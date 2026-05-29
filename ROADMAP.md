@@ -36,6 +36,30 @@ Site public → formulaire → création d'une demande → affichage dans le das
 Personnes → Espaces → Réservations → Résidences → Événements → modules Gestion / Rayonnement / Collectif.
 Chaque table métier reste liée à `organization_id` avec RLS.
 
-### Règle de versioning
-À chaque nouvelle version, archiver l'état courant (commit Git dédié + copie de dossier si besoin)
-avant de poursuivre.
+### Règle de versioning (STRICTE)
+
+> **Avant chaque nouvelle version, créer un commit, un tag et une copie complète du dossier précédent.**
+
+Procédure obligatoire, dans l'ordre, **avant** de commencer la version suivante :
+
+1. **Vérifier le build** : `npm run build` doit passer.
+2. **Commit Git propre** : arbre de travail clean, message clair (`vX.Y - description`).
+3. **Tag Git de version** : ex. `v1.0-socle`, `v1.1-demandes`.
+4. **Copie complète du dossier** vers `D:\01 Casaminga\01 Dev\archives\casa-minga-lieux-vX.Y`
+   (script [`scripts/archive-version.ps1`](scripts/archive-version.ps1)).
+5. **Seulement ensuite**, démarrer le développement de la version suivante.
+
+Convention de nommage :
+
+| Élément              | Exemple                                          |
+| -------------------- | ------------------------------------------------ |
+| Développement actif  | `casa-minga-lieux`                               |
+| Archive v1           | `archives\casa-minga-lieux-v1` (tag `v1.0-socle`) |
+| Archive v1.1         | `archives\casa-minga-lieux-v1.1` (tag `v1.1-demandes`) |
+
+Historique des versions :
+
+| Version | Tag             | Commit    | Archive                          |
+| ------- | --------------- | --------- | -------------------------------- |
+| v1.0    | `v1.0-socle`    | `77fc3d4` | `archives\casa-minga-lieux-v1.1` (snapshot) |
+| v1.1    | `v1.1-demandes` | `7162543` | `archives\casa-minga-lieux-v1.1` |
