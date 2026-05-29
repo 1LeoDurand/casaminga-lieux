@@ -85,13 +85,42 @@ export async function createRequest(
     return addDemoRequest({ ...input, summary });
   }
 
+  // Insertion via le client anon (policy `requests_insert_from_public_site`).
+  // On NE fait PAS de `.select()` de retour : aucune policy SELECT n'autorise
+  // l'anonyme à relire une demande (lecture réservée aux membres), donc un
+  // `RETURNING *` reviendrait vide et ferait échouer l'enregistrement à tort.
+  // On génère donc l'id côté serveur et on reconstruit la ligne créée.
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("requests")
-    .insert({ ...input, summary, status: "nouvelle", priority: "normale" })
-    .select("*")
-    .single();
-  return data;
+  const id = crypto.randomUUID();
+  const receivedAt = new Date().toISOString();
+  const { error } = await supabase.from("requests").insert({
+    id,
+    ...input,
+    summary,
+    status: "nouvelle",
+    priority: "normale",
+    received_at: receivedAt,
+  });
+
+  if (error) {
+    console.error("createRequest: échec insertion Supabase", error);
+    return null;
+  }
+
+  return {
+    id,
+    organization_id: input.organization_id,
+    name: input.name,
+    email: input.email,
+    phone: input.phone,
+    organization_ext: input.organization_ext,
+    type: input.type,
+    status: "nouvelle",
+    priority: "normale",
+    summary,
+    message: input.message,
+    received_at: receivedAt,
+  };
 }
 
 /** Met à jour le statut d'une demande. Demo → store ; sinon → update Supabase. */

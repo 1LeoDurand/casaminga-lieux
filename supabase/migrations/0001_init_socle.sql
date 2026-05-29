@@ -163,22 +163,31 @@ alter table public.organization_members enable row level security;
 alter table public.public_sites         enable row level security;
 alter table public.requests             enable row level security;
 
+-- Note : `drop policy if exists` avant chaque `create policy` rend ce fichier
+-- entièrement ré-exécutable (« appliquer OU vérifier » sans erreur).
+
 -- PROFILES : chacun gère son propre profil
+drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
   for select using (id = auth.uid());
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
+drop policy if exists "profiles_insert_own" on public.profiles;
 create policy "profiles_insert_own" on public.profiles
   for insert with check (id = auth.uid());
 
 -- ORGANIZATIONS : membres lisent leurs orgs ; lecture publique si site publié
+drop policy if exists "orgs_select_member" on public.organizations;
 create policy "orgs_select_member" on public.organizations
   for select using (public.is_org_member(id));
+drop policy if exists "orgs_select_public" on public.organizations;
 create policy "orgs_select_public" on public.organizations
   for select using (
     exists (select 1 from public.public_sites ps
             where ps.organization_id = organizations.id and ps.status = 'publie')
   );
+drop policy if exists "orgs_update_admin" on public.organizations;
 create policy "orgs_update_admin" on public.organizations
   for update using (
     exists (select 1 from public.organization_members m
@@ -188,8 +197,10 @@ create policy "orgs_update_admin" on public.organizations
   );
 
 -- ORGANIZATION_MEMBERS : membres voient les membres de leurs orgs
+drop policy if exists "members_select" on public.organization_members;
 create policy "members_select" on public.organization_members
   for select using (public.is_org_member(organization_id));
+drop policy if exists "members_manage_admin" on public.organization_members;
 create policy "members_manage_admin" on public.organization_members
   for all using (
     exists (select 1 from public.organization_members m
@@ -199,16 +210,20 @@ create policy "members_manage_admin" on public.organization_members
   );
 
 -- PUBLIC_SITES : lecture anonyme des sites publiés ; gestion réservée aux membres
+drop policy if exists "public_sites_select_published" on public.public_sites;
 create policy "public_sites_select_published" on public.public_sites
   for select using (status = 'publie');
+drop policy if exists "public_sites_member_all" on public.public_sites;
 create policy "public_sites_member_all" on public.public_sites
   for all using (public.is_org_member(organization_id))
   with check (public.is_org_member(organization_id));
 
 -- REQUESTS : membres = accès complet ; insertion anonyme depuis un site publié
+drop policy if exists "requests_member_all" on public.requests;
 create policy "requests_member_all" on public.requests
   for all using (public.is_org_member(organization_id))
   with check (public.is_org_member(organization_id));
+drop policy if exists "requests_insert_from_public_site" on public.requests;
 create policy "requests_insert_from_public_site" on public.requests
   for insert with check (
     exists (select 1 from public.public_sites ps

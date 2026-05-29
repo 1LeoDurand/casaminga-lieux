@@ -45,21 +45,30 @@ Procédure obligatoire, dans l'ordre, **avant** de commencer la version suivante
 1. **Vérifier le build** : `npm run build` doit passer.
 2. **Commit Git propre** : arbre de travail clean, message clair (`vX.Y - description`).
 3. **Tag Git de version** : ex. `v1.0-socle`, `v1.1-demandes`.
-4. **Copie complète du dossier** vers `D:\01 Casaminga\01 Dev\archives\casa-minga-lieux-vX.Y`
-   (script [`scripts/archive-version.ps1`](scripts/archive-version.ps1)).
+4. **Archive depuis le tag** (jamais une copie du dossier de travail, qui peut contenir
+   du WIP de la version suivante). Générer un ZIP figé sur l'arbre du tag :
+
+   ```powershell
+   git archive --format=zip --prefix=casa-minga-lieux-<tag>/ `
+     -o "D:\01 Casaminga\01 Dev\archives\casa-minga-lieux-<tag>.zip" <tag>
+   ```
+
+   Ex. `git archive ... casa-minga-lieux-v1.1-demandes.zip ... v1.1-demandes`.
+   `git archive` n'inclut que les fichiers **suivis du commit taggé** : les fichiers
+   ignorés (`.env.local`, `node_modules`, `.next`) et le WIP non commité sont exclus
+   par construction. Vérifier ensuite que l'archive correspond bien au tag (et non au WIP).
 5. **Seulement ensuite**, démarrer le développement de la version suivante.
 
 Convention de nommage :
 
-| Élément              | Exemple                                          |
-| -------------------- | ------------------------------------------------ |
-| Développement actif  | `casa-minga-lieux`                               |
-| Archive v1           | `archives\casa-minga-lieux-v1` (tag `v1.0-socle`) |
-| Archive v1.1         | `archives\casa-minga-lieux-v1.1` (tag `v1.1-demandes`) |
+| Élément              | Exemple                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| Développement actif  | `casa-minga-lieux`                                         |
+| Archive (depuis tag) | `archives\casa-minga-lieux-v1.1-demandes.zip` (tag `v1.1-demandes`) |
 
 Historique des versions :
 
-| Version | Tag             | Commit    | Archive                          |
-| ------- | --------------- | --------- | -------------------------------- |
-| v1.0    | `v1.0-socle`    | `77fc3d4` | `archives\casa-minga-lieux-v1.1` (snapshot) |
-| v1.1    | `v1.1-demandes` | `7162543` | `archives\casa-minga-lieux-v1.1` |
+| Version | Tag             | Commit    | Archive (figée sur le tag)                       |
+| ------- | --------------- | --------- | ------------------------------------------------ |
+| v1.0    | `v1.0-socle`    | `77fc3d4` | incluse dans l'historique Git / push GitHub      |
+| v1.1    | `v1.1-demandes` | `7162543` | `archives\casa-minga-lieux-v1.1-demandes.zip`    |

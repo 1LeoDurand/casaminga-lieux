@@ -43,7 +43,7 @@ values
    'Demande de résidence artistique (céramique) — 3 semaines',
    'Bonjour, je suis céramiste et je souhaiterais candidater pour une résidence cet automne.'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Studio Halle Nord', 'contact@hallenord.fr',
-   'salle', 'etudier', 'normale',
+   'reservation', 'etudier', 'normale',
    'Réservation de la grande salle pour une exposition (week-end)',
    'Nous cherchons un espace pour une exposition collective sur deux jours.'),
   ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Mairie de Saint-Mandé', 'culture@saintmande.fr',
