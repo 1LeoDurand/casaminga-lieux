@@ -45,7 +45,7 @@ if (Test-Path $destination) {
         Write-Error "L'archive existe déjà : $destination (utilise -Force pour écraser)."
         exit 1
     }
-    Write-Host "Archive existante -> écrasement (-Force)." -ForegroundColor Yellow
+    Write-Host "Archive existante -> ecrasement (-Force)." -ForegroundColor Yellow
 }
 
 if (-not (Test-Path $archivesDir)) {
@@ -56,11 +56,12 @@ if (-not (Test-Path $archivesDir)) {
 robocopy $projectRoot $destination /E /XD node_modules .next /NFL /NDL /NJH /NP /R:1 /W:1 | Out-Null
 $code = $LASTEXITCODE
 
-# robocopy : codes 0-7 = succès, >= 8 = erreur
+# robocopy : codes 0-7 = succes, >= 8 = erreur
 if ($code -ge 8) {
     Write-Error "Echec de la copie (robocopy code $code)."
     exit 1
 }
 
-Write-Host "Archive créée : $destination (robocopy code $code)" -ForegroundColor Green
-Write-Host "node_modules et .next exclus ; .git conservé."
+Write-Host "Archive creee : $destination (robocopy code $code)" -ForegroundColor Green
+Write-Host "node_modules et .next exclus ; .git conserve."
+exit 0
