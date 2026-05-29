@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { DashboardSidebar } from "@/components/mc/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
-import { getOrganizationBySlug } from "@/lib/data";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
+
+const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
 export default async function DashboardLayout({
   children,
@@ -15,17 +16,22 @@ export default async function DashboardLayout({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
+  const requests = await getRequestsForOrg(organization.id);
+  const openRequests = requests.filter(
+    (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
+  ).length;
+
   return (
     <div className="grid h-screen grid-cols-[232px_1fr] grid-rows-[56px_1fr] overflow-hidden">
       <div className="row-span-2 overflow-hidden">
-        <DashboardSidebar orgSlug={organization.slug} orgName={organization.name} />
+        <DashboardSidebar
+          orgSlug={organization.slug}
+          orgName={organization.name}
+          openRequests={openRequests}
+        />
       </div>
-      <DashboardTopbar
-        orgName={organization.name}
-        orgSlug={organization.slug}
-        demoMode={!isSupabaseConfigured()}
-      />
-      <main className="overflow-y-auto p-8">{children}</main>
+      <DashboardTopbar orgSlug={organization.slug} />
+      <main className="overflow-y-auto p-7">{children}</main>
     </div>
   );
 }

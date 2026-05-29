@@ -22,6 +22,8 @@
   --color-mint: var(--mint);
   --color-ink: var(--ink);
   --color-warmgray: var(--warmgray);
+  --color-warn: var(--warn);
+  --color-gray-light: var(--gray-light);
 
   /* Tokens sémantiques shadcn → mappés sur la palette Casa Minga */
   --color-background: var(--background);
@@ -80,6 +82,8 @@
   --mint: #81c784;
   --ink: #1c1c1c;
   --warmgray: #6b6460;
+  --warn: #fb923c; /* badge "à traiter" / nav-badge alerte */
+  --gray-light: #fff8f4; /* fonds doux (today-it, dash-pill) */
 
   --radius: 1.125rem; /* 18px */
 
@@ -167,3 +171,224 @@
     font-family: var(--font-heading), var(--font-poppins), sans-serif;
   }
 }
+
+/* ════════════════════════════════════════════════════════════
+   UI kit Casa Minga — portage fidèle du prototype Claude Design
+   (Plateforme.html). Classes bespoke réutilisées par le shell
+   dashboard et la vue d'ensemble. Couche purement visuelle.
+   ════════════════════════════════════════════════════════════ */
+
+/* ─── En-tête de page ─── */
+.mc-page-tag {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 138, 101, 0.3);
+  background: var(--peach-pale);
+  color: var(--coral-dark);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.mc-page-title {
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #2c2c2c;
+}
+.mc-page-sub {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--warmgray);
+}
+
+/* ─── Badges ─── */
+.mc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mc-badge-green { background: #e8f8ec; color: #2d8a4e; border: 1px solid #b6e8c4; }
+.mc-badge-red { background: #fdecea; color: #c0392b; border: 1px solid #f5c6c6; }
+.mc-badge-orange { background: #fff3e0; color: #c2621c; border: 1px solid #ffd9a0; }
+.mc-badge-gray { background: #f2ede9; color: #6b6460; border: 1px solid var(--peach); }
+.mc-badge-lime { background: var(--peach-pale); color: var(--coral-dark); border: 1px solid var(--peach); }
+.mc-badge-golden { background: var(--golden); color: #2c2c2c; border: 1px solid rgba(255, 213, 79, 0.4); }
+
+/* ─── Carte ─── */
+.mc-card {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(255, 138, 101, 0.07);
+}
+
+/* ─── Boutons (variantes prototype) ─── */
+.mc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 22px;
+  border-radius: 16px;
+  font-family: var(--font-poppins), sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mc-btn-sm { padding: 6px 14px; font-size: 12px; }
+.mc-btn-lime { background: var(--coral); color: var(--cream); box-shadow: 0 6px 20px rgba(255, 138, 101, 0.35); }
+.mc-btn-lime:hover { background: #ff6d4d; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255, 138, 101, 0.45); }
+.mc-btn-black { background: var(--peach); color: var(--ink); }
+.mc-btn-black:hover { background: var(--coral); color: var(--cream); }
+.mc-btn-outline { background: transparent; border: 1.5px solid var(--peach); color: var(--ink); }
+.mc-btn-outline:hover { border-color: var(--coral); color: var(--coral); background: var(--peach-pale); }
+.mc-btn:disabled, .mc-btn[disabled] { background: #c8bfbb; color: #7a7a7a; box-shadow: none; pointer-events: none; opacity: 0.6; }
+
+/* ─── Barre d'actions rapides (dashboard) ─── */
+.mc-quickbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mc-dq-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  color: #2c2c2c;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.mc-dq-btn:hover { border-color: var(--coral); color: var(--coral-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255, 138, 101, 0.16); }
+.mc-dq-btn.primary { background: var(--coral); color: #fff; border-color: var(--coral); box-shadow: 0 6px 18px rgba(255, 138, 101, 0.32); }
+.mc-dq-btn.primary:hover { background: var(--coral-dark); border-color: var(--coral-dark); }
+.mc-dq-ic { font-size: 14px; opacity: 0.9; }
+
+/* ─── Rangée KPI ─── */
+.mc-kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+@media (max-width: 1280px) { .mc-kpi-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 720px) { .mc-kpi-row { grid-template-columns: repeat(2, 1fr); } }
+.mc-kpi-tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas: "ic body" "trend trend";
+  gap: 6px 12px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  box-shadow: 0 3px 16px rgba(255, 138, 101, 0.06);
+}
+.mc-kpi-tile:hover { transform: translateY(-2px); border-color: var(--peach); box-shadow: 0 10px 28px rgba(255, 138, 101, 0.14); }
+.mc-kpi-tile.alert { border-color: rgba(251, 146, 60, 0.4); background: linear-gradient(180deg, #fffaf2 0%, #fff 100%); }
+.mc-kpi-ic {
+  grid-area: ic;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-poppins), sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.mc-kpi-body { grid-area: body; min-width: 0; }
+.mc-kpi-num { font-family: var(--font-poppins), sans-serif; font-weight: 700; font-size: 22px; color: #2c2c2c; letter-spacing: -0.5px; line-height: 1.1; white-space: nowrap; }
+.mc-kpi-cap { font-size: 11px; color: var(--warmgray); font-weight: 500; margin-top: 2px; line-height: 1.3; }
+.mc-kpi-trend { grid-area: trend; font-size: 11px; color: var(--warmgray); font-weight: 600; padding-top: 10px; border-top: 1px dashed var(--border); margin-top: 4px; }
+.mc-kpi-trend.up { color: #2f8a4c; }
+.mc-kpi-trend.warn { color: var(--coral-dark); }
+
+/* ─── Rangée 2 + cartes dashboard ─── */
+.mc-dash-row-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .mc-dash-row-2 { grid-template-columns: 1fr; } }
+.mc-dash-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+.mc-dash-h3 { font-family: var(--font-poppins), sans-serif; font-weight: 700; font-size: 15px; color: #2c2c2c; letter-spacing: -0.2px; }
+.mc-dash-card-sub { font-size: 11.5px; color: var(--warmgray); margin-top: 2px; font-weight: 400; }
+.mc-dash-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--warmgray); background: var(--gray-light); padding: 5px 10px; border-radius: 100px; }
+.mc-dash-pill.prio-count { background: var(--peach-pale); color: var(--coral-dark); }
+.mc-dash-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 3px rgba(129, 199, 132, 0.25); animation: mcDashPulse 2s infinite; }
+@keyframes mcDashPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ─── Bloc "Aujourd'hui" ─── */
+.mc-today-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 600px) { .mc-today-grid { grid-template-columns: 1fr; } }
+.mc-today-it {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--gray-light);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-poppins), sans-serif;
+  transition: all 0.18s;
+}
+.mc-today-it:hover { background: #fff; border-color: var(--peach); transform: translateX(2px); box-shadow: 0 4px 14px rgba(255, 138, 101, 0.12); }
+.mc-today-it.warn { background: #fff8f3; }
+.mc-today-it.warn:hover { border-color: var(--coral); }
+.mc-today-ic { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.mc-today-body { flex: 1; min-width: 0; }
+.mc-today-num { font-family: var(--font-poppins), sans-serif; font-weight: 700; font-size: 19px; color: #2c2c2c; line-height: 1.1; letter-spacing: -0.3px; }
+.mc-today-extra { font-size: 12px; color: var(--warmgray); font-weight: 500; }
+.mc-today-lbl { font-size: 11.5px; color: var(--warmgray); margin-top: 1px; font-weight: 500; }
+.mc-today-arrow { font-size: 14px; color: var(--warmgray); opacity: 0; transition: opacity 0.18s, transform 0.18s; }
+.mc-today-it:hover .mc-today-arrow { opacity: 1; transform: translateX(2px); color: var(--coral); }
+
+/* ─── Nav latérale (item + badge) ─── */
+.mc-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin: 1px 8px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  cursor: pointer;
+  position: relative;
+}
+.mc-nav-item:hover { background: rgba(255, 138, 101, 0.12); color: #fff; }
+.mc-nav-item.active { background: var(--coral); color: #fff; }
+.mc-nav-item.disabled { color: rgba(255, 255, 255, 0.28); cursor: default; }
+.mc-nav-item.disabled:hover { background: transparent; color: rgba(255, 255, 255, 0.28); }
+.mc-nav-icon { width: 20px; text-align: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.mc-nav-badge {
+  margin-left: auto;
+  background: var(--warn);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  min-width: 18px;
+  text-align: center;
+}
+.mc-nav-badge.danger { background: var(--coral); }
+.mc-nav-badge.soon { background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.5); font-weight: 600; }
+.mc-nav-item.active .mc-nav-badge { background: rgba(0, 0, 0, 0.25); color: #fff; }

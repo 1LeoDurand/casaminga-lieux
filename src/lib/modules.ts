@@ -1,7 +1,10 @@
 /**
- * Cartographie des 18 modules du dashboard (ref. ROUTES.md / HANDOFF).
+ * Cartographie des modules du dashboard, fidèle au prototype Claude Design
+ * (Plateforme.html). Groupement de la nav latérale :
+ *   Pilotage · Gestion du lieu · Structure · Publication · Système.
+ *
  * `segment` correspond au sous-chemin /dashboard/[org]/<segment>.
- * `ready` = construit en v1 (sinon : structure prête, "à venir").
+ * `ready`   = module réellement construit (sinon : à venir).
  */
 
 export interface ModuleDef {
@@ -20,14 +23,16 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Pilotage",
     modules: [
-      { key: "dashboard", label: "Vue d'ensemble", segment: null, ready: true },
+      { key: "dashboard", label: "Tableau de bord", segment: null, ready: true },
+      { key: "demandes", label: "Demandes", segment: "demandes", ready: true },
+      { key: "personnes", label: "Personnes", segment: "personnes", ready: false },
+      { key: "taches", label: "Tâches & alertes", segment: "taches", ready: false },
     ],
   },
   {
-    title: "Activité",
+    title: "Gestion du lieu",
     modules: [
-      { key: "demandes", label: "Demandes", segment: "demandes", ready: true },
-      { key: "personnes", label: "Personnes", segment: "personnes", ready: false },
+      { key: "communaute", label: "Communauté", segment: "communaute", ready: false },
       { key: "espaces", label: "Espaces", segment: "espaces", ready: false },
       { key: "reservations", label: "Réservations", segment: "reservations", ready: false },
       { key: "residences", label: "Résidences", segment: "residences", ready: false },
@@ -35,35 +40,38 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     ],
   },
   {
-    title: "Gestion",
+    title: "Structure",
     modules: [
       { key: "finances", label: "Finances", segment: "finances", ready: false },
       { key: "documents", label: "Documents", segment: "documents", ready: false },
+      { key: "gouvernance", label: "Gouvernance", segment: "gouvernance", ready: false },
+      { key: "impact", label: "Impact", segment: "impact", ready: false },
       { key: "partenaires", label: "Partenaires", segment: "partenaires", ready: false },
-      { key: "taches", label: "Tâches & alertes", segment: "taches", ready: false },
     ],
   },
   {
-    title: "Rayonnement",
+    title: "Publication",
     modules: [
       { key: "site-public", label: "Site public", segment: "site-public", ready: false },
       { key: "communication", label: "Communication", segment: "communication", ready: false },
       { key: "mediatheque", label: "Médiathèque", segment: "mediatheque", ready: false },
-      { key: "impact", label: "Impact", segment: "impact", ready: false },
     ],
   },
   {
-    title: "Collectif",
+    title: "Système",
     modules: [
-      { key: "gouvernance", label: "Gouvernance", segment: "gouvernance", ready: false },
       { key: "automatisations", label: "Automatisations", segment: "automatisations", ready: false },
+      { key: "parametres", label: "Paramètres", segment: "parametres", ready: false },
     ],
   },
 ];
 
-export const SETTINGS_MODULE: ModuleDef = {
-  key: "parametres",
-  label: "Paramètres",
-  segment: "parametres",
-  ready: false,
-};
+/** Libellé de page d'après le segment d'URL (pour le titre de la topbar). */
+export function moduleLabelForSegment(segment: string | null): string {
+  if (!segment) return "Tableau de bord";
+  for (const section of MODULE_SECTIONS) {
+    const found = section.modules.find((m) => m.segment === segment);
+    if (found) return found.label;
+  }
+  return "Tableau de bord";
+}

@@ -39,9 +39,29 @@ Le même flux tourne sur la vraie table `requests` (plus de fallback démo une f
 - Insertion publique anonyme via la policy `requests_insert_from_public_site` ; `id` généré côté serveur,
   pas de `.select()` de retour (aucune policy SELECT pour l'anonyme). Aucune clé `service_role` côté front.
 
+### v1.3 — UI kit + shell dashboard fidèle ✅
+Réorientation : porter beaucoup plus fidèlement l'interface Claude Design officielle sur
+`admin.casaminga.com`, sans casser la fondation Next.js/Supabase. **Couche purement visuelle** —
+aucune modification du socle Supabase/auth/RLS : le flux Demandes v1.2 reste intact.
+- **UI kit fidèle** (`src/app/globals.css`, classes `mc-*` portées de `Plateforme.html`) :
+  page-header (`mc-page-tag/title/sub`), badges (`mc-badge-*`), boutons (`mc-btn-*`),
+  tuiles KPI (`mc-kpi-tile`), grille « Aujourd'hui » (`mc-today-it`), cartes dashboard
+  (`mc-dash-*`), nav latérale (`mc-nav-item/badge`). Composants : `page-header`, `mc-badge`,
+  `kpi-tile`, `dashboard-quickbar`, `dashboard-today`.
+- **Shell dashboard fidèle** : sidebar avec groupement officiel **Pilotage · Gestion du lieu ·
+  Structure · Publication · Système**, pastille **DÉMO**, sous-titre `Casa Minga Lieux · /<slug>`,
+  badge Demandes branché sur le **vrai** nombre de demandes ouvertes ; topbar avec titre de page
+  dérivé de l'URL, recherche, « Voir le site public », « Landing », cloche de notifications.
+- **Vue d'ensemble fidèle** (cockpit) : en-tête + barre d'actions rapides, rangée de 6 tuiles KPI
+  (illustratives en mode démo, sauf « Demandes » = données réelles), grille « Aujourd'hui »,
+  carte « Demandes récentes » (données réelles). Les modules non encore construits annoncent
+  leur arrivée via toast (pas de lien mort).
+
 ### Prochaines versions (ordre MVP)
-Personnes → Espaces → Réservations → Résidences → Événements → modules Gestion / Rayonnement / Collectif.
-Chaque table métier reste liée à `organization_id` avec RLS.
+Demandes (refonte fidèle UI + Supabase) → Personnes → Espaces → Réservations → Résidences →
+Événements → modules Structure / Publication / Système. Chaque module = **une version**, livré
+avec UI fidèle **et** liaison Supabase ensemble. Chaque table métier reste liée à
+`organization_id` avec RLS.
 
 ### Règle de versioning (STRICTE)
 
@@ -80,3 +100,4 @@ Historique des versions :
 | v1.0    | `v1.0-socle`            | `77fc3d4` | incluse dans l'historique Git / push GitHub              |
 | v1.1    | `v1.1-demandes`         | `7162543` | `archives\casa-minga-lieux-v1.1-demandes.zip`            |
 | v1.2    | `v1.2-supabase-demandes`| `72e06a4` | `archives\casa-minga-lieux-v1.2-supabase-demandes.zip`   |
+| v1.3    | `v1.3-ui-kit-shell`     | _à venir_ | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |

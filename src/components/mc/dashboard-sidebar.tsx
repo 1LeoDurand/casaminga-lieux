@@ -2,46 +2,49 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Inbox,
   Users,
+  ListChecks,
+  HeartHandshake,
   DoorOpen,
   CalendarCheck,
-  Palette,
+  Home,
   CalendarDays,
   Wallet,
   FileText,
+  Scale,
+  BarChart3,
   Handshake,
-  ListChecks,
   Globe,
   Megaphone,
   Image as ImageIcon,
-  BarChart3,
-  Scale,
   Zap,
   Settings,
   type LucideIcon,
 } from "lucide-react";
-import { MODULE_SECTIONS, SETTINGS_MODULE, type ModuleDef } from "@/lib/modules";
+import { MODULE_SECTIONS, type ModuleDef } from "@/lib/modules";
 
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
   demandes: Inbox,
   personnes: Users,
+  taches: ListChecks,
+  communaute: HeartHandshake,
   espaces: DoorOpen,
   reservations: CalendarCheck,
-  residences: Palette,
+  residences: Home,
   evenements: CalendarDays,
   finances: Wallet,
   documents: FileText,
+  gouvernance: Scale,
+  impact: BarChart3,
   partenaires: Handshake,
-  taches: ListChecks,
   "site-public": Globe,
   communication: Megaphone,
   mediatheque: ImageIcon,
-  impact: BarChart3,
-  gouvernance: Scale,
   automatisations: Zap,
   parametres: Settings,
 };
@@ -50,41 +53,49 @@ function hrefFor(orgSlug: string, m: ModuleDef) {
   return m.segment ? `/dashboard/${orgSlug}/${m.segment}` : `/dashboard/${orgSlug}`;
 }
 
-function NavItem({ orgSlug, m }: { orgSlug: string; m: ModuleDef }) {
+function NavItem({
+  orgSlug,
+  m,
+  badge,
+}: {
+  orgSlug: string;
+  m: ModuleDef;
+  badge?: number;
+}) {
   const pathname = usePathname();
   const href = hrefFor(orgSlug, m);
   const active = pathname === href;
   const Icon = ICONS[m.key] ?? LayoutDashboard;
 
-  const base =
-    "group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors";
+  const inner = (
+    <>
+      <span className="mc-nav-icon">
+        <Icon className="size-[17px]" strokeWidth={1.7} />
+      </span>
+      <span className="truncate">{m.label}</span>
+      {badge ? <span className="mc-nav-badge danger">{badge}</span> : null}
+    </>
+  );
 
   if (!m.ready) {
     return (
-      <span
-        title="À venir"
-        className={`${base} cursor-default text-sidebar-foreground/35`}
+      <button
+        type="button"
+        className="mc-nav-item w-[calc(100%-16px)]"
+        onClick={() =>
+          toast.info(`Module « ${m.label} » — bientôt disponible`, {
+            description: "Il sera branché à Supabase dans une prochaine version.",
+          })
+        }
       >
-        <Icon className="size-[18px] shrink-0" />
-        <span className="truncate">{m.label}</span>
-        <span className="ml-auto rounded-full bg-sidebar-accent px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
-          bientôt
-        </span>
-      </span>
+        {inner}
+      </button>
     );
   }
 
   return (
-    <Link
-      href={href}
-      className={`${base} ${
-        active
-          ? "bg-sidebar-primary text-sidebar-primary-foreground"
-          : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-      }`}
-    >
-      <Icon className="size-[18px] shrink-0" />
-      <span className="truncate">{m.label}</span>
+    <Link href={href} className={`mc-nav-item ${active ? "active" : ""}`}>
+      {inner}
     </Link>
   );
 }
@@ -92,48 +103,73 @@ function NavItem({ orgSlug, m }: { orgSlug: string; m: ModuleDef }) {
 export function DashboardSidebar({
   orgSlug,
   orgName,
+  openRequests = 0,
+  userName = "Léo",
+  userRole = "Coordination",
 }: {
   orgSlug: string;
   orgName: string;
+  openRequests?: number;
+  userName?: string;
+  userRole?: string;
 }) {
+  const initials = userName
+    .split(" ")
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
-    <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-2.5 border-b border-sidebar-border px-5 py-4">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-coral font-heading text-sm font-extrabold text-white">
+    <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground">
+      {/* Logo + organisation */}
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5 pb-4 pt-5">
+        <span className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-coral font-heading text-[12px] font-extrabold text-white">
           CM
         </span>
         <div className="min-w-0">
-          <div className="font-heading text-[15px] font-extrabold leading-tight">
-            Casa Minga Lieux
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-heading text-[15px] font-extrabold text-white">
+              {orgName}
+            </span>
+            <span className="shrink-0 rounded-md bg-coral px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">
+              Démo
+            </span>
           </div>
-          <div className="truncate text-[10px] text-sidebar-foreground/45">{orgName}</div>
+          <div className="truncate text-[10px] text-white/35">
+            Casa Minga Lieux · /{orgSlug}
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-2 py-3">
+      {/* Navigation */}
+      <nav className="flex-1 py-1">
         {MODULE_SECTIONS.map((section) => (
-          <div key={section.title} className="mb-1">
-            <div className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/30">
+          <div key={section.title}>
+            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/25">
               {section.title}
             </div>
-            <div className="flex flex-col gap-0.5">
-              {section.modules.map((m) => (
-                <NavItem key={m.key} orgSlug={orgSlug} m={m} />
-              ))}
-            </div>
+            {section.modules.map((m) => (
+              <NavItem
+                key={m.key}
+                orgSlug={orgSlug}
+                m={m}
+                badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
+              />
+            ))}
           </div>
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border px-2 py-3">
-        <NavItem orgSlug={orgSlug} m={SETTINGS_MODULE} />
-        <div className="mt-2 flex items-center gap-2.5 rounded-lg px-3 py-2">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-coral text-xs font-bold text-white">
-            LÉ
+      {/* Pied : utilisateur */}
+      <div className="mt-auto shrink-0 border-t border-white/[0.07] px-3 py-4">
+        <div className="flex cursor-pointer items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.07]">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[14px] bg-coral text-[12px] font-bold text-white">
+            {initials}
           </span>
           <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold">Léo</div>
-            <div className="text-[11px] text-sidebar-foreground/40">Coordination</div>
+            <div className="truncate text-[13px] font-semibold text-white">{userName}</div>
+            <div className="text-[11px] text-white/35">{userRole}</div>
           </div>
         </div>
       </div>
