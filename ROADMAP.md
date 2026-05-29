@@ -100,4 +100,4 @@ Historique des versions :
 | v1.0    | `v1.0-socle`            | `77fc3d4` | incluse dans l'historique Git / push GitHub              |
 | v1.1    | `v1.1-demandes`         | `7162543` | `archives\casa-minga-lieux-v1.1-demandes.zip`            |
 | v1.2    | `v1.2-supabase-demandes`| `72e06a4` | `archives\casa-minga-lieux-v1.2-supabase-demandes.zip`   |
-| v1.3    | `v1.3-ui-kit-shell`     | _à venir_ | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
+| v1.3    | `v1.3-ui-kit-shell`     | `968da11` | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
