@@ -26,7 +26,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Activité",
     modules: [
-      { key: "demandes", label: "Demandes", segment: "demandes", ready: false },
+      { key: "demandes", label: "Demandes", segment: "demandes", ready: true },
       { key: "personnes", label: "Personnes", segment: "personnes", ready: false },
       { key: "espaces", label: "Espaces", segment: "espaces", ready: false },
       { key: "reservations", label: "Réservations", segment: "reservations", ready: false },

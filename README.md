@@ -4,10 +4,12 @@ SaaS multi-tenant pour lieux collectifs (tiers-lieux, lieux culturels, résidenc
 Chaque lieu est une **organisation** ; toutes les données métier sont rattachées à un `organization_id`.
 **Supabase** est la source de vérité ; `localStorage` n'est utilisé que pour des préférences d'UI / la démo.
 
-> **v1 — socle technique.** Cette version pose une fondation propre et stable :
-> design system, routes de base, client/serveur Supabase préparés, première migration + seed,
-> dashboard et site public minimaux. Les modules métier (Demandes, Personnes, Espaces,
-> Réservations, Événements…) seront construits dans les versions suivantes.
+> **v1 — socle technique.** Fondation : design system, routes de base, clients Supabase,
+> première migration + seed, dashboard et site public minimaux.
+>
+> **v1.1 — premier flux end-to-end.** Site public → formulaire → création d'une demande →
+> affichage dans le dashboard (module **Demandes**). Voir [ROADMAP.md](ROADMAP.md).
+> Les autres modules métier (Personnes, Espaces, Réservations, Événements…) viendront ensuite.
 
 ---
 
@@ -42,8 +44,20 @@ npm run dev                  # http://localhost:3000
 | `/`                       | Landing SaaS |
 | `/login`                  | Connexion (bandeau « mode démo » tant que Supabase n'est pas configuré) |
 | `/dashboard/bernard-kohn` | Dashboard du lieu démo (KPIs + demandes récentes) |
-| `/site/bernard-kohn`      | Site public généré du lieu démo |
+| `/dashboard/bernard-kohn/demandes` | Module Demandes : liste, détail, changement de statut |
+| `/site/bernard-kohn`      | Site public généré du lieu démo (formulaire de contact) |
 | `/dashboard/inconnu`      | 404 |
+
+### Tester le flux end-to-end (v1.1)
+
+1. Ouvre `/site/bernard-kohn`, remplis le formulaire de contact, envoie.
+2. Un toast confirme l'envoi ; la demande est créée (table `requests`, liée à `organization_id`).
+3. Ouvre `/dashboard/bernard-kohn/demandes` : la demande apparaît en tête de liste.
+4. « Voir détail » → change le statut, « Marquer traitée » ou « Archiver » (toast à chaque action).
+
+> En **mode démo**, les demandes sont stockées en mémoire (singleton `globalThis`), partagées
+> entre la route serveur et le dashboard pour la durée du process — réinitialisées au redémarrage.
+> Avec Supabase configuré, tout passe par la table `requests` (RLS).
 
 ### Commandes
 
@@ -99,16 +113,24 @@ src/
       dashboard/[org]/
         layout.tsx               # sidebar + topbar + org active
         page.tsx                 # KPIs + demandes récentes
+        demandes/
+          page.tsx               # module Demandes (liste + détail)
+          actions.ts             # server actions (changement de statut)
+    api/orgs/[slug]/requests/
+      route.ts                   # POST public → création d'une demande
     site/[slug]/page.tsx         # site public généré
   components/
     ui/                          # primitives shadcn
-    mc/                          # composants Casa Minga (sidebar, topbar, kpi-card, status-badge)
+    mc/                          # composants Casa Minga (sidebar, topbar, kpi-card,
+                                 #   status-badge, public-contact-form, requests-board)
   lib/
     supabase/                    # env, client, server, middleware (updateSession)
     demo/data.ts                 # seed local (mode démo)
-    data.ts                      # accès données (démo ⇆ Supabase)
+    demo/store.ts                # store mutable des demandes (mode démo, globalThis)
+    data.ts                      # accès données (démo ⇆ Supabase) + create/update requests
+    requests-meta.ts             # types de demande, statuts, priorités (libellés)
     types.ts                     # types métier alignés sur la migration
-    modules.ts                   # définition des 18 modules (seul "dashboard" actif en v1)
+    modules.ts                   # 18 modules ("dashboard" + "demandes" actifs)
 supabase/
   migrations/0001_init_socle.sql # organizations, profiles, organization_members, public_sites, requests + RLS
   seed.sql                       # organisation démo Bernard Kohn
@@ -143,10 +165,10 @@ RLS activé sur toutes les tables, adossé à `organization_members` via le help
 
 ## Prochaines étapes
 
-1. Fournir l'URL + clé anon Supabase, appliquer migration + seed, vérifier l'auth réelle.
-2. Brancher le formulaire de contact du site public sur `requests`.
-3. Construire les modules métier (ordre MVP) en respectant `organization_id` + RLS :
-   Demandes → Personnes → Espaces → Réservations → Événements, etc.
+1. Fournir l'URL + clé anon Supabase, appliquer migration + seed, vérifier l'auth réelle
+   et le flux Demandes branché sur la vraie table `requests`.
+2. Construire les modules métier suivants (ordre MVP) en respectant `organization_id` + RLS :
+   Personnes → Espaces → Réservations → Résidences → Événements, etc.
 4. **Versioning** : à chaque nouvelle version, copier le dossier courant en archive
    (ex. `casa-minga-lieux` → `casa-minga-lieux-v1`) avant de poursuivre en v1.1.
 ```

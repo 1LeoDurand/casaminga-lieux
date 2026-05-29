@@ -32,11 +32,26 @@ export type RequestStatus =
   | "refusee"
   | "archivee";
 
+export type RequestType =
+  | "contact"
+  | "residence"
+  | "coworking"
+  | "reservation"
+  | "evenement"
+  | "partenariat"
+  | "benevolat"
+  | "presse"
+  | "autre";
+
+export type RequestPriority = "haute" | "normale" | "basse";
+
 export interface IncomingRequest {
   id: string;
   organization_id: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
+  organization_ext: string | null;
   type: string | null;
   status: RequestStatus;
   priority: string;

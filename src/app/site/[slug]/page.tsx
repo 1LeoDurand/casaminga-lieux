@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getPublicSiteBySlug } from "@/lib/data";
+import { PublicContactForm } from "@/components/mc/public-contact-form";
 
 export async function generateMetadata({
   params,
@@ -99,27 +100,7 @@ export default async function PublicSitePage({
             Résidence, réservation, partenariat, bénévolat… Votre message arrive
             directement à l&apos;équipe.
           </p>
-          <form className="mt-6 grid gap-4 sm:grid-cols-2">
-            <input
-              placeholder="Votre nom"
-              className="rounded-lg border border-input bg-cream px-3 py-2 text-sm outline-none focus:border-coral"
-            />
-            <input
-              placeholder="Votre email"
-              className="rounded-lg border border-input bg-cream px-3 py-2 text-sm outline-none focus:border-coral"
-            />
-            <textarea
-              placeholder="Votre message"
-              rows={4}
-              className="rounded-lg border border-input bg-cream px-3 py-2 text-sm outline-none focus:border-coral sm:col-span-2"
-            />
-            <button
-              type="button"
-              className="justify-self-start rounded-lg bg-coral px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark sm:col-span-2"
-            >
-              Envoyer (branché à Supabase en v1.x)
-            </button>
-          </form>
+          <PublicContactForm slug={slug} />
         </div>
       </section>
 
