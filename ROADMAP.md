@@ -32,6 +32,13 @@ Site public → formulaire → création d'une demande → affichage dans le das
 - Page Demandes (`/dashboard/bernard-kohn/demandes`) : liste, détail, changement de statut,
   marquer traitée, archiver, toasts.
 
+### v1.2 — flux Demandes sur Supabase réel ✅
+Le même flux tourne sur la vraie table `requests` (plus de fallback démo une fois `.env.local` renseigné).
+- Migration `0001_init_socle.sql` + `seed.sql` appliqués via SQL Editor ; `verify.sql` (lecture seule).
+- Auth réelle (`/login`) + appartenance `organization_members` (rôle `admin`) → lecture dashboard filtrée par RLS (`is_org_member`).
+- Insertion publique anonyme via la policy `requests_insert_from_public_site` ; `id` généré côté serveur,
+  pas de `.select()` de retour (aucune policy SELECT pour l'anonyme). Aucune clé `service_role` côté front.
+
 ### Prochaines versions (ordre MVP)
 Personnes → Espaces → Réservations → Résidences → Événements → modules Gestion / Rayonnement / Collectif.
 Chaque table métier reste liée à `organization_id` avec RLS.
@@ -70,5 +77,6 @@ Historique des versions :
 
 | Version | Tag             | Commit    | Archive (figée sur le tag)                       |
 | ------- | --------------- | --------- | ------------------------------------------------ |
-| v1.0    | `v1.0-socle`    | `77fc3d4` | incluse dans l'historique Git / push GitHub      |
-| v1.1    | `v1.1-demandes` | `7162543` | `archives\casa-minga-lieux-v1.1-demandes.zip`    |
+| v1.0    | `v1.0-socle`            | `77fc3d4` | incluse dans l'historique Git / push GitHub              |
+| v1.1    | `v1.1-demandes`         | `7162543` | `archives\casa-minga-lieux-v1.1-demandes.zip`            |
+| v1.2    | `v1.2-supabase-demandes`| `72e06a4` | `archives\casa-minga-lieux-v1.2-supabase-demandes.zip`   |
