@@ -57,11 +57,28 @@ aucune modification du socle Supabase/auth/RLS : le flux Demandes v1.2 reste int
   carte « Demandes récentes » (données réelles). Les modules non encore construits annoncent
   leur arrivée via toast (pas de lien mort).
 
+### v1.4 — module Demandes fidèle (UI Claude Design + Supabase) ✅
+Premier module reconstruit selon le plan ([`docs/PLAN_RECONSTRUCTION.md`](docs/PLAN_RECONSTRUCTION.md)) ;
+sert de **modèle de portage** pour tous les modules suivants. **Couche visuelle + UI** — la table
+`requests` (v1.2) et la RLS restent intactes.
+- **Primitives `mc-*` réutilisables** ajoutées à `globals.css` : `mc-kpi-grid`/`mc-stat`
+  (stat-cards), `mc-input`/`mc-search`, `mc-chip`/`mc-filter-row` (filtres), `mc-table`,
+  `mc-empty`, `mc-skeleton`, `mc-drawer`, `mc-confirm`.
+- **Écran Demandes** (`requests-view.tsx`) : en-tête fidèle (`PageHeader`), **5 KPIs réels**
+  (ouvertes, urgentes, cette semaine, en attente, traitées), toolbar (recherche live + export
+  CSV + reset), **filtres à chips** (type/statut/priorité), **table** clic → **drawer détail**
+  (contact, message, changement de statut, marquer traitée), **dialogue de confirmation**
+  (`confirm-dialog.tsx`) avant archivage.
+- **4 états couverts** : vide (`mc-empty`), loading (`loading.tsx` skeleton), erreur
+  (`error.tsx`, frontière + Réessayer), succès (toasts `sonner`).
+- **Supabase** : aucune nouvelle table ; lecture par RLS (`getRequestsForOrg`), maj de statut
+  via server action ; jamais de `service_role` côté front. `requests-board.tsx` supprimé (remplacé).
+
 ### Prochaines versions (ordre MVP)
-Demandes (refonte fidèle UI + Supabase) → Personnes → Espaces → Réservations → Résidences →
-Événements → modules Structure / Publication / Système. Chaque module = **une version**, livré
-avec UI fidèle **et** liaison Supabase ensemble. Chaque table métier reste liée à
-`organization_id` avec RLS.
+Personnes → Espaces → Réservations → Résidences → Événements → modules Structure / Publication /
+Système. Chaque module = **une version**, livré avec UI fidèle **et** liaison Supabase ensemble.
+Chaque table métier reste liée à `organization_id` avec RLS. Détail dans
+[`docs/PLAN_RECONSTRUCTION.md`](docs/PLAN_RECONSTRUCTION.md).
 
 ### Règle de versioning (STRICTE)
 
@@ -101,3 +118,4 @@ Historique des versions :
 | v1.1    | `v1.1-demandes`         | `7162543` | `archives\casa-minga-lieux-v1.1-demandes.zip`            |
 | v1.2    | `v1.2-supabase-demandes`| `72e06a4` | `archives\casa-minga-lieux-v1.2-supabase-demandes.zip`   |
 | v1.3    | `v1.3-ui-kit-shell`     | `968da11` | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
+| v1.4    | `v1.4-demandes`         | `_à venir_` | `archives\casa-minga-lieux-v1.4-demandes.zip`          |

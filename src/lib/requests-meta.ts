@@ -31,6 +31,22 @@ export const SELECTABLE_STATUSES: { value: RequestStatus; label: string }[] = [
   { value: "refusee", label: "Refusée" },
 ];
 
+/** Tous les statuts (chips de filtre), inclut l'archivage. */
+export const ALL_STATUSES: { value: RequestStatus; label: string }[] = [
+  ...SELECTABLE_STATUSES,
+  { value: "archivee", label: "Archivée" },
+];
+
+/** Statuts considérés « ouverts » (à traiter). */
+export const OPEN_STATUSES: RequestStatus[] = ["nouvelle", "etudier", "attente"];
+
+/** Priorités (chips de filtre). */
+export const PRIORITIES: { value: RequestPriority; label: string }[] = [
+  { value: "haute", label: "Haute" },
+  { value: "normale", label: "Normale" },
+  { value: "basse", label: "Basse" },
+];
+
 export const PRIORITY_META: Record<
   RequestPriority,
   { label: string; className: string }

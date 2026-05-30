@@ -392,3 +392,118 @@
 .mc-nav-badge.danger { background: var(--coral); }
 .mc-nav-badge.soon { background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.5); font-weight: 600; }
 .mc-nav-item.active .mc-nav-badge { background: rgba(0, 0, 0, 0.25); color: #fff; }
+
+/* ════════════════════════════════════════════════════════════
+   v1.4 Demandes — primitives réutilisables (modèle de portage)
+   stat-cards · toolbar/chips · table · empty · skeleton · drawer
+   · confirm. Réemployées ensuite par tous les modules suivants.
+   ════════════════════════════════════════════════════════════ */
+
+/* ─── Grille de stat-cards (port de .kpi-grid/.kpi-card) ─── */
+.mc-kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+@media (max-width: 1280px) { .mc-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 720px) { .mc-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.mc-stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 3px 16px rgba(255, 138, 101, 0.06);
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+.mc-stat:hover { transform: translateY(-2px); border-color: var(--peach); box-shadow: 0 10px 28px rgba(255, 138, 101, 0.12); }
+.mc-stat-val { font-family: var(--font-poppins), sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -1px; color: #2c2c2c; line-height: 1; }
+.mc-stat-lbl { font-size: 11px; color: var(--warmgray); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 6px; font-weight: 600; }
+.mc-stat-chg { font-size: 11px; margin-top: 8px; font-weight: 600; color: var(--warmgray); }
+.mc-stat-chg.up { color: #2f8a4c; }
+.mc-stat-chg.warn { color: var(--coral-dark); }
+
+/* ─── Toolbar : recherche + chips de filtre ─── */
+.mc-input {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 13px;
+  padding: 10px 13px;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mc-input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255, 138, 101, 0.12); }
+.mc-search { position: relative; flex: 1; min-width: 240px; }
+.mc-search-ic { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--warmgray); pointer-events: none; display: flex; }
+.mc-search .mc-input { padding-left: 38px; }
+.mc-filter-row { display: flex; align-items: center; gap: 10px; padding-top: 12px; flex-wrap: wrap; }
+.mc-filter-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warmgray); min-width: 64px; }
+.mc-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.mc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1.5px solid var(--peach);
+  background: var(--cream);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mc-chip:hover { border-color: var(--coral); color: var(--coral-dark); }
+.mc-chip.active { background: var(--coral); color: #fff; border-color: var(--coral); }
+
+/* ─── Table ─── */
+.mc-table-wrap { overflow-x: auto; }
+.mc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mc-table thead th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--warmgray);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--gray-light);
+  white-space: nowrap;
+}
+.mc-table tbody td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.mc-table tbody tr { cursor: pointer; transition: background 0.15s; }
+.mc-table tbody tr:hover { background: var(--peach-pale); }
+.mc-table tbody tr:last-child td { border-bottom: none; }
+
+/* ─── État vide ─── */
+.mc-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 56px 24px; text-align: center; color: var(--warmgray); }
+.mc-empty-ic { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: var(--peach-pale); color: var(--coral-dark); }
+.mc-empty-title { font-family: var(--font-poppins), sans-serif; font-weight: 600; font-size: 15px; color: #2c2c2c; }
+.mc-empty-sub { font-size: 13px; max-width: 360px; }
+
+/* ─── Skeleton (loading) ─── */
+.mc-skeleton { background: linear-gradient(90deg, var(--gray-light) 25%, #f3ece7 37%, var(--gray-light) 63%); background-size: 400% 100%; animation: mcSkeleton 1.4s ease infinite; border-radius: 8px; }
+@keyframes mcSkeleton { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* ─── Drawer latéral (fiche détail) ─── */
+.mc-drawer-ov { position: fixed; inset: 0; z-index: 50; background: rgba(44, 44, 44, 0.4); backdrop-filter: blur(3px); }
+.mc-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 51;
+  height: 100%;
+  width: 100%;
+  max-width: 440px;
+  background: var(--cream);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: mcDrawerIn 0.22s ease;
+}
+@keyframes mcDrawerIn { from { transform: translateX(24px); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+
+/* ─── Dialogue de confirmation ─── */
+.mc-confirm-ov { position: fixed; inset: 0; z-index: 60; background: rgba(44, 44, 44, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.mc-confirm { background: var(--cream); border-radius: 20px; width: 100%; max-width: 400px; padding: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); animation: mcDrawerIn 0.18s ease; }

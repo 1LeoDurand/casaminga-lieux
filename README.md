@@ -20,6 +20,13 @@ Chaque lieu est une **organisation** ; toutes les données métier sont rattach�
 > groupement officiel Pilotage / Gestion du lieu / Structure / Publication / Système, topbar,
 > cockpit « Vue d'ensemble »). **Couche purement visuelle** : le socle Supabase/auth/RLS et le
 > flux Demandes v1.2 restent intacts. Les modules à venir s'annoncent par toast (pas de lien mort).
+>
+> **v1.4 — module Demandes fidèle (UI Claude Design + Supabase).** Premier module reconstruit
+> selon [`docs/PLAN_RECONSTRUCTION.md`](docs/PLAN_RECONSTRUCTION.md) ; **modèle de portage** des
+> modules suivants. Nouvelle vue Demandes (`requests-view.tsx`) : 5 KPIs réels, toolbar
+> (recherche + export CSV), filtres à chips (type/statut/priorité), table → drawer détail,
+> confirmation avant archivage. Primitives `mc-*` réutilisables (table, chips, stat-cards, empty,
+> skeleton, drawer, confirm) + états vide/loading/erreur/succès. Table `requests` et RLS inchangées.
 
 ---
 
