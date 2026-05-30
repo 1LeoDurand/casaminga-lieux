@@ -160,4 +160,4 @@ Historique des versions :
 | v1.3    | `v1.3-ui-kit-shell`     | `968da11` | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
 | v1.4    | `v1.4-demandes`         | `3356b68` | `archives\casa-minga-lieux-v1.4-demandes.zip`            |
 | v1.5    | `v1.5-personnes`        | `72459c1` | `archives\casa-minga-lieux-v1.5-personnes.zip`          |
-| v1.6    | `v1.6-espaces`          | _à venir_ | `archives\casa-minga-lieux-v1.6-espaces.zip`            |
+| v1.6    | `v1.6-espaces`          | `fed88f1` | `archives\casa-minga-lieux-v1.6-espaces.zip`            |
