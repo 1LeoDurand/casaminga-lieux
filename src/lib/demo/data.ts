@@ -1,4 +1,4 @@
-import type { IncomingRequest, Organization, PublicSite } from "@/lib/types";
+import type { IncomingRequest, Organization, Person, PublicSite } from "@/lib/types";
 
 /**
  * Données de démonstration — Tiers-lieu Bernard Kohn.
@@ -80,6 +80,89 @@ export const DEMO_REQUESTS: IncomingRequest[] = [
     summary: "Proposition de partenariat sur la programmation jeunesse",
     message: "Nous aimerions échanger sur un partenariat autour des ateliers jeunesse.",
     received_at: "2026-05-15",
+  },
+];
+
+const NOW = "2026-05-20T09:00:00.000Z";
+
+export const DEMO_PERSONS: Person[] = [
+  {
+    id: "c1111111-1111-4111-8111-111111111111",
+    organization_id: BK_ORG_ID,
+    name: "Camille Aubry",
+    email: "camille.aubry@example.org",
+    phone: "+33 6 12 34 56 78",
+    role: "resident",
+    status: "actif",
+    tags: ["céramique", "résidence"],
+    notes: "Céramiste en résidence à l'automne.",
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: "c2222222-2222-4222-8222-222222222222",
+    organization_id: BK_ORG_ID,
+    name: "Sofiane Merabet",
+    email: "sofiane.merabet@example.org",
+    phone: "+33 6 23 45 67 89",
+    role: "coworker",
+    status: "actif",
+    tags: ["design", "abonné"],
+    notes: "Coworker régulier, poste fixe.",
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: "c3333333-3333-4333-8333-333333333333",
+    organization_id: BK_ORG_ID,
+    name: "Awa Diop",
+    email: "awa.diop@example.org",
+    phone: null,
+    role: "benevole",
+    status: "actif",
+    tags: ["accueil", "événements"],
+    notes: "Bénévole sur les événements du week-end.",
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: "c4444444-4444-4444-8444-444444444444",
+    organization_id: BK_ORG_ID,
+    name: "Léa Fontaine",
+    email: "lea.fontaine@example.org",
+    phone: "+33 6 34 56 78 90",
+    role: "intervenant",
+    status: "actif",
+    tags: ["atelier", "poterie"],
+    notes: "Intervenante ateliers poterie.",
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: "c5555555-5555-4555-8555-555555555555",
+    organization_id: BK_ORG_ID,
+    name: "Marc Lefèvre",
+    email: "marc.lefevre@example.org",
+    phone: null,
+    role: "prospect",
+    status: "actif",
+    tags: ["prospect"],
+    notes: "A demandé des infos sur le coworking.",
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: "c6666666-6666-4666-8666-666666666666",
+    organization_id: BK_ORG_ID,
+    name: "Hélène Roy",
+    email: "helene.roy@example.org",
+    phone: "+33 6 45 67 89 01",
+    role: "equipe",
+    status: "actif",
+    tags: ["coordination"],
+    notes: "Coordination du lieu.",
+    created_at: NOW,
+    updated_at: NOW,
   },
 ];
 

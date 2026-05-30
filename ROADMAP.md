@@ -74,8 +74,27 @@ sert de **modèle de portage** pour tous les modules suivants. **Couche visuelle
 - **Supabase** : aucune nouvelle table ; lecture par RLS (`getRequestsForOrg`), maj de statut
   via server action ; jamais de `service_role` côté front. `requests-board.tsx` supprimé (remplacé).
 
+### v1.5 — module Personnes (CRM du lieu) ✅
+Deuxième module reconstruit selon le modèle de portage. **Nouvelle table métier + UI fidèle.**
+- **Migration `0002_personnes.sql`** (idempotente) : table `persons` (`organization_id` FK,
+  `name`, `email`, `phone`, `role`, `status`, `tags text[]`, `notes`, timestamps), index
+  `(org, status)` et `(org, role)`, trigger `set_updated_at`, **RLS membre-only**
+  (`persons_member_all` via `is_org_member`). Seed : 6 personnes de démo (`on conflict do nothing`).
+- **Primitives `mc-*`** ajoutées à `globals.css` : `mc-view-toggle`/`mc-view-btn`, `mc-avatar`,
+  `mc-tag`, `mc-cards-grid`/`mc-person-card`, `mc-modal`/`mc-modal-ov`, `mc-form-group`/`mc-textarea`.
+- **Écran Personnes** (`persons-view.tsx`) : `PageHeader` fidèle, **5 KPIs réels** (actives,
+  coworkers, bénévoles, intervenant·es, prospects), toolbar (recherche + **bascule cartes ⇆
+  tableau** + Ajouter + reset), **filtres à chips** (rôle/statut), **grille de cartes** à avatars
+  (initiales + couleur déterministe) **ou** vue tableau, clic → **drawer détail** (contact, tags,
+  notes, Modifier/Supprimer), **formulaire modal** création/édition (`person-form.tsx`),
+  **confirmation** avant suppression. KPI « Membres actifs » du cockpit câblé sur le décompte réel.
+- **4 états couverts** : vide (`mc-empty`), loading (`loading.tsx`), erreur (`error.tsx`),
+  succès (toasts `sonner`).
+- **Supabase** : `getPersonsForOrg` / `createPerson` / `updatePerson` / `deletePerson` (demo ⇆
+  Supabase), server actions avec `revalidatePath` ; jamais de `service_role` côté front.
+
 ### Prochaines versions (ordre MVP)
-Personnes → Espaces → Réservations → Résidences → Événements → modules Structure / Publication /
+Espaces → Réservations → Résidences → Événements → modules Structure / Publication /
 Système. Chaque module = **une version**, livré avec UI fidèle **et** liaison Supabase ensemble.
 Chaque table métier reste liée à `organization_id` avec RLS. Détail dans
 [`docs/PLAN_RECONSTRUCTION.md`](docs/PLAN_RECONSTRUCTION.md).
@@ -119,3 +138,4 @@ Historique des versions :
 | v1.2    | `v1.2-supabase-demandes`| `72e06a4` | `archives\casa-minga-lieux-v1.2-supabase-demandes.zip`   |
 | v1.3    | `v1.3-ui-kit-shell`     | `968da11` | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
 | v1.4    | `v1.4-demandes`         | `3356b68` | `archives\casa-minga-lieux-v1.4-demandes.zip`            |
+| v1.5    | `v1.5-personnes`        | `_à venir_` | `archives\casa-minga-lieux-v1.5-personnes.zip`         |

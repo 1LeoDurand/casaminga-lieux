@@ -25,7 +25,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     modules: [
       { key: "dashboard", label: "Tableau de bord", segment: null, ready: true },
       { key: "demandes", label: "Demandes", segment: "demandes", ready: true },
-      { key: "personnes", label: "Personnes", segment: "personnes", ready: false },
+      { key: "personnes", label: "Personnes", segment: "personnes", ready: true },
       { key: "taches", label: "Tâches & alertes", segment: "taches", ready: false },
     ],
   },

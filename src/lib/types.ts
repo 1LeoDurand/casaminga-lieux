@@ -60,6 +60,32 @@ export interface IncomingRequest {
   received_at: string;
 }
 
+export type PersonRole =
+  | "membre"
+  | "coworker"
+  | "benevole"
+  | "intervenant"
+  | "resident"
+  | "partenaire"
+  | "equipe"
+  | "prospect";
+
+export type PersonStatus = "actif" | "inactif";
+
+export interface Person {
+  id: string;
+  organization_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  status: PersonStatus;
+  tags: string[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PublicSite {
   organization_id: string;
   slug: string;

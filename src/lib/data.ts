@@ -2,13 +2,18 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
+  addDemoPerson,
   addDemoRequest,
+  deleteDemoPerson,
+  getDemoPersons,
   getDemoRequests,
+  updateDemoPerson,
   updateDemoRequestStatus,
 } from "@/lib/demo/store";
 import type {
   IncomingRequest,
   Organization,
+  Person,
   PublicSite,
   RequestStatus,
 } from "@/lib/types";
@@ -137,5 +142,68 @@ export async function updateRequestStatus(
     .from("requests")
     .update({ status })
     .eq("id", id);
+  return !error;
+}
+
+// ════════════════════════════════════════════════════════════
+// PERSONNES (CRM) — démo ⇆ Supabase (isolation par RLS)
+// ════════════════════════════════════════════════════════════
+
+export async function getPersonsForOrg(orgId: string): Promise<Person[]> {
+  if (!isSupabaseConfigured()) return getDemoPersons(orgId);
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("persons")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface PersonInput {
+  organization_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  status: Person["status"];
+  tags: string[];
+  notes: string | null;
+}
+
+/** Crée une personne. Membre uniquement (RLS). */
+export async function createPerson(input: PersonInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return addDemoPerson(input) !== null;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("persons").insert(input);
+  if (error) console.error("createPerson: échec insertion Supabase", error);
+  return !error;
+}
+
+/** Met à jour une personne (champs éditables). */
+export async function updatePerson(
+  id: string,
+  patch: Partial<PersonInput>
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return updateDemoPerson(id, patch) !== null;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("persons").update(patch).eq("id", id);
+  if (error) console.error("updatePerson: échec maj Supabase", error);
+  return !error;
+}
+
+/** Supprime une personne. */
+export async function deletePerson(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return deleteDemoPerson(id);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("persons").delete().eq("id", id);
+  if (error) console.error("deletePerson: échec suppression Supabase", error);
   return !error;
 }

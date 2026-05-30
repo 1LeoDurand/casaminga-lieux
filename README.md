@@ -27,6 +27,15 @@ Chaque lieu est une **organisation** ; toutes les données métier sont rattach�
 > (recherche + export CSV), filtres à chips (type/statut/priorité), table → drawer détail,
 > confirmation avant archivage. Primitives `mc-*` réutilisables (table, chips, stat-cards, empty,
 > skeleton, drawer, confirm) + états vide/loading/erreur/succès. Table `requests` et RLS inchangées.
+>
+> **v1.5 — module Personnes (CRM du lieu).** Deuxième module reconstruit selon le modèle de
+> portage. Nouvelle table `persons` (migration idempotente `0002_personnes.sql`, RLS membre-only)
+> et vue `persons-view.tsx` : 5 KPIs réels, bascule **cartes ⇆ tableau**, recherche, filtres à
+> chips (rôle/statut), grille de cartes à avatars (initiales + couleur déterministe), drawer
+> détail (contact, tags, notes), formulaire modal de création/édition, confirmation avant
+> suppression. KPI « Membres actifs » du cockpit câblé sur le décompte réel. Primitives `mc-*`
+> ajoutées (view-toggle, avatar, tag, cards-grid, person-card, modal, form-group) + états
+> vide/loading/erreur/succès.
 
 ---
 

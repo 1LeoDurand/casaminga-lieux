@@ -6,7 +6,7 @@ import { KpiTile } from "@/components/mc/kpi-tile";
 import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
 import { StatusBadge } from "@/components/mc/status-badge";
-import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
+import { getOrganizationBySlug, getPersonsForOrg, getRequestsForOrg } from "@/lib/data";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -34,11 +34,15 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const requests = await getRequestsForOrg(organization.id);
+  const [requests, persons] = await Promise.all([
+    getRequestsForOrg(organization.id),
+    getPersonsForOrg(organization.id),
+  ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   );
   const recent = requests.slice(0, 5);
+  const activeMembers = persons.filter((p) => p.status === "actif").length;
 
   const now = new Date();
   const dayLabel = new Intl.DateTimeFormat("fr-FR", {
@@ -90,10 +94,9 @@ export default async function DashboardOverview({
           icon={<Users className="size-[18px]" />}
           iconBg="#e5f4f7"
           iconColor="#0a6b78"
-          value="24"
+          value={activeMembers}
           caption="Membres actifs"
-          trend="↑ 2 ce mois"
-          trendTone="up"
+          trend="dans le CRM"
         />
         <KpiTile
           icon={<Inbox className="size-[18px]" />}

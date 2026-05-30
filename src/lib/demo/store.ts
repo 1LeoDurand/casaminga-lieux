@@ -1,5 +1,5 @@
-import { DEMO_REQUESTS } from "@/lib/demo/data";
-import type { IncomingRequest, RequestStatus } from "@/lib/types";
+import { DEMO_PERSONS, DEMO_REQUESTS } from "@/lib/demo/data";
+import type { IncomingRequest, Person, RequestStatus } from "@/lib/types";
 
 /**
  * Store mutable en mémoire pour le MODE DÉMO uniquement.
@@ -14,6 +14,7 @@ import type { IncomingRequest, RequestStatus } from "@/lib/types";
 
 const globalForDemo = globalThis as unknown as {
   __cmRequests?: IncomingRequest[];
+  __cmPersons?: Person[];
 };
 
 function store(): IncomingRequest[] {
@@ -59,4 +60,45 @@ export function updateDemoRequestStatus(
   if (!found) return null;
   found.status = status;
   return found;
+}
+
+// ── Personnes (mode démo) ───────────────────────────────────
+function personStore(): Person[] {
+  if (!globalForDemo.__cmPersons) {
+    globalForDemo.__cmPersons = DEMO_PERSONS.map((p) => ({ ...p, tags: [...p.tags] }));
+  }
+  return globalForDemo.__cmPersons;
+}
+
+export function getDemoPersons(orgId: string): Person[] {
+  return personStore()
+    .filter((p) => p.organization_id === orgId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function addDemoPerson(
+  input: Omit<Person, "id" | "created_at" | "updated_at">
+): Person {
+  const now = new Date().toISOString();
+  const created: Person = { ...input, id: `person-${Date.now()}`, created_at: now, updated_at: now };
+  personStore().unshift(created);
+  return created;
+}
+
+export function updateDemoPerson(
+  id: string,
+  patch: Partial<Omit<Person, "id" | "organization_id" | "created_at">>
+): Person | null {
+  const found = personStore().find((p) => p.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() });
+  return found;
+}
+
+export function deleteDemoPerson(id: string): boolean {
+  const arr = personStore();
+  const i = arr.findIndex((p) => p.id === id);
+  if (i === -1) return false;
+  arr.splice(i, 1);
+  return true;
 }

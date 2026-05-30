@@ -507,3 +507,73 @@
 /* ─── Dialogue de confirmation ─── */
 .mc-confirm-ov { position: fixed; inset: 0; z-index: 60; background: rgba(44, 44, 44, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .mc-confirm { background: var(--cream); border-radius: 20px; width: 100%; max-width: 400px; padding: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); animation: mcDrawerIn 0.18s ease; }
+
+/* ════════════════════════════════════════════════════════════
+   v1.5 Personnes — primitives réutilisables
+   view-toggle · avatar · tag · cards-grid · modal · form
+   ════════════════════════════════════════════════════════════ */
+
+/* ─── Bascule de vue (cartes / table) ─── */
+.mc-view-toggle { display: inline-flex; gap: 0; background: var(--peach-pale); border-radius: 12px; padding: 3px; }
+.mc-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warmgray);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mc-view-btn.active { background: #fff; color: var(--coral-dark); box-shadow: 0 2px 8px rgba(255, 138, 101, 0.18); }
+
+/* ─── Avatar (initiales, couleur déterministe) ─── */
+.mc-avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-family: var(--font-poppins), sans-serif; font-weight: 700; color: #fff; flex-shrink: 0; line-height: 1; }
+
+/* ─── Étiquette (tag) ─── */
+.mc-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 100px; font-size: 10.5px; font-weight: 600; background: var(--peach-pale); color: var(--coral-dark); border: 1px solid var(--peach); }
+
+/* ─── Grille de cartes ─── */
+.mc-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; padding: 16px; }
+.mc-person-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+.mc-person-card:hover { transform: translateY(-2px); border-color: var(--peach); box-shadow: 0 10px 26px rgba(255, 138, 101, 0.12); }
+
+/* ─── Modal (formulaire) ─── */
+.mc-modal-ov { position: fixed; inset: 0; z-index: 60; background: rgba(44, 44, 44, 0.5); backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; }
+.mc-modal { background: var(--cream); border-radius: 20px; width: 100%; max-width: 520px; padding: 28px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28); animation: mcDrawerIn 0.2s ease; }
+
+/* ─── Formulaire ─── */
+.mc-form-group { display: flex; flex-direction: column; gap: 5px; }
+.mc-form-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warmgray); }
+.mc-textarea {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: 13px;
+  padding: 10px 13px;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+  resize: vertical;
+  min-height: 84px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.mc-textarea:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255, 138, 101, 0.12); }
+select.mc-input { cursor: pointer; }
