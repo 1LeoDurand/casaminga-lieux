@@ -138,4 +138,4 @@ Historique des versions :
 | v1.2    | `v1.2-supabase-demandes`| `72e06a4` | `archives\casa-minga-lieux-v1.2-supabase-demandes.zip`   |
 | v1.3    | `v1.3-ui-kit-shell`     | `968da11` | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
 | v1.4    | `v1.4-demandes`         | `3356b68` | `archives\casa-minga-lieux-v1.4-demandes.zip`            |
-| v1.5    | `v1.5-personnes`        | `_à venir_` | `archives\casa-minga-lieux-v1.5-personnes.zip`         |
+| v1.5    | `v1.5-personnes`        | `72459c1` | `archives\casa-minga-lieux-v1.5-personnes.zip`          |
