@@ -6,7 +6,7 @@ import { KpiTile } from "@/components/mc/kpi-tile";
 import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
 import { StatusBadge } from "@/components/mc/status-badge";
-import { getOrganizationBySlug, getPersonsForOrg, getRequestsForOrg } from "@/lib/data";
+import { getOrganizationBySlug, getPersonsForOrg, getRequestsForOrg, getSpacesForOrg } from "@/lib/data";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -34,15 +34,17 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons] = await Promise.all([
+  const [requests, persons, spaces] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
+    getSpacesForOrg(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   );
   const recent = requests.slice(0, 5);
   const activeMembers = persons.filter((p) => p.status === "actif").length;
+  const availableSpaces = spaces.filter((s) => s.status === "disponible").length;
 
   const now = new Date();
   const dayLabel = new Intl.DateTimeFormat("fr-FR", {
@@ -86,9 +88,10 @@ export default async function DashboardOverview({
           icon={<Building2 className="size-[18px]" />}
           iconBg="#e8f5ee"
           iconColor="#2f8a4c"
-          value="75 %"
-          caption="Taux d'occupation"
-          trend="6 bureaux / 8"
+          value={spaces.length}
+          caption="Espaces au catalogue"
+          trend={`${availableSpaces} disponible${availableSpaces > 1 ? "s" : ""}`}
+          href={`/dashboard/${organization.slug}/espaces`}
         />
         <KpiTile
           icon={<Users className="size-[18px]" />}

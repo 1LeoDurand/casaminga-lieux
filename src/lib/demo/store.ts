@@ -1,5 +1,5 @@
-import { DEMO_PERSONS, DEMO_REQUESTS } from "@/lib/demo/data";
-import type { IncomingRequest, Person, RequestStatus } from "@/lib/types";
+import { DEMO_PERSONS, DEMO_REQUESTS, DEMO_SPACES } from "@/lib/demo/data";
+import type { IncomingRequest, Person, RequestStatus, Space } from "@/lib/types";
 
 /**
  * Store mutable en mémoire pour le MODE DÉMO uniquement.
@@ -15,6 +15,7 @@ import type { IncomingRequest, Person, RequestStatus } from "@/lib/types";
 const globalForDemo = globalThis as unknown as {
   __cmRequests?: IncomingRequest[];
   __cmPersons?: Person[];
+  __cmSpaces?: Space[];
 };
 
 function store(): IncomingRequest[] {
@@ -98,6 +99,47 @@ export function updateDemoPerson(
 export function deleteDemoPerson(id: string): boolean {
   const arr = personStore();
   const i = arr.findIndex((p) => p.id === id);
+  if (i === -1) return false;
+  arr.splice(i, 1);
+  return true;
+}
+
+// ── Espaces (mode démo) ─────────────────────────────────────
+function spaceStore(): Space[] {
+  if (!globalForDemo.__cmSpaces) {
+    globalForDemo.__cmSpaces = DEMO_SPACES.map((s) => ({ ...s, photos: [...s.photos] }));
+  }
+  return globalForDemo.__cmSpaces;
+}
+
+export function getDemoSpaces(orgId: string): Space[] {
+  return spaceStore()
+    .filter((s) => s.organization_id === orgId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function addDemoSpace(
+  input: Omit<Space, "id" | "created_at" | "updated_at">
+): Space {
+  const now = new Date().toISOString();
+  const created: Space = { ...input, id: `space-${Date.now()}`, created_at: now, updated_at: now };
+  spaceStore().unshift(created);
+  return created;
+}
+
+export function updateDemoSpace(
+  id: string,
+  patch: Partial<Omit<Space, "id" | "organization_id" | "created_at">>
+): Space | null {
+  const found = spaceStore().find((s) => s.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() });
+  return found;
+}
+
+export function deleteDemoSpace(id: string): boolean {
+  const arr = spaceStore();
+  const i = arr.findIndex((s) => s.id === id);
   if (i === -1) return false;
   arr.splice(i, 1);
   return true;

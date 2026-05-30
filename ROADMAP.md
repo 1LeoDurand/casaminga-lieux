@@ -93,8 +93,29 @@ Deuxième module reconstruit selon le modèle de portage. **Nouvelle table méti
 - **Supabase** : `getPersonsForOrg` / `createPerson` / `updatePerson` / `deletePerson` (demo ⇆
   Supabase), server actions avec `revalidatePath` ; jamais de `service_role` côté front.
 
+### v1.6 — module Espaces (catalogue du lieu) ✅
+Troisième module reconstruit selon le modèle de portage. **Nouvelle table métier + UI fidèle.**
+- **Migration `0003_espaces.sql`** (idempotente) : table `spaces` (`organization_id` FK, `name`,
+  `type`, `capacity`, `area`, `price_hour`, `price_day`, `description`, `photos text[]`, `status`,
+  timestamps), index `(org, status)` et `(org, type)`, trigger `set_updated_at`, **RLS membre-only**
+  (`spaces_member_all` via `is_org_member`). Seed : 5 espaces de démo (`on conflict do nothing`).
+- **Primitives `mc-*`** ajoutées à `globals.css` : `mc-space-card`, `mc-space-cover`(+placeholder),
+  `mc-space-badges`, `mc-space-body`, `mc-space-meta`/`mc-space-meta-item`, `mc-space-price`,
+  `mc-space-hero`.
+- **Écran Espaces** (`spaces-view.tsx`) : `PageHeader` fidèle, **5 KPIs réels** (espaces,
+  disponibles, capacité totale, surface m², en maintenance), toolbar (recherche + **bascule cartes
+  ⇆ tableau** + Ajouter + reset), **filtres à chips** (type/statut), **grille de cartes** à
+  couverture photo (ou dégradé à initiales, badges superposés) **ou** vue tableau, clic → **drawer
+  détail** (hero photo, capacité/surface/tarifs, description, Modifier/Supprimer), **formulaire
+  modal** création/édition (`space-form.tsx`), **confirmation** avant suppression. Tuile KPI du
+  cockpit « Espaces au catalogue » câblée sur le décompte réel.
+- **4 états couverts** : vide (`mc-empty`), loading (`loading.tsx`), erreur (`error.tsx`),
+  succès (toasts `sonner`).
+- **Supabase** : `getSpacesForOrg` / `createSpace` / `updateSpace` / `deleteSpace` (demo ⇆
+  Supabase), server actions avec `revalidatePath` ; jamais de `service_role` côté front.
+
 ### Prochaines versions (ordre MVP)
-Espaces → Réservations → Résidences → Événements → modules Structure / Publication /
+Réservations → Résidences → Événements → modules Structure / Publication /
 Système. Chaque module = **une version**, livré avec UI fidèle **et** liaison Supabase ensemble.
 Chaque table métier reste liée à `organization_id` avec RLS. Détail dans
 [`docs/PLAN_RECONSTRUCTION.md`](docs/PLAN_RECONSTRUCTION.md).
@@ -139,3 +160,4 @@ Historique des versions :
 | v1.3    | `v1.3-ui-kit-shell`     | `968da11` | `archives\casa-minga-lieux-v1.3-ui-kit-shell.zip`        |
 | v1.4    | `v1.4-demandes`         | `3356b68` | `archives\casa-minga-lieux-v1.4-demandes.zip`            |
 | v1.5    | `v1.5-personnes`        | `72459c1` | `archives\casa-minga-lieux-v1.5-personnes.zip`          |
+| v1.6    | `v1.6-espaces`          | _à venir_ | `archives\casa-minga-lieux-v1.6-espaces.zip`            |

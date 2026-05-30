@@ -36,6 +36,16 @@ Chaque lieu est une **organisation** ; toutes les données métier sont rattach�
 > suppression. KPI « Membres actifs » du cockpit câblé sur le décompte réel. Primitives `mc-*`
 > ajoutées (view-toggle, avatar, tag, cards-grid, person-card, modal, form-group) + états
 > vide/loading/erreur/succès.
+>
+> **v1.6 — module Espaces (catalogue du lieu).** Troisième module reconstruit selon le modèle de
+> portage. Nouvelle table `spaces` (migration idempotente `0003_espaces.sql`, RLS membre-only) et
+> vue `spaces-view.tsx` : 5 KPIs réels (total, disponibles, capacité totale, surface, maintenance),
+> bascule **cartes ⇆ tableau**, recherche, filtres à chips (type/statut), grille de cartes à
+> couverture photo (ou dégradé à initiales), drawer détail (capacité, surface, tarifs h/j,
+> description), formulaire modal de création/édition, confirmation avant suppression. Tuile KPI du
+> cockpit « Espaces au catalogue » câblée sur le décompte réel. Primitives `mc-*` ajoutées
+> (space-card, space-cover, space-badges, space-meta, space-price, space-hero) + états
+> vide/loading/erreur/succès.
 
 ---
 
@@ -172,7 +182,7 @@ src/
     data.ts                      # accès données (démo ⇆ Supabase) + create/update requests
     requests-meta.ts             # types de demande, statuts, priorités (libellés)
     types.ts                     # types métier alignés sur la migration
-    modules.ts                   # 18 modules ("dashboard" + "demandes" actifs)
+    modules.ts                   # 18 modules ("dashboard", "demandes", "personnes", "espaces" actifs)
 supabase/
   migrations/0001_init_socle.sql # organizations, profiles, organization_members, public_sites, requests + RLS
   seed.sql                       # organisation démo Bernard Kohn

@@ -577,3 +577,66 @@
 }
 .mc-textarea:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255, 138, 101, 0.12); }
 select.mc-input { cursor: pointer; }
+
+/* ════════════════════════════════════════════════════════════
+   v1.6 Espaces — primitives réutilisables
+   carte à photo · cover · méta (capacité / tarif)
+   ════════════════════════════════════════════════════════════ */
+
+/* ─── Carte espace (photo + infos) ─── */
+.mc-space-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s;
+}
+.mc-space-card:hover { transform: translateY(-2px); border-color: var(--peach); box-shadow: 0 10px 26px rgba(255, 138, 101, 0.12); }
+
+/* ─── Photo de couverture (avec placeholder dégradé) ─── */
+.mc-space-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mc-space-cover-ph {
+  background: linear-gradient(135deg, var(--peach-pale), var(--peach));
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.mc-space-cover .mc-space-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mc-space-body { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px; }
+
+/* ─── Ligne de méta (capacité · surface · tarif) ─── */
+.mc-space-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: var(--warmgray); }
+.mc-space-meta-item { display: inline-flex; align-items: center; gap: 5px; }
+.mc-space-price { font-family: var(--font-poppins), sans-serif; font-weight: 700; font-size: 13px; color: var(--coral-dark); }
+
+/* ─── Grande photo dans le drawer détail ─── */
+.mc-space-hero {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  background-size: cover;
+  background-position: center;
+}

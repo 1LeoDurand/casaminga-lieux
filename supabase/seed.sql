@@ -76,6 +76,32 @@ values
    'equipe', 'actif', array['coordination'], 'Coordination du lieu.')
 on conflict (id) do nothing;
 
+-- Espaces de démonstration (catalogue) — UUID fixes pour des liens stables
+insert into public.spaces
+  (id, organization_id, name, type, capacity, area, price_hour, price_day, description, photos, status)
+values
+  ('d1111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'Grande Salle', 'salle', 60, 85.0, 35.0, 220.0,
+   'Vaste salle lumineuse pour expositions, assemblées et événements.',
+   array['https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=60'], 'disponible'),
+  ('d2222222-2222-4222-8222-222222222222', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'Atelier Céramique', 'atelier', 12, 40.0, 18.0, 110.0,
+   'Atelier équipé (four, tours) dédié à la céramique et à la poterie.',
+   array['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=60'], 'disponible'),
+  ('d3333333-3333-4333-8333-333333333333', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'Bureau partagé', 'bureau', 8, 30.0, 6.0, 40.0,
+   'Espace de coworking avec postes fixes et nomades, fibre et café.',
+   array['https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800&q=60'], 'disponible'),
+  ('d4444444-4444-4444-8444-444444444444', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'Jardin & Terrasse', 'exterieur', 40, 120.0, null, 150.0,
+   'Espace extérieur arboré pour marchés, repas partagés et concerts.',
+   array['https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=60'], 'disponible'),
+  ('d5555555-5555-4555-8555-555555555555', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'Salle de réunion', 'salle', 10, 22.0, 12.0, 75.0,
+   'Petite salle pour réunions, ateliers et rendez-vous partenaires.',
+   array[]::text[], 'maintenance')
+on conflict (id) do nothing;
+
 -- ────────────────────────────────────────────────────────────
 -- Pour devenir membre admin du lieu démo :
 -- 1) crée ton compte via l'app (login),

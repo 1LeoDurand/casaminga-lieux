@@ -4,11 +4,15 @@ import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
   addDemoPerson,
   addDemoRequest,
+  addDemoSpace,
   deleteDemoPerson,
+  deleteDemoSpace,
   getDemoPersons,
   getDemoRequests,
+  getDemoSpaces,
   updateDemoPerson,
   updateDemoRequestStatus,
+  updateDemoSpace,
 } from "@/lib/demo/store";
 import type {
   IncomingRequest,
@@ -16,6 +20,7 @@ import type {
   Person,
   PublicSite,
   RequestStatus,
+  Space,
 } from "@/lib/types";
 
 /**
@@ -205,5 +210,67 @@ export async function deletePerson(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("persons").delete().eq("id", id);
   if (error) console.error("deletePerson: échec suppression Supabase", error);
+  return !error;
+}
+
+// ── Espaces ─────────────────────────────────────────────────
+export async function getSpacesForOrg(orgId: string): Promise<Space[]> {
+  if (!isSupabaseConfigured()) return getDemoSpaces(orgId);
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("spaces")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface SpaceInput {
+  organization_id: string;
+  name: string;
+  type: string;
+  capacity: number | null;
+  area: number | null;
+  price_hour: number | null;
+  price_day: number | null;
+  description: string | null;
+  photos: string[];
+  status: Space["status"];
+}
+
+/** Crée un espace. Membre uniquement (RLS). */
+export async function createSpace(input: SpaceInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return addDemoSpace(input) !== null;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("spaces").insert(input);
+  if (error) console.error("createSpace: échec insertion Supabase", error);
+  return !error;
+}
+
+/** Met à jour un espace (champs éditables). */
+export async function updateSpace(
+  id: string,
+  patch: Partial<SpaceInput>
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return updateDemoSpace(id, patch) !== null;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("spaces").update(patch).eq("id", id);
+  if (error) console.error("updateSpace: échec maj Supabase", error);
+  return !error;
+}
+
+/** Supprime un espace. */
+export async function deleteSpace(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return deleteDemoSpace(id);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("spaces").delete().eq("id", id);
+  if (error) console.error("deleteSpace: échec suppression Supabase", error);
   return !error;
 }

@@ -86,6 +86,31 @@ export interface Person {
   updated_at: string;
 }
 
+export type SpaceType =
+  | "salle"
+  | "atelier"
+  | "bureau"
+  | "exterieur"
+  | "commun";
+
+export type SpaceStatus = "disponible" | "maintenance" | "masque";
+
+export interface Space {
+  id: string;
+  organization_id: string;
+  name: string;
+  type: string;
+  capacity: number | null;
+  area: number | null;
+  price_hour: number | null;
+  price_day: number | null;
+  description: string | null;
+  photos: string[];
+  status: SpaceStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PublicSite {
   organization_id: string;
   slug: string;
