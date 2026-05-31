@@ -1,0 +1,291 @@
+"use client";
+import { useMemo, useState, useTransition } from "react";
+import { X, Plus, Pencil, Trash2, Gavel, Calendar, User, FileText, Check } from "lucide-react";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/mc/confirm-dialog";
+import {
+  MEETING_TYPES, MEETING_STATUSES, meetingTypeShort, meetingTypeBadge,
+  meetingStatusLabel, meetingStatusBadge, formatDateLong, mandatePeriod,
+} from "@/lib/governance-meta";
+import {
+  createMeetingAction, updateMeetingAction, deleteMeetingAction,
+  createMandateAction, updateMandateAction, deleteMandateAction,
+} from "@/app/(admin)/dashboard/[org]/gouvernance/actions";
+import type { Mandate, Meeting, Person } from "@/lib/types";
+
+type Tab = "reunions" | "mandats";
+
+// ── Modale Réunion ──
+interface MeetingFV { type: Meeting["type"]; title: string; date: string; agenda: string; minutes: string; status: Meeting["status"]; }
+function MeetingModal({ open, meeting, busy, onSubmit, onClose }: {
+  open: boolean; meeting: Meeting | null; busy: boolean; onSubmit: (v: MeetingFV) => void; onClose: () => void;
+}) {
+  const [v, setV] = useState<MeetingFV>({
+    type: meeting?.type ?? "bureau", title: meeting?.title ?? "", date: meeting?.date ?? "",
+    agenda: meeting?.agenda ?? "", minutes: meeting?.minutes ?? "", status: meeting?.status ?? "planifiee",
+  });
+  const [error, setError] = useState<string | null>(null);
+  if (!open) return null;
+  function set<K extends keyof MeetingFV>(k: K, val: MeetingFV[K]) { setV((s) => ({ ...s, [k]: val })); }
+  function submit() {
+    if (!v.title.trim()) { setError("Le titre est obligatoire."); return; }
+    if (!v.date) { setError("La date est obligatoire."); return; }
+    onSubmit({ ...v, title: v.title.trim() });
+  }
+  return (
+    <div className="mc-modal-ov" role="presentation" onClick={() => !busy && onClose()}>
+      <div className="mc-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <h2 className="font-heading text-xl font-bold text-foreground">{meeting ? "Modifier la réunion" : "Nouvelle réunion"}</h2>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-warmgray hover:bg-peach-pale"><X className="size-5" /></button>
+        </div>
+        <div className="flex flex-col gap-3.5">
+          <div className="mc-form-group"><label className="mc-form-label">Titre *</label>
+            <input className="mc-input" value={v.title} autoFocus onChange={(e) => set("title", e.target.value)} placeholder="Conseil d'administration, AG ordinaire…" /></div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="mc-form-group"><label className="mc-form-label">Type</label>
+              <select className="mc-input" value={v.type} onChange={(e) => set("type", e.target.value as Meeting["type"])}>
+                {MEETING_TYPES.map((t) => <option key={t.value} value={t.value}>{meetingTypeShort(t.value)}</option>)}
+              </select></div>
+            <div className="mc-form-group"><label className="mc-form-label">Date</label>
+              <input className="mc-input" type="date" value={v.date} onChange={(e) => set("date", e.target.value)} /></div>
+            <div className="mc-form-group"><label className="mc-form-label">Statut</label>
+              <select className="mc-input" value={v.status} onChange={(e) => set("status", e.target.value as Meeting["status"])}>
+                {MEETING_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select></div>
+          </div>
+          <div className="mc-form-group"><label className="mc-form-label">Ordre du jour</label>
+            <textarea className="mc-textarea" value={v.agenda} onChange={(e) => set("agenda", e.target.value)} placeholder="1. ...\n2. ..." /></div>
+          <div className="mc-form-group"><label className="mc-form-label">Compte-rendu</label>
+            <textarea className="mc-textarea" value={v.minutes} onChange={(e) => set("minutes", e.target.value)} placeholder="Décisions, votes, points abordés…" /></div>
+          {error ? <p className="text-sm font-medium text-coral-dark">{error}</p> : null}
+        </div>
+        <div className="mt-6 flex justify-end gap-2.5">
+          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={onClose} disabled={busy}>Annuler</button>
+          <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={submit} disabled={busy}>{busy ? "…" : meeting ? "Enregistrer" : "Créer"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modale Mandat ──
+interface MandateFV { personId: string; role: string; startDate: string; endDate: string; status: Mandate["status"]; }
+function MandateModal({ open, mandate, persons, busy, onSubmit, onClose }: {
+  open: boolean; mandate: Mandate | null; persons: Person[]; busy: boolean; onSubmit: (v: MandateFV) => void; onClose: () => void;
+}) {
+  const [v, setV] = useState<MandateFV>({
+    personId: mandate?.person_id ?? "", role: mandate?.role ?? "", startDate: mandate?.start_date ?? "",
+    endDate: mandate?.end_date ?? "", status: mandate?.status ?? "actif",
+  });
+  const [error, setError] = useState<string | null>(null);
+  if (!open) return null;
+  function set<K extends keyof MandateFV>(k: K, val: MandateFV[K]) { setV((s) => ({ ...s, [k]: val })); }
+  function submit() {
+    if (!v.role.trim()) { setError("Le rôle est obligatoire."); return; }
+    onSubmit({ ...v, role: v.role.trim() });
+  }
+  return (
+    <div className="mc-modal-ov" role="presentation" onClick={() => !busy && onClose()}>
+      <div className="mc-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <h2 className="font-heading text-xl font-bold text-foreground">{mandate ? "Modifier le mandat" : "Nouveau mandat"}</h2>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-warmgray hover:bg-peach-pale"><X className="size-5" /></button>
+        </div>
+        <div className="flex flex-col gap-3.5">
+          <div className="mc-form-group"><label className="mc-form-label">Rôle *</label>
+            <input className="mc-input" value={v.role} autoFocus onChange={(e) => set("role", e.target.value)} placeholder="Président·e, Trésorier·e, Secrétaire…" /></div>
+          <div className="mc-form-group"><label className="mc-form-label">Personne</label>
+            <select className="mc-input" value={v.personId} onChange={(e) => set("personId", e.target.value)}>
+              <option value="">— À définir —</option>
+              {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="mc-form-group"><label className="mc-form-label">Début</label>
+              <input className="mc-input" type="date" value={v.startDate} onChange={(e) => set("startDate", e.target.value)} /></div>
+            <div className="mc-form-group"><label className="mc-form-label">Fin</label>
+              <input className="mc-input" type="date" value={v.endDate} onChange={(e) => set("endDate", e.target.value)} /></div>
+          </div>
+          <div className="mc-form-group"><label className="mc-form-label">Statut</label>
+            <select className="mc-input" value={v.status} onChange={(e) => set("status", e.target.value as Mandate["status"])}>
+              <option value="actif">Actif</option><option value="termine">Terminé</option>
+            </select></div>
+          {error ? <p className="text-sm font-medium text-coral-dark">{error}</p> : null}
+        </div>
+        <div className="mt-6 flex justify-end gap-2.5">
+          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={onClose} disabled={busy}>Annuler</button>
+          <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={submit} disabled={busy}>{busy ? "…" : mandate ? "Enregistrer" : "Créer"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function GouvernanceView({ meetings, mandates, persons, orgSlug, orgId }: {
+  meetings: Meeting[]; mandates: Mandate[]; persons: Person[]; orgSlug: string; orgId: string;
+}) {
+  const [tab, setTab] = useState<Tab>("reunions");
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [meetingForm, setMeetingForm] = useState<{ open: boolean; editing: Meeting | null }>({ open: false, editing: null });
+  const [mandateForm, setMandateForm] = useState<{ open: boolean; editing: Mandate | null }>({ open: false, editing: null });
+  const [confirmM, setConfirmM] = useState<Meeting | null>(null);
+  const [confirmMa, setConfirmMa] = useState<Mandate | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const personById = useMemo(() => new Map(persons.map((p) => [p.id, p])), [persons]);
+  const personName = (id: string | null) => id ? personById.get(id)?.name ?? "—" : "À définir";
+
+  const kpis = useMemo(() => ({
+    reunions: meetings.length,
+    planifiees: meetings.filter((m) => m.status === "planifiee").length,
+    mandatsActifs: mandates.filter((m) => m.status === "actif").length,
+  }), [meetings, mandates]);
+
+  function submitMeeting(v: MeetingFV) {
+    const payload = { type: v.type, title: v.title, date: v.date, agenda: v.agenda.trim() || null, minutes: v.minutes.trim() || null, status: v.status };
+    startTransition(async () => {
+      const res = meetingForm.editing
+        ? await updateMeetingAction(orgSlug, meetingForm.editing.id, payload)
+        : await createMeetingAction(orgSlug, { ...payload, organization_id: orgId });
+      if (res.ok) { toast.success(meetingForm.editing ? "Réunion mise à jour" : "Réunion créée"); setMeetingForm({ open: false, editing: null }); }
+      else toast.error("Action impossible.");
+    });
+  }
+  function submitMandate(v: MandateFV) {
+    const payload = { person_id: v.personId || null, role: v.role, start_date: v.startDate || null, end_date: v.endDate || null, status: v.status };
+    startTransition(async () => {
+      const res = mandateForm.editing
+        ? await updateMandateAction(orgSlug, mandateForm.editing.id, payload)
+        : await createMandateAction(orgSlug, { ...payload, organization_id: orgId });
+      if (res.ok) { toast.success(mandateForm.editing ? "Mandat mis à jour" : "Mandat créé"); setMandateForm({ open: false, editing: null }); }
+      else toast.error("Action impossible.");
+    });
+  }
+  function delMeeting(m: Meeting) {
+    startTransition(async () => {
+      const { ok } = await deleteMeetingAction(orgSlug, m.id);
+      if (ok) { toast.success("Réunion supprimée"); setConfirmM(null); setSelectedMeeting(null); } else toast.error("Suppression impossible.");
+    });
+  }
+  function delMandate(m: Mandate) {
+    startTransition(async () => {
+      const { ok } = await deleteMandateAction(orgSlug, m.id);
+      if (ok) { toast.success("Mandat supprimé"); setConfirmMa(null); } else toast.error("Suppression impossible.");
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="mc-kpi-grid">
+        <div className="mc-stat"><div className="mc-stat-val">{kpis.reunions}</div><div className="mc-stat-lbl">Réunions</div></div>
+        <div className="mc-stat"><div className="mc-stat-val" style={{ color: "#a06800" }}>{kpis.planifiees}</div><div className="mc-stat-lbl">À venir</div></div>
+        <div className="mc-stat"><div className="mc-stat-val" style={{ color: "#2f8a4c" }}>{kpis.mandatsActifs}</div><div className="mc-stat-lbl">Mandats actifs</div></div>
+      </div>
+
+      <div className="mc-card p-[18px]">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="mc-view-toggle">
+            <button type="button" className={`mc-view-btn ${tab === "reunions" ? "active" : ""}`} onClick={() => setTab("reunions")}><Calendar className="size-3.5" /> Réunions</button>
+            <button type="button" className={`mc-view-btn ${tab === "mandats" ? "active" : ""}`} onClick={() => setTab("mandats")}><User className="size-3.5" /> Mandats</button>
+          </div>
+          {tab === "reunions"
+            ? <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={() => setMeetingForm({ open: true, editing: null })}><Plus className="size-3.5" /> Réunion</button>
+            : <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={() => setMandateForm({ open: true, editing: null })}><Plus className="size-3.5" /> Mandat</button>}
+        </div>
+      </div>
+
+      {tab === "reunions" ? (
+        meetings.length === 0 ? (
+          <div className="mc-card"><div className="mc-empty"><span className="mc-empty-ic"><Gavel className="size-6" strokeWidth={1.8} /></span><div className="mc-empty-title">Aucune réunion</div><p className="mc-empty-sub">Planifiez vos instances : CA, AG, bureau.</p></div></div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {meetings.map((m) => (
+              <button key={m.id} type="button" className="mc-card cursor-pointer px-5 py-4 text-left transition-shadow hover:shadow-md" onClick={() => setSelectedMeeting(m)}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`mc-badge ${meetingTypeBadge(m.type)}`}>{meetingTypeShort(m.type)}</span>
+                      <span className="font-semibold text-foreground">{m.title}</span>
+                      <span className={`mc-badge ${meetingStatusBadge(m.status)}`}>{meetingStatusLabel(m.status)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-[12px] text-warmgray"><Calendar className="size-3.5" /> {formatDateLong(m.date)}{m.minutes ? <><FileText className="ml-2 size-3.5" /> CR disponible</> : null}</div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )
+      ) : (
+        mandates.length === 0 ? (
+          <div className="mc-card"><div className="mc-empty"><span className="mc-empty-ic"><User className="size-6" strokeWidth={1.8} /></span><div className="mc-empty-title">Aucun mandat</div><p className="mc-empty-sub">Enregistrez les mandats du bureau et des référent·es.</p></div></div>
+        ) : (
+          <div className="mc-card overflow-hidden">
+            <div className="mc-table-wrap">
+              <table className="mc-table">
+                <thead><tr><th>Rôle</th><th>Personne</th><th>Période</th><th>Statut</th><th></th></tr></thead>
+                <tbody>
+                  {mandates.map((m) => (
+                    <tr key={m.id}>
+                      <td><span className="font-semibold text-foreground">{m.role}</span></td>
+                      <td className="text-[13px]">{personName(m.person_id)}</td>
+                      <td className="text-[12px] text-warmgray">{mandatePeriod(m.start_date, m.end_date)}</td>
+                      <td><span className={`mc-badge ${m.status === "actif" ? "mc-badge-green" : "mc-badge-gray"}`}>{m.status === "actif" ? "Actif" : "Terminé"}</span></td>
+                      <td>
+                        <div className="flex justify-end gap-1">
+                          <button type="button" className="rounded-lg p-1.5 text-warmgray hover:bg-peach-pale" onClick={() => setMandateForm({ open: true, editing: m })}><Pencil className="size-4" /></button>
+                          <button type="button" className="rounded-lg p-1.5 text-warmgray hover:bg-peach-pale" onClick={() => setConfirmMa(m)}><Trash2 className="size-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Drawer réunion */}
+      {selectedMeeting ? (
+        <>
+          <button type="button" aria-label="Fermer" className="mc-drawer-ov" onClick={() => setSelectedMeeting(null)} />
+          <aside className="mc-drawer" aria-label="Fiche réunion">
+            <div className="flex items-start justify-between gap-4 border-b border-border p-6">
+              <div>
+                <h2 className="font-heading text-xl font-bold text-foreground">{selectedMeeting.title}</h2>
+                <div className="mt-1 flex gap-1.5"><span className={`mc-badge ${meetingTypeBadge(selectedMeeting.type)}`}>{meetingTypeShort(selectedMeeting.type)}</span><span className={`mc-badge ${meetingStatusBadge(selectedMeeting.status)}`}>{meetingStatusLabel(selectedMeeting.status)}</span></div>
+              </div>
+              <button type="button" onClick={() => setSelectedMeeting(null)} className="rounded-lg p-1.5 text-warmgray hover:bg-peach-pale"><X className="size-5" /></button>
+            </div>
+            <div className="flex flex-col gap-5 p-6">
+              <div className="flex items-center gap-2 text-sm font-medium"><Calendar className="size-4 text-warmgray" /> {formatDateLong(selectedMeeting.date)}</div>
+              {selectedMeeting.agenda ? <div><h3 className="text-xs font-semibold uppercase tracking-wide text-warmgray">Ordre du jour</h3><p className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed">{selectedMeeting.agenda}</p></div> : null}
+              {selectedMeeting.minutes ? <div><h3 className="text-xs font-semibold uppercase tracking-wide text-warmgray">Compte-rendu</h3><p className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed">{selectedMeeting.minutes}</p></div> : null}
+              {selectedMeeting.status === "planifiee" ? (
+                <button type="button" disabled={pending} onClick={() => { startTransition(async () => { const r = await updateMeetingAction(orgSlug, selectedMeeting.id, { status: "tenue" }); if (r.ok) toast.success("Réunion marquée tenue"); }); }} className="mc-btn mc-btn-outline mc-btn-sm self-start"><Check className="size-3.5" /> Marquer tenue</button>
+              ) : null}
+            </div>
+            <div className="mt-auto flex gap-3 border-t border-border p-6">
+              <button type="button" disabled={pending} onClick={() => { setMeetingForm({ open: true, editing: selectedMeeting }); setSelectedMeeting(null); }} className="mc-btn mc-btn-lime flex-1"><Pencil className="size-4" /> Modifier</button>
+              <button type="button" disabled={pending} onClick={() => setConfirmM(selectedMeeting)} className="mc-btn mc-btn-outline"><Trash2 className="size-4" /> Supprimer</button>
+            </div>
+          </aside>
+        </>
+      ) : null}
+
+      <MeetingModal key={meetingForm.open ? `m-${meetingForm.editing?.id ?? "new"}` : "m-closed"}
+        open={meetingForm.open} meeting={meetingForm.editing} busy={pending}
+        onClose={() => setMeetingForm({ open: false, editing: null })} onSubmit={submitMeeting} />
+      <MandateModal key={mandateForm.open ? `ma-${mandateForm.editing?.id ?? "new"}` : "ma-closed"}
+        open={mandateForm.open} mandate={mandateForm.editing} persons={persons} busy={pending}
+        onClose={() => setMandateForm({ open: false, editing: null })} onSubmit={submitMandate} />
+
+      <ConfirmDialog open={confirmM !== null} title="Supprimer cette réunion ?"
+        message={confirmM ? `« ${confirmM.title} » sera supprimée.` : ""} confirmLabel="Supprimer" tone="danger" busy={pending}
+        onCancel={() => setConfirmM(null)} onConfirm={() => confirmM && delMeeting(confirmM)} />
+      <ConfirmDialog open={confirmMa !== null} title="Supprimer ce mandat ?"
+        message={confirmMa ? `Le mandat « ${confirmMa.role} » sera supprimé.` : ""} confirmLabel="Supprimer" tone="danger" busy={pending}
+        onCancel={() => setConfirmMa(null)} onConfirm={() => confirmMa && delMandate(confirmMa)} />
+    </div>
+  );
+}

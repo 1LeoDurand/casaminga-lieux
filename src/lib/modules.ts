@@ -44,7 +44,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     modules: [
       { key: "finances", label: "Finances", segment: "finances", ready: true },
       { key: "documents", label: "Documents", segment: "documents", ready: true },
-      { key: "gouvernance", label: "Gouvernance", segment: "gouvernance", ready: false },
+      { key: "gouvernance", label: "Gouvernance", segment: "gouvernance", ready: true },
       { key: "impact", label: "Impact", segment: "impact", ready: false },
       { key: "partenaires", label: "Partenaires", segment: "partenaires", ready: false },
     ],

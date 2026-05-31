@@ -4,7 +4,9 @@ import type {
   Document,
   Evenement,
   IncomingRequest,
+  Mandate,
   Media,
+  Meeting,
   Organization,
   Person,
   PublicSite,
@@ -593,6 +595,24 @@ export const DEMO_COMMUNITY_POSTS: CommunityPost[] = [
     type: "info", title: "Nouveau planning d'ouverture", content: "À partir de juillet, le lieu ouvre aussi le dimanche après-midi (14h-18h).", status: "actif", created_at: NOW, updated_at: NOW },
   { id: "95555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, author_id: "c3333333-3333-4333-8333-333333333333",
     type: "demande", title: "Recherche peintures acryliques", content: "Quelqu'un aurait des restes de peinture acrylique à partager ?", status: "resolu", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_MEETINGS: Meeting[] = [
+  { id: "a1111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, type: "ca", title: "Conseil d'administration — T2 2026", date: "2026-04-15",
+    agenda: "1. Bilan financier T1\n2. Programmation été\n3. Nouvelles résidences", minutes: "CA tenu en présence de 7 membres. Budget validé. Programmation été approuvée à l'unanimité.", status: "tenue", created_at: NOW, updated_at: NOW },
+  { id: "a2222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, type: "bureau", title: "Réunion de bureau — juin", date: "2026-06-10",
+    agenda: "1. Préparation AG\n2. Point trésorerie\n3. Embauches", minutes: "Préparation de l'AG lancée. Trésorerie saine. Recrutement d'un médiateur à l'étude.", status: "tenue", created_at: NOW, updated_at: NOW },
+  { id: "a3333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, type: "ag", title: "Assemblée générale ordinaire 2026", date: "2026-06-28",
+    agenda: "1. Rapport moral\n2. Rapport financier\n3. Élection du bureau\n4. Projets 2027", minutes: null, status: "planifiee", created_at: NOW, updated_at: NOW },
+  { id: "a4444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, type: "bureau", title: "Réunion de bureau — mai", date: "2026-05-12",
+    agenda: "1. Suivi des résidences\n2. Communication", minutes: "Réunion annulée faute de quorum, reportée au 10 juin.", status: "annulee", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_MANDATES: Mandate[] = [
+  { id: "b1111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, person_id: "c6666666-6666-4666-8666-666666666666", role: "Présidente", start_date: "2025-06-01", end_date: "2027-06-01", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "b2222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, person_id: "c2222222-2222-4222-8222-222222222222", role: "Trésorier", start_date: "2025-06-01", end_date: "2027-06-01", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "b3333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, person_id: "c3333333-3333-4333-8333-333333333333", role: "Secrétaire", start_date: "2025-06-01", end_date: "2027-06-01", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "b4444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, person_id: "c4444444-4444-4444-8444-444444444444", role: "Référente ateliers", start_date: "2024-01-01", end_date: "2026-01-01", status: "termine", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

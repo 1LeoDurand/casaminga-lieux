@@ -5,6 +5,8 @@ import {
   addDemoAnnouncement,
   addDemoCommunityPost,
   addDemoDocument,
+  addDemoMandate,
+  addDemoMeeting,
   addDemoEvenement,
   addDemoMedia,
   addDemoPerson,
@@ -17,6 +19,8 @@ import {
   deleteDemoAnnouncement,
   deleteDemoCommunityPost,
   deleteDemoDocument,
+  deleteDemoMandate,
+  deleteDemoMeeting,
   deleteDemoEvenement,
   deleteDemoMedia,
   deleteDemoPerson,
@@ -29,6 +33,8 @@ import {
   getDemoAnnouncements,
   getDemoCommunityPosts,
   getDemoDocuments,
+  getDemoMandates,
+  getDemoMeetings,
   getDemoEvenements,
   getDemoMedia,
   getDemoPersons,
@@ -42,6 +48,8 @@ import {
   updateDemoAnnouncement,
   updateDemoCommunityPost,
   updateDemoDocument,
+  updateDemoMandate,
+  updateDemoMeeting,
   updateDemoEvenement,
   updateDemoMedia,
   updateDemoPerson,
@@ -58,7 +66,9 @@ import type {
   Document,
   Evenement,
   IncomingRequest,
+  Mandate,
   Media,
+  Meeting,
   Organization,
   Person,
   PublicSite,
@@ -808,4 +818,64 @@ export async function deleteCommunityPost(id: string): Promise<boolean> {
   const { error } = await supabase.from("community_posts").delete().eq("id", id);
   if (error) console.error("deleteCommunityPost:", error);
   return !error;
+}
+
+// ── Gouvernance : Réunions ───────────────────────────────────
+export async function getMeetingsForOrg(orgId: string): Promise<Meeting[]> {
+  if (!isSupabaseConfigured()) return getDemoMeetings(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("meetings").select("*").eq("organization_id", orgId).order("date", { ascending: false });
+  return data ?? [];
+}
+export interface MeetingInput {
+  organization_id: string; type: Meeting["type"]; title: string; date: string;
+  agenda: string | null; minutes: string | null; status: Meeting["status"];
+}
+export async function createMeeting(input: MeetingInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoMeeting(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("meetings").insert(input);
+  if (error) console.error("createMeeting:", error); return !error;
+}
+export async function updateMeeting(id: string, patch: Partial<MeetingInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoMeeting(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("meetings").update(patch).eq("id", id);
+  if (error) console.error("updateMeeting:", error); return !error;
+}
+export async function deleteMeeting(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoMeeting(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("meetings").delete().eq("id", id);
+  if (error) console.error("deleteMeeting:", error); return !error;
+}
+
+// ── Gouvernance : Mandats ────────────────────────────────────
+export async function getMandatesForOrg(orgId: string): Promise<Mandate[]> {
+  if (!isSupabaseConfigured()) return getDemoMandates(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("mandates").select("*").eq("organization_id", orgId).order("status", { ascending: true });
+  return data ?? [];
+}
+export interface MandateInput {
+  organization_id: string; person_id: string | null; role: string;
+  start_date: string | null; end_date: string | null; status: Mandate["status"];
+}
+export async function createMandate(input: MandateInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoMandate(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("mandates").insert(input);
+  if (error) console.error("createMandate:", error); return !error;
+}
+export async function updateMandate(id: string, patch: Partial<MandateInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoMandate(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("mandates").update(patch).eq("id", id);
+  if (error) console.error("updateMandate:", error); return !error;
+}
+export async function deleteMandate(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoMandate(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("mandates").delete().eq("id", id);
+  if (error) console.error("deleteMandate:", error); return !error;
 }

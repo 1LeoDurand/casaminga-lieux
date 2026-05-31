@@ -132,6 +132,36 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type MeetingType = "ca" | "ag" | "bureau" | "autre";
+export type MeetingStatus = "planifiee" | "tenue" | "annulee";
+
+export interface Meeting {
+  id: string;
+  organization_id: string;
+  type: MeetingType;
+  title: string;
+  date: string;
+  agenda: string | null;
+  minutes: string | null;
+  status: MeetingStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MandateStatus = "actif" | "termine";
+
+export interface Mandate {
+  id: string;
+  organization_id: string;
+  person_id: string | null;
+  role: string;
+  start_date: string | null;
+  end_date: string | null;
+  status: MandateStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export type CommunityType = "offre" | "demande" | "info" | "entraide";
 export type CommunityStatus = "actif" | "resolu" | "archive";
 

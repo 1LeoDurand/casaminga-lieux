@@ -3,7 +3,9 @@ import {
   DEMO_COMMUNITY_POSTS,
   DEMO_DOCUMENTS,
   DEMO_EVENEMENTS,
+  DEMO_MANDATES,
   DEMO_MEDIA,
+  DEMO_MEETINGS,
   DEMO_PERSONS,
   DEMO_REQUESTS,
   DEMO_RESERVATIONS,
@@ -18,7 +20,9 @@ import type {
   Document,
   Evenement,
   IncomingRequest,
+  Mandate,
   Media,
+  Meeting,
   Person,
   Reservation,
   RequestStatus,
@@ -52,6 +56,8 @@ const globalForDemo = globalThis as unknown as {
   __cmAnnouncements?: Announcement[];
   __cmTasks?: Task[];
   __cmCommunity?: CommunityPost[];
+  __cmMeetings?: Meeting[];
+  __cmMandates?: Mandate[];
 };
 
 function store(): IncomingRequest[] {
@@ -482,5 +488,50 @@ export function updateDemoCommunityPost(id: string, patch: Partial<Omit<Communit
 export function deleteDemoCommunityPost(id: string): boolean {
   const arr = communityStore();
   const i = arr.findIndex((p) => p.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Gouvernance : réunions (mode démo) ──────────────────────
+function meetingStore(): Meeting[] {
+  if (!globalForDemo.__cmMeetings) globalForDemo.__cmMeetings = DEMO_MEETINGS.map((m) => ({ ...m }));
+  return globalForDemo.__cmMeetings;
+}
+export function getDemoMeetings(orgId: string): Meeting[] {
+  return meetingStore().filter((m) => m.organization_id === orgId).sort((a, b) => b.date.localeCompare(a.date));
+}
+export function addDemoMeeting(input: Omit<Meeting, "id" | "created_at" | "updated_at">): Meeting {
+  const now = new Date().toISOString();
+  const m: Meeting = { ...input, id: `meet-${Date.now()}`, created_at: now, updated_at: now };
+  meetingStore().unshift(m); return m;
+}
+export function updateDemoMeeting(id: string, patch: Partial<Omit<Meeting, "id" | "organization_id" | "created_at">>): Meeting | null {
+  const found = meetingStore().find((m) => m.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoMeeting(id: string): boolean {
+  const arr = meetingStore(); const i = arr.findIndex((m) => m.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Gouvernance : mandats (mode démo) ───────────────────────
+function mandateStore(): Mandate[] {
+  if (!globalForDemo.__cmMandates) globalForDemo.__cmMandates = DEMO_MANDATES.map((m) => ({ ...m }));
+  return globalForDemo.__cmMandates;
+}
+export function getDemoMandates(orgId: string): Mandate[] {
+  return mandateStore().filter((m) => m.organization_id === orgId)
+    .sort((a, b) => (a.status === b.status ? 0 : a.status === "actif" ? -1 : 1));
+}
+export function addDemoMandate(input: Omit<Mandate, "id" | "created_at" | "updated_at">): Mandate {
+  const now = new Date().toISOString();
+  const m: Mandate = { ...input, id: `mand-${Date.now()}`, created_at: now, updated_at: now };
+  mandateStore().unshift(m); return m;
+}
+export function updateDemoMandate(id: string, patch: Partial<Omit<Mandate, "id" | "organization_id" | "created_at">>): Mandate | null {
+  const found = mandateStore().find((m) => m.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoMandate(id: string): boolean {
+  const arr = mandateStore(); const i = arr.findIndex((m) => m.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }
