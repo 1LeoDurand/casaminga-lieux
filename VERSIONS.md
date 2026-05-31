@@ -109,14 +109,53 @@ Table `reservations` (migration 0004, FK spaces + persons). Vue `reservations-vi
 
 ---
 
-## 🔜 Versions à venir
+## ✅ Suite des versions réalisées (v1.8 → v1.15)
 
-> **Ordre MVP** : chaque module suit exactement le même modèle de portage (voir `docs/PASSATION.md`).
-> Build + lint avant chaque commit. Validation visuelle avant commit/tag/archive.
+### v1.8 — Module Événements ✅
+**Commit** `b8f6ac2` · **Tag** `v1.8-evenements`
+
+Table `evenements` (ALTER depuis la table existante + enrichissement : organization_id, type, status, space_id, start_at, end_at, capacity, price, photos, updated_at). Vue `events-view.tsx` : 3 vues cartes/agenda/table, KPIs (total, à venir, publiés, cette semaine, annulés), filtres type/statut, actions rapides publier/dépublier. KPI cockpit « Événements à venir » câblé réel.
+
+> **Note dev** : `evenements` (table Supabase préexistante) est enrichie via ALTER TABLE — pas recréée. `space_id` nullable. `events-meta.ts` : formatters date/heure, `isFuture`, `isThisWeek`.
 
 ---
 
-### v1.8 — Module Événements
+### v1.9 — Module Résidences ✅
+**Commit** `e4d8367` · **Tag** `v1.9-residences`
+
+Table `residences` (FK spaces + persons, disciplines, statuts workflow). Vue `residences-view.tsx` : tableau + filtres discipline/statut, workflow Candidature→Acceptée→En cours→Terminée/Refusée avec actions rapides dans le drawer.
+
+---
+
+### v1.10 — Module Documents ✅
+**Commit** `dd65739` · **Tag** `v1.10-documents`
+
+Table `documents` (type contrat/devis/facture/convention/rapport, URL externe). Vue `documents-view.tsx` : tableau filtrable, workflow Brouillon→Envoyé→Signé→Archivé, lien fichier externe, lien personne.
+
+> **Note dev** : upload réel via Supabase Storage à brancher en v2. Pour l'instant = URL libre.
+
+---
+
+### v1.11 — Module Finances ✅
+**Commit** `01b27df` · **Tag** `v1.11-finances`
+
+Table `transactions` (recettes/dépenses, catégories). Vue `finances-view.tsx` : solde net en temps réel, **graphique barres CSS sans lib externe**, tableau filtrable, KPI cockpit « Solde net » câblé réel.
+
+> **Note dev** : graphique = `BarChart` component CSS pur dans `finances-view.tsx`, pas de recharts. Colonne `amount` est `numeric(10,2)` côté Supabase → toujours `Number(t.amount)` en TypeScript.
+
+---
+
+### v1.12 — Médiathèque ✅ | v1.13 — Site public ✅ | v1.14 — Communication ✅ | v1.15 — Paramètres ✅
+**Commit** `0ce52f8` · **Tag** `v1.12-v1.15-publication`
+
+- **Médiathèque** : table `media`, galerie cartes à miniature, filtres type/tags, drawer aperçu + lien externe.
+- **Site public** : tableau de bord des données publiées (espaces disponibles, événements publiés), lien « Voir le site ».
+- **Communication** : table `announcements`, liste d'annonces, filtres statut, workflow brouillon→publié→archivé, audience membres/public/tous.
+- **Paramètres** : fiche organisation en lecture (nom, slug, structure, horaires, couleur, plan) — édition prévue en v2.
+
+---
+
+## 🔜 Ce qui reste (v2+)
 **Priorité** : haute · **Dépend de** : Espaces, Personnes
 
 **Ce qu'il faut faire :**
@@ -135,81 +174,15 @@ Table `reservations` (migration 0004, FK spaces + persons). Vue `reservations-vi
 
 ---
 
-### v1.9 — Module Résidences
-**Priorité** : moyenne · **Dépend de** : Espaces, Personnes
+### v2.0 — Gouvernance / Impact / Automatisations + améliorations
+**Priorité** : basse (v2, après validation terrain)
 
-**Ce qu'il faut faire :**
-- Table `residences` : `id`, `organization_id`, `space_id`, `person_id`, `title`, `start_date`,
-  `end_date` (dates, pas timestamptz), `status` (candidature/acceptee/en_cours/terminee/refusee),
-  `discipline`, `description`, `notes`, timestamps + RLS.
-- Vue : liste/cartes résidences, timeline, filtres statut/discipline, drawer détail.
-- Vigilance : chevauchement d'espace avec Réservations et Événements.
-
----
-
-### v1.10 — Module Documents
-**Priorité** : moyenne · **Dépend de** : Personnes
-
-**Ce qu'il faut faire :**
-- Table `documents` : `id`, `organization_id`, `person_id?`, `title`, `type`
-  (contrat/devis/facture/convention/autre), `status` (brouillon/envoye/signe/archive),
-  `file_url`, `file_name`, `file_size`, `notes`, timestamps + RLS.
-- Upload via **Supabase Storage** (bucket `documents`, policy membre).
-- Vue : liste fichiers, filtres type/statut, aperçu, téléchargement.
-
-> **Note dev** : premier module avec Supabase Storage. Créer un bucket `documents` dans
-> le dashboard Supabase avant le développement. La policy Storage est séparée de la RLS table.
-
----
-
-### v1.11 — Module Finances
-**Priorité** : haute · **Dépend de** : Personnes, Réservations
-
-**Ce qu'il faut faire :**
-- Table `transactions` : `id`, `organization_id`, `person_id?`, `type` (recette/dépense),
-  `amount`, `date`, `category`, `status` (en_attente/validee/annulee), `notes`, timestamps.
-- Table `invoices` (optionnel v1) : numéro, person_id, montant, échéance, statut (payée/impayée).
-- Vue : graphiques barres (recettes vs dépenses), table transactions, KPIs trésorerie.
-- ⚠️ Graphiques : utiliser une lib légère (ex. recharts ou chart.js) — à ajouter comme dépendance.
-
----
-
-### v1.12 — Médiathèque
-**Priorité** : moyenne · **Dépend de** : rien (alimente Site public + Communication)
-
-**Ce qu'il faut faire :**
-- Table `media` : `id`, `organization_id`, `title`, `type` (photo/video/audio/document),
-  `url`, `thumbnail_url`, `alt_text`, `tags text[]`, `size`, timestamps + RLS.
-- Upload Supabase Storage (bucket `media`, images).
-- Vue : galerie + liste, filtres type/tags, aperçu, drag-drop optionnel.
-
----
-
-### v1.13 — Site public (Vitrine enrichie)
-**Priorité** : haute · **Dépend de** : Espaces, Événements, Médiathèque
-
-**Ce qu'il faut faire :**
-- Enrichir `/site/[slug]` : présenter les espaces disponibles, les événements publiés, galerie.
-- Pages : accueil → espaces → événements → contact (formulaire existant).
-- Données publiques via RLS read-only (policy SELECT anon sur `spaces` status=disponible
-  et `events` status=publie).
-
-> **Note dev** : actuellement `/site/[slug]` = page formulaire seule. Garder le formulaire,
-> ajouter sections. Le proxy `src/proxy.ts` est déjà en place pour le routage apex.
-
----
-
-### v1.14 — Communication
-**Priorité** : moyenne · **Dépend de** : Personnes, Médiathèque
-
-Campagnes email, newsletters, annonces internes.
-Table `messages` : destinataires (segment de personnes), objet, corps, statut (brouillon/envoyé).
-Intégration email à décider (Resend ? Supabase Edge Functions ?).
-
----
-
-### v1.15 et + — Gouvernance / Impact / Automatisations / Paramètres
-À planifier après les modules fondamentaux. Voir `docs/PLAN_RECONSTRUCTION.md` pour le détail.
+- **Gouvernance** : procès-verbaux, votes, mandats (`governance_records`)
+- **Impact** : indicateurs agrégés depuis tous les modules
+- **Automatisations** : règles déclencheur/condition/action (`automations`)
+- **Upload réel** Supabase Storage pour Documents et Médiathèque
+- **Communauté & Partenaires** : annuaires internes
+- **Site public** enrichi côté public : sections espaces + événements sur `/site/[slug]`
 
 ---
 
