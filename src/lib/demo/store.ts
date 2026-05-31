@@ -3,6 +3,7 @@ import {
   DEMO_PERSONS,
   DEMO_REQUESTS,
   DEMO_RESERVATIONS,
+  DEMO_RESIDENCES,
   DEMO_SPACES,
 } from "@/lib/demo/data";
 import type {
@@ -11,6 +12,7 @@ import type {
   Person,
   Reservation,
   RequestStatus,
+  Residence,
   Space,
 } from "@/lib/types";
 
@@ -31,6 +33,7 @@ const globalForDemo = globalThis as unknown as {
   __cmSpaces?: Space[];
   __cmReservations?: Reservation[];
   __cmEvenements?: Evenement[];
+  __cmResidences?: Residence[];
 };
 
 function store(): IncomingRequest[] {
@@ -273,4 +276,31 @@ export function deleteDemoEvenement(id: string): boolean {
   if (i === -1) return false;
   arr.splice(i, 1);
   return true;
+}
+
+// ── Résidences (mode démo) ──────────────────────────────────
+function residenceStore(): Residence[] {
+  if (!globalForDemo.__cmResidences) {
+    globalForDemo.__cmResidences = DEMO_RESIDENCES.map((r) => ({ ...r }));
+  }
+  return globalForDemo.__cmResidences;
+}
+export function getDemoResidences(orgId: string): Residence[] {
+  return residenceStore().filter((r) => r.organization_id === orgId)
+    .sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? ""));
+}
+export function addDemoResidence(input: Omit<Residence, "id" | "created_at" | "updated_at">): Residence {
+  const now = new Date().toISOString();
+  const r: Residence = { ...input, id: `res-${Date.now()}`, created_at: now, updated_at: now };
+  residenceStore().unshift(r); return r;
+}
+export function updateDemoResidence(id: string, patch: Partial<Omit<Residence, "id" | "organization_id" | "created_at">>): Residence | null {
+  const found = residenceStore().find((r) => r.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoResidence(id: string): boolean {
+  const arr = residenceStore();
+  const i = arr.findIndex((r) => r.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
 }

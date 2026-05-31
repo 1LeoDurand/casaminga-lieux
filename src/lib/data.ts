@@ -4,22 +4,26 @@ import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
   addDemoEvenement,
   addDemoPerson,
+  addDemoResidence,
   addDemoRequest,
   addDemoReservation,
   addDemoSpace,
   deleteDemoEvenement,
   deleteDemoPerson,
+  deleteDemoResidence,
   deleteDemoReservation,
   deleteDemoSpace,
   findDemoReservationConflict,
   getDemoEvenements,
   getDemoPersons,
+  getDemoResidences,
   getDemoRequests,
   getDemoReservationById,
   getDemoReservations,
   getDemoSpaces,
   updateDemoEvenement,
   updateDemoPerson,
+  updateDemoResidence,
   updateDemoRequestStatus,
   updateDemoReservation,
   updateDemoSpace,
@@ -32,6 +36,7 @@ import type {
   PublicSite,
   Reservation,
   RequestStatus,
+  Residence,
   Space,
 } from "@/lib/types";
 
@@ -467,5 +472,51 @@ export async function deleteEvenement(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("evenements").delete().eq("id", id);
   if (error) console.error("deleteEvenement: échec suppression Supabase", error);
+  return !error;
+}
+
+// ── Résidences ───────────────────────────────────────────────
+export async function getResidencesForOrg(orgId: string): Promise<Residence[]> {
+  if (!isSupabaseConfigured()) return getDemoResidences(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("residences").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface ResidenceInput {
+  organization_id: string;
+  space_id: string | null;
+  person_id: string | null;
+  title: string;
+  discipline: string;
+  status: Residence["status"];
+  start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  notes: string | null;
+}
+
+export async function createResidence(input: ResidenceInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoResidence(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("residences").insert(input);
+  if (error) console.error("createResidence:", error);
+  return !error;
+}
+
+export async function updateResidence(id: string, patch: Partial<ResidenceInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoResidence(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("residences").update(patch).eq("id", id);
+  if (error) console.error("updateResidence:", error);
+  return !error;
+}
+
+export async function deleteResidence(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoResidence(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("residences").delete().eq("id", id);
+  if (error) console.error("deleteResidence:", error);
   return !error;
 }

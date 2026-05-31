@@ -132,6 +132,29 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type ResidenceDiscipline =
+  | "ceramique" | "peinture" | "musique" | "danse"
+  | "theatre" | "litterature" | "numerique" | "autre";
+
+export type ResidenceStatus =
+  | "candidature" | "acceptee" | "en_cours" | "terminee" | "refusee";
+
+export interface Residence {
+  id: string;
+  organization_id: string;
+  space_id: string | null;
+  person_id: string | null;
+  title: string;
+  discipline: string;
+  status: ResidenceStatus;
+  start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type EvenementType =
   | "atelier"
   | "concert"
