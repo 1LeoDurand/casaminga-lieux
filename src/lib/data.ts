@@ -5,6 +5,7 @@ import {
   addDemoAnnouncement,
   addDemoCommunityPost,
   addDemoDocument,
+  addDemoImpactIndicator,
   addDemoMandate,
   addDemoMeeting,
   addDemoPartner,
@@ -20,6 +21,7 @@ import {
   deleteDemoAnnouncement,
   deleteDemoCommunityPost,
   deleteDemoDocument,
+  deleteDemoImpactIndicator,
   deleteDemoMandate,
   deleteDemoMeeting,
   deleteDemoPartner,
@@ -35,6 +37,7 @@ import {
   getDemoAnnouncements,
   getDemoCommunityPosts,
   getDemoDocuments,
+  getDemoImpactIndicators,
   getDemoMandates,
   getDemoMeetings,
   getDemoPartners,
@@ -51,6 +54,7 @@ import {
   updateDemoAnnouncement,
   updateDemoCommunityPost,
   updateDemoDocument,
+  updateDemoImpactIndicator,
   updateDemoMandate,
   updateDemoMeeting,
   updateDemoPartner,
@@ -69,6 +73,7 @@ import type {
   CommunityPost,
   Document,
   Evenement,
+  ImpactIndicator,
   IncomingRequest,
   Mandate,
   Media,
@@ -914,4 +919,34 @@ export async function deletePartner(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("partners").delete().eq("id", id);
   if (error) console.error("deletePartner:", error); return !error;
+}
+
+// ── Impact ───────────────────────────────────────────────────
+export async function getImpactIndicatorsForOrg(orgId: string): Promise<ImpactIndicator[]> {
+  if (!isSupabaseConfigured()) return getDemoImpactIndicators(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("impact_indicators").select("*").eq("organization_id", orgId).order("category", { ascending: true });
+  return data ?? [];
+}
+export interface ImpactIndicatorInput {
+  organization_id: string; label: string; value: number;
+  unit: string | null; period: string | null; category: ImpactIndicator["category"];
+}
+export async function createImpactIndicator(input: ImpactIndicatorInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoImpactIndicator(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("impact_indicators").insert(input);
+  if (error) console.error("createImpactIndicator:", error); return !error;
+}
+export async function updateImpactIndicator(id: string, patch: Partial<ImpactIndicatorInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoImpactIndicator(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("impact_indicators").update(patch).eq("id", id);
+  if (error) console.error("updateImpactIndicator:", error); return !error;
+}
+export async function deleteImpactIndicator(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoImpactIndicator(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("impact_indicators").delete().eq("id", id);
+  if (error) console.error("deleteImpactIndicator:", error); return !error;
 }

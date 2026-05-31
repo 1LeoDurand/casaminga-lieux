@@ -3,6 +3,7 @@ import {
   DEMO_COMMUNITY_POSTS,
   DEMO_DOCUMENTS,
   DEMO_EVENEMENTS,
+  DEMO_IMPACT_INDICATORS,
   DEMO_MANDATES,
   DEMO_MEDIA,
   DEMO_MEETINGS,
@@ -20,6 +21,7 @@ import type {
   CommunityPost,
   Document,
   Evenement,
+  ImpactIndicator,
   IncomingRequest,
   Mandate,
   Media,
@@ -61,6 +63,7 @@ const globalForDemo = globalThis as unknown as {
   __cmMeetings?: Meeting[];
   __cmMandates?: Mandate[];
   __cmPartners?: Partner[];
+  __cmImpact?: ImpactIndicator[];
 };
 
 function store(): IncomingRequest[] {
@@ -558,5 +561,27 @@ export function updateDemoPartner(id: string, patch: Partial<Omit<Partner, "id" 
 }
 export function deleteDemoPartner(id: string): boolean {
   const arr = partnerStore(); const i = arr.findIndex((p) => p.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Impact (mode démo) ──────────────────────────────────────
+function impactStore(): ImpactIndicator[] {
+  if (!globalForDemo.__cmImpact) globalForDemo.__cmImpact = DEMO_IMPACT_INDICATORS.map((i) => ({ ...i }));
+  return globalForDemo.__cmImpact;
+}
+export function getDemoImpactIndicators(orgId: string): ImpactIndicator[] {
+  return impactStore().filter((i) => i.organization_id === orgId).sort((a, b) => a.category.localeCompare(b.category));
+}
+export function addDemoImpactIndicator(input: Omit<ImpactIndicator, "id" | "created_at" | "updated_at">): ImpactIndicator {
+  const now = new Date().toISOString();
+  const i: ImpactIndicator = { ...input, id: `impact-${Date.now()}`, created_at: now, updated_at: now };
+  impactStore().unshift(i); return i;
+}
+export function updateDemoImpactIndicator(id: string, patch: Partial<Omit<ImpactIndicator, "id" | "organization_id" | "created_at">>): ImpactIndicator | null {
+  const found = impactStore().find((i) => i.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoImpactIndicator(id: string): boolean {
+  const arr = impactStore(); const i = arr.findIndex((x) => x.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }

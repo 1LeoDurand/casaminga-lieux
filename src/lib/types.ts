@@ -132,6 +132,20 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type ImpactCategory = "frequentation" | "diversite" | "environnement" | "economie" | "autre";
+
+export interface ImpactIndicator {
+  id: string;
+  organization_id: string;
+  label: string;
+  value: number;
+  unit: string | null;
+  period: string | null;
+  category: ImpactCategory;
+  created_at: string;
+  updated_at: string;
+}
+
 export type PartnerType = "public" | "prive" | "associatif" | "fondation" | "autre";
 export type PartnerStatus = "actif" | "prospect" | "inactif";
 

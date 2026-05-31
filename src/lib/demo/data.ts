@@ -3,6 +3,7 @@ import type {
   CommunityPost,
   Document,
   Evenement,
+  ImpactIndicator,
   IncomingRequest,
   Mandate,
   Media,
@@ -622,6 +623,14 @@ export const DEMO_PARTNERS: Partner[] = [
   { id: "c3a33333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, contact_id: null, name: "Studio Halle Nord", type: "prive", status: "actif", email: "contact@hallenord.fr", phone: null, website: "https://hallenord.fr", notes: "Location régulière de la grande salle pour expositions.", created_at: NOW, updated_at: NOW },
   { id: "c4a44444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, contact_id: null, name: "Collectif Terre & Feu", type: "associatif", status: "prospect", email: "hello@terrefeu.org", phone: null, website: null, notes: "Échanges en cours pour un partenariat céramique.", created_at: NOW, updated_at: NOW },
   { id: "c5a55555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, contact_id: null, name: "Région Île-de-France", type: "public", status: "prospect", email: "culture@iledefrance.fr", phone: null, website: "https://iledefrance.fr", notes: "Dossier de subvention déposé, en attente de réponse.", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_IMPACT_INDICATORS: ImpactIndicator[] = [
+  { id: "d1b11111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, label: "Visiteurs accueillis", value: 3200, unit: "pers.", period: "2026", category: "frequentation", created_at: NOW, updated_at: NOW },
+  { id: "d2b22222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, label: "Heures d'ateliers dispensées", value: 480, unit: "h", period: "2026", category: "frequentation", created_at: NOW, updated_at: NOW },
+  { id: "d3b33333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, label: "Part de femmes parmi les intervenant·es", value: 62, unit: "%", period: "2026", category: "diversite", created_at: NOW, updated_at: NOW },
+  { id: "d4b44444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, label: "Déchets recyclés", value: 850, unit: "kg", period: "2026", category: "environnement", created_at: NOW, updated_at: NOW },
+  { id: "d5b55555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, label: "Emplois soutenus (ETP)", value: 4, unit: "ETP", period: "2026", category: "economie", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {
