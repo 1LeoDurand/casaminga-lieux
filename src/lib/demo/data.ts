@@ -1,7 +1,9 @@
 import type {
+  Announcement,
   Document,
   Evenement,
   IncomingRequest,
+  Media,
   Organization,
   Person,
   PublicSite,
@@ -525,6 +527,39 @@ export const DEMO_TRANSACTIONS: Transaction[] = [
   { id: "58888888-8888-4888-8888-888888888888", organization_id: BK_ORG_ID, person_id: null,
     type: "depense", category: "autre", amount: 95, date: "2026-06-05",
     label: "Fournitures bureau et communication", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_MEDIA: Media[] = [
+  { id: "61111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID,
+    title: "Grande Salle — jour de vernissage", type: "photo",
+    url: "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=400&q=60",
+    alt_text: "La grande salle aménagée pour le vernissage", tags: ["salle","événement","expo"], created_at: NOW, updated_at: NOW },
+  { id: "62222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID,
+    title: "Atelier céramique en activité", type: "photo",
+    url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&q=60",
+    alt_text: "Résidente au travail dans l'atelier céramique", tags: ["atelier","céramique","résidence"], created_at: NOW, updated_at: NOW },
+  { id: "63333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID,
+    title: "Jardin et terrasse — été", type: "photo",
+    url: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80",
+    thumbnail_url: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=60",
+    alt_text: "Le jardin aménagé pour les événements en plein air", tags: ["jardin","extérieur","été"], created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_ANNOUNCEMENTS: Announcement[] = [
+  { id: "71111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID,
+    title: "Fermeture exceptionnelle — 14 juillet",
+    content: "Le tiers-lieu sera fermé le lundi 14 juillet (jour férié). Réouverture le mardi 15 juillet à 9h.",
+    status: "publie", audience: "membres", created_at: NOW, updated_at: NOW },
+  { id: "72222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID,
+    title: "Appel à candidatures — Résidences automne 2026",
+    content: "Nous ouvrons les candidatures pour nos résidences artistiques d'automne (sept–nov 2026). Dossiers à envoyer avant le 15 juillet.",
+    status: "publie", audience: "public", created_at: NOW, updated_at: NOW },
+  { id: "73333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID,
+    title: "Réunion équipe — bilan S1",
+    content: "Bilan du premier semestre : programmation, finances, résidences. Présence obligatoire pour l'équipe.",
+    status: "brouillon", audience: "membres", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

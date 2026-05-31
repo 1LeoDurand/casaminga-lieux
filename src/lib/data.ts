@@ -2,24 +2,30 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
+  addDemoAnnouncement,
   addDemoDocument,
   addDemoEvenement,
+  addDemoMedia,
   addDemoPerson,
   addDemoResidence,
   addDemoTransaction,
   addDemoRequest,
   addDemoReservation,
   addDemoSpace,
+  deleteDemoAnnouncement,
   deleteDemoDocument,
   deleteDemoEvenement,
+  deleteDemoMedia,
   deleteDemoPerson,
   deleteDemoResidence,
   deleteDemoTransaction,
   deleteDemoReservation,
   deleteDemoSpace,
   findDemoReservationConflict,
+  getDemoAnnouncements,
   getDemoDocuments,
   getDemoEvenements,
+  getDemoMedia,
   getDemoPersons,
   getDemoResidences,
   getDemoTransactions,
@@ -27,8 +33,10 @@ import {
   getDemoReservationById,
   getDemoReservations,
   getDemoSpaces,
+  updateDemoAnnouncement,
   updateDemoDocument,
   updateDemoEvenement,
+  updateDemoMedia,
   updateDemoPerson,
   updateDemoResidence,
   updateDemoTransaction,
@@ -37,9 +45,11 @@ import {
   updateDemoSpace,
 } from "@/lib/demo/store";
 import type {
+  Announcement,
   Document,
   Evenement,
   IncomingRequest,
+  Media,
   Organization,
   Person,
   PublicSite,
@@ -617,5 +627,89 @@ export async function deleteTransaction(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("transactions").delete().eq("id", id);
   if (error) console.error("deleteTransaction:", error);
+  return !error;
+}
+
+// ── Médiathèque ──────────────────────────────────────────────
+export async function getMediaForOrg(orgId: string): Promise<Media[]> {
+  if (!isSupabaseConfigured()) return getDemoMedia(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("media").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface MediaInput {
+  organization_id: string;
+  title: string;
+  type: Media["type"];
+  url: string;
+  thumbnail_url: string | null;
+  alt_text: string | null;
+  tags: string[];
+}
+
+export async function createMedia(input: MediaInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoMedia(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("media").insert(input);
+  if (error) console.error("createMedia:", error);
+  return !error;
+}
+
+export async function updateMedia(id: string, patch: Partial<MediaInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoMedia(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("media").update(patch).eq("id", id);
+  if (error) console.error("updateMedia:", error);
+  return !error;
+}
+
+export async function deleteMedia(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoMedia(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("media").delete().eq("id", id);
+  if (error) console.error("deleteMedia:", error);
+  return !error;
+}
+
+// ── Communication / Annonces ─────────────────────────────────
+export async function getAnnouncementsForOrg(orgId: string): Promise<Announcement[]> {
+  if (!isSupabaseConfigured()) return getDemoAnnouncements(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("announcements").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface AnnouncementInput {
+  organization_id: string;
+  title: string;
+  content: string;
+  status: Announcement["status"];
+  audience: Announcement["audience"];
+}
+
+export async function createAnnouncement(input: AnnouncementInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoAnnouncement(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("announcements").insert(input);
+  if (error) console.error("createAnnouncement:", error);
+  return !error;
+}
+
+export async function updateAnnouncement(id: string, patch: Partial<AnnouncementInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoAnnouncement(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("announcements").update(patch).eq("id", id);
+  if (error) console.error("updateAnnouncement:", error);
+  return !error;
+}
+
+export async function deleteAnnouncement(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoAnnouncement(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("announcements").delete().eq("id", id);
+  if (error) console.error("deleteAnnouncement:", error);
   return !error;
 }

@@ -52,16 +52,16 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Publication",
     modules: [
-      { key: "site-public", label: "Site public", segment: "site-public", ready: false },
-      { key: "communication", label: "Communication", segment: "communication", ready: false },
-      { key: "mediatheque", label: "Médiathèque", segment: "mediatheque", ready: false },
+      { key: "site-public", label: "Site public", segment: "site-public", ready: true },
+      { key: "communication", label: "Communication", segment: "communication", ready: true },
+      { key: "mediatheque", label: "Médiathèque", segment: "mediatheque", ready: true },
     ],
   },
   {
     title: "Système",
     modules: [
       { key: "automatisations", label: "Automatisations", segment: "automatisations", ready: false },
-      { key: "parametres", label: "Paramètres", segment: "parametres", ready: false },
+      { key: "parametres", label: "Paramètres", segment: "parametres", ready: true },
     ],
   },
 ];

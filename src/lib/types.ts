@@ -132,6 +132,35 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type MediaType = "photo" | "video" | "audio" | "document";
+
+export interface Media {
+  id: string;
+  organization_id: string;
+  title: string;
+  type: MediaType;
+  url: string;
+  thumbnail_url: string | null;
+  alt_text: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type AnnouncementStatus = "brouillon" | "publie" | "archive";
+export type AnnouncementAudience = "membres" | "public" | "tous";
+
+export interface Announcement {
+  id: string;
+  organization_id: string;
+  title: string;
+  content: string;
+  status: AnnouncementStatus;
+  audience: AnnouncementAudience;
+  created_at: string;
+  updated_at: string;
+}
+
 export type TransactionType = "recette" | "depense";
 export type TransactionStatus = "en_attente" | "validee" | "annulee";
 

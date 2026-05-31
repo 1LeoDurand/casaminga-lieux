@@ -1,6 +1,8 @@
 import {
+  DEMO_ANNOUNCEMENTS,
   DEMO_DOCUMENTS,
   DEMO_EVENEMENTS,
+  DEMO_MEDIA,
   DEMO_PERSONS,
   DEMO_REQUESTS,
   DEMO_RESERVATIONS,
@@ -9,9 +11,11 @@ import {
   DEMO_TRANSACTIONS,
 } from "@/lib/demo/data";
 import type {
+  Announcement,
   Document,
   Evenement,
   IncomingRequest,
+  Media,
   Person,
   Reservation,
   RequestStatus,
@@ -40,6 +44,8 @@ const globalForDemo = globalThis as unknown as {
   __cmResidences?: Residence[];
   __cmDocuments?: Document[];
   __cmTransactions?: Transaction[];
+  __cmMedia?: Media[];
+  __cmAnnouncements?: Announcement[];
 };
 
 function store(): IncomingRequest[] {
@@ -362,5 +368,59 @@ export function updateDemoTransaction(id: string, patch: Partial<Omit<Transactio
 export function deleteDemoTransaction(id: string): boolean {
   const arr = txStore();
   const i = arr.findIndex((t) => t.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Médiathèque (mode démo) ─────────────────────────────────
+function mediaStore(): Media[] {
+  if (!globalForDemo.__cmMedia) {
+    globalForDemo.__cmMedia = DEMO_MEDIA.map((m) => ({ ...m, tags: [...m.tags] }));
+  }
+  return globalForDemo.__cmMedia;
+}
+export function getDemoMedia(orgId: string): Media[] {
+  return mediaStore().filter((m) => m.organization_id === orgId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function addDemoMedia(input: Omit<Media, "id" | "created_at" | "updated_at">): Media {
+  const now = new Date().toISOString();
+  const m: Media = { ...input, id: `media-${Date.now()}`, created_at: now, updated_at: now };
+  mediaStore().unshift(m); return m;
+}
+export function updateDemoMedia(id: string, patch: Partial<Omit<Media, "id" | "organization_id" | "created_at">>): Media | null {
+  const found = mediaStore().find((m) => m.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoMedia(id: string): boolean {
+  const arr = mediaStore();
+  const i = arr.findIndex((m) => m.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Annonces / Communication (mode démo) ────────────────────
+function announcementStore(): Announcement[] {
+  if (!globalForDemo.__cmAnnouncements) {
+    globalForDemo.__cmAnnouncements = DEMO_ANNOUNCEMENTS.map((a) => ({ ...a }));
+  }
+  return globalForDemo.__cmAnnouncements;
+}
+export function getDemoAnnouncements(orgId: string): Announcement[] {
+  return announcementStore().filter((a) => a.organization_id === orgId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function addDemoAnnouncement(input: Omit<Announcement, "id" | "created_at" | "updated_at">): Announcement {
+  const now = new Date().toISOString();
+  const a: Announcement = { ...input, id: `ann-${Date.now()}`, created_at: now, updated_at: now };
+  announcementStore().unshift(a); return a;
+}
+export function updateDemoAnnouncement(id: string, patch: Partial<Omit<Announcement, "id" | "organization_id" | "created_at">>): Announcement | null {
+  const found = announcementStore().find((a) => a.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoAnnouncement(id: string): boolean {
+  const arr = announcementStore();
+  const i = arr.findIndex((a) => a.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }
