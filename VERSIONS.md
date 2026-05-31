@@ -194,6 +194,29 @@ personnes, espaces, solde net finances) calculés côté serveur, + indicateurs 
 Table `automations`. Règles « si… alors… » (déclencheur/condition/action), toggle actif,
 compteur d'exécutions. **L'exécution réelle relève de la logique serveur** — aucun secret côté front.
 
+### v2.6 — Adhésions dédié (façon HelloAsso) ✅
+**Tag** `v2.6-adhesions`
+Module d'adhésions complet, **double face** :
+- **Back-office** (`/dashboard/[org]/adhesions`) : liste « Mes campagnes » (KPIs campagnes /
+  publiques / adhérents confirmés / collecté), wizard 3 étapes (Infos générales : titre, slug,
+  statut, période `année glissante`/`illimitée`/`personnalisée` → Montants & paramètres :
+  formules, don optionnel, nb max, options cartes/compteur → Résumé), et drawer
+  « Administrer » (souscriptions, confirmer/annuler, dates de validité calculées).
+- **Tunnel public** (`/site/[slug]/adhesion/[campaignSlug]`) : parcours 4 étapes sans login
+  (Formule + don → Adhérent → Coordonnées payeur → Récapitulatif), embarquable sur le site de
+  chaque association. Les campagnes publiées apparaissent dans la section « Adhérer » de
+  `/site/[slug]`.
+
+3 tables : `membership_campaigns`, `membership_tiers`, `membership_applications`.
+Soumission via `POST /api/orgs/[slug]/adhesions/[campaignSlug]` (insert anon, **sans `.select()`**,
+status `en_attente`), autorisée par la policy RLS `ma_public_insert` (campagne `publie`).
+
+> **Note dev** : statut publié = `'publie'` **partout** (app + DB). D'anciennes policies en double
+> (`campaigns_/tiers_/applications_public_*` sur `'public'`) ont été supprimées ; seules les
+> `mc_/mt_/ma_public_*` (sur `'publie'`) subsistent. Dates de validité calculées par
+> `computeMembershipEnd` (`adhesions-meta.ts`) : année glissante = +1 an. Vérifié end-to-end
+> (POST 201, ligne en base correcte, brouillon → 404).
+
 ---
 
 ## 🎉 État : les 19 modules sont `ready`

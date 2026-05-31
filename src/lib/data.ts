@@ -2,6 +2,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
+  addDemoApplication,
+  addDemoCampaign,
+  addDemoTier,
   addDemoAnnouncement,
   addDemoAutomation,
   addDemoCommunityPost,
@@ -19,6 +22,8 @@ import {
   addDemoRequest,
   addDemoReservation,
   addDemoSpace,
+  deleteDemoCampaign,
+  deleteDemoTier,
   deleteDemoAnnouncement,
   deleteDemoAutomation,
   deleteDemoCommunityPost,
@@ -36,6 +41,11 @@ import {
   deleteDemoReservation,
   deleteDemoSpace,
   findDemoReservationConflict,
+  getDemoApplications,
+  getDemoApplicationsForOrg,
+  getDemoCampaignBySlug,
+  getDemoCampaigns,
+  getDemoTiers,
   getDemoAnnouncements,
   getDemoAutomations,
   getDemoCommunityPosts,
@@ -54,6 +64,9 @@ import {
   getDemoReservationById,
   getDemoReservations,
   getDemoSpaces,
+  updateDemoApplication,
+  updateDemoCampaign,
+  updateDemoTier,
   updateDemoAnnouncement,
   updateDemoAutomation,
   updateDemoCommunityPost,
@@ -82,6 +95,9 @@ import type {
   IncomingRequest,
   Mandate,
   Media,
+  MembershipApplication,
+  MembershipCampaign,
+  MembershipTier,
   Meeting,
   Organization,
   Partner,
@@ -985,4 +1001,127 @@ export async function deleteAutomation(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("automations").delete().eq("id", id);
   if (error) console.error("deleteAutomation:", error); return !error;
+}
+
+// ── Adhésions : Campagnes ────────────────────────────────────
+export async function getMembershipCampaignsForOrg(orgId: string): Promise<MembershipCampaign[]> {
+  if (!isSupabaseConfigured()) return getDemoCampaigns(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("membership_campaigns").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function getPublicCampaignBySlug(orgId: string, slug: string): Promise<MembershipCampaign | null> {
+  if (!isSupabaseConfigured()) return getDemoCampaignBySlug(orgId, slug);
+  const supabase = await createClient();
+  const { data } = await supabase.from("membership_campaigns").select("*")
+    .eq("organization_id", orgId).eq("slug", slug).eq("status", "publie").maybeSingle();
+  return data;
+}
+
+export interface MembershipCampaignInput {
+  organization_id: string; title: string; slug: string; description: string | null;
+  status: MembershipCampaign["status"]; period_type: MembershipCampaign["period_type"];
+  period_start: string | null; period_end: string | null; max_members: number | null;
+  allow_donation: boolean; donation_amounts: string[];
+  show_member_count: boolean; show_collected: boolean; generate_cards: boolean; photos: string[];
+}
+
+export async function createMembershipCampaign(input: MembershipCampaignInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoCampaign(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_campaigns").insert(input);
+  if (error) console.error("createMembershipCampaign:", error); return !error;
+}
+
+export async function updateMembershipCampaign(id: string, patch: Partial<MembershipCampaignInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoCampaign(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_campaigns").update(patch).eq("id", id);
+  if (error) console.error("updateMembershipCampaign:", error); return !error;
+}
+
+export async function deleteMembershipCampaign(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoCampaign(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_campaigns").delete().eq("id", id);
+  if (error) console.error("deleteMembershipCampaign:", error); return !error;
+}
+
+// ── Adhésions : Formules ─────────────────────────────────────
+export async function getTiersForCampaign(campaignId: string): Promise<MembershipTier[]> {
+  if (!isSupabaseConfigured()) return getDemoTiers(campaignId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("membership_tiers").select("*")
+    .eq("campaign_id", campaignId).order("sort_order", { ascending: true });
+  return data ?? [];
+}
+
+export interface MembershipTierInput {
+  campaign_id: string; organization_id: string;
+  name: string; description: string | null; amount: number; sort_order: number;
+}
+
+export async function createMembershipTier(input: MembershipTierInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoTier(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_tiers").insert(input);
+  if (error) console.error("createMembershipTier:", error); return !error;
+}
+
+export async function updateMembershipTier(id: string, patch: Partial<MembershipTierInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoTier(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_tiers").update(patch).eq("id", id);
+  if (error) console.error("updateMembershipTier:", error); return !error;
+}
+
+export async function deleteMembershipTier(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoTier(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_tiers").delete().eq("id", id);
+  if (error) console.error("deleteMembershipTier:", error); return !error;
+}
+
+// ── Adhésions : Souscriptions ────────────────────────────────
+export async function getApplicationsForCampaign(campaignId: string): Promise<MembershipApplication[]> {
+  if (!isSupabaseConfigured()) return getDemoApplications(campaignId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("membership_applications").select("*")
+    .eq("campaign_id", campaignId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function getMembershipApplicationsForOrg(orgId: string): Promise<MembershipApplication[]> {
+  if (!isSupabaseConfigured()) return getDemoApplicationsForOrg(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("membership_applications").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface MembershipApplicationInput {
+  campaign_id: string; tier_id: string | null; organization_id: string;
+  first_name: string; last_name: string; email: string | null; phone: string | null;
+  payer_name: string | null; payer_email: string | null;
+  amount_paid: number; donation_amount: number | null;
+  status: MembershipApplication["status"];
+  membership_start: string | null; membership_end: string | null; notes: string | null;
+}
+
+/** Souscription publique (anon). */
+export async function createMembershipApplication(input: MembershipApplicationInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoApplication(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_applications").insert(input);
+  if (error) console.error("createMembershipApplication:", error); return !error;
+}
+
+/** Admin : changer le statut d'une souscription. */
+export async function updateMembershipApplication(id: string, patch: Partial<MembershipApplicationInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoApplication(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("membership_applications").update(patch).eq("id", id);
+  if (error) console.error("updateMembershipApplication:", error); return !error;
 }

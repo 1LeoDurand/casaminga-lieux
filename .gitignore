@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# MCP local config (peut contenir des tokens — ne jamais committer)
+.mcp.json
+
 # local dev logs
 *.log
 

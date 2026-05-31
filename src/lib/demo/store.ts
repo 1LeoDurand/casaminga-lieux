@@ -8,6 +8,9 @@ import {
   DEMO_MANDATES,
   DEMO_MEDIA,
   DEMO_MEETINGS,
+  DEMO_MEMBERSHIP_APPLICATIONS,
+  DEMO_MEMBERSHIP_CAMPAIGNS,
+  DEMO_MEMBERSHIP_TIERS,
   DEMO_PARTNERS,
   DEMO_PERSONS,
   DEMO_REQUESTS,
@@ -28,6 +31,9 @@ import type {
   Mandate,
   Media,
   Meeting,
+  MembershipApplication,
+  MembershipCampaign,
+  MembershipTier,
   Partner,
   Person,
   Reservation,
@@ -67,6 +73,9 @@ const globalForDemo = globalThis as unknown as {
   __cmPartners?: Partner[];
   __cmImpact?: ImpactIndicator[];
   __cmAutomations?: Automation[];
+  __cmMembershipCampaigns?: MembershipCampaign[];
+  __cmMembershipTiers?: MembershipTier[];
+  __cmMembershipApplications?: MembershipApplication[];
 };
 
 function store(): IncomingRequest[] {
@@ -609,4 +618,74 @@ export function updateDemoAutomation(id: string, patch: Partial<Omit<Automation,
 export function deleteDemoAutomation(id: string): boolean {
   const arr = automationStore(); const i = arr.findIndex((a) => a.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Adhésions : campagnes (mode démo) ───────────────────────
+function campaignStore(): MembershipCampaign[] {
+  if (!globalForDemo.__cmMembershipCampaigns)
+    globalForDemo.__cmMembershipCampaigns = DEMO_MEMBERSHIP_CAMPAIGNS.map((c) => ({ ...c, photos: [...c.photos], donation_amounts: [...c.donation_amounts] }));
+  return globalForDemo.__cmMembershipCampaigns;
+}
+export function getDemoCampaigns(orgId: string): MembershipCampaign[] {
+  return campaignStore().filter((c) => c.organization_id === orgId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function getDemoCampaignBySlug(orgId: string, slug: string): MembershipCampaign | null {
+  return campaignStore().find((c) => c.organization_id === orgId && c.slug === slug) ?? null;
+}
+export function addDemoCampaign(input: Omit<MembershipCampaign, "id" | "created_at" | "updated_at">): MembershipCampaign {
+  const now = new Date().toISOString();
+  const c: MembershipCampaign = { ...input, id: `camp-${Date.now()}`, created_at: now, updated_at: now };
+  campaignStore().unshift(c); return c;
+}
+export function updateDemoCampaign(id: string, patch: Partial<Omit<MembershipCampaign, "id" | "organization_id" | "created_at">>): MembershipCampaign | null {
+  const found = campaignStore().find((c) => c.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoCampaign(id: string): boolean {
+  const arr = campaignStore(); const i = arr.findIndex((c) => c.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Adhésions : formules (mode démo) ────────────────────────
+function tierStore(): MembershipTier[] {
+  if (!globalForDemo.__cmMembershipTiers)
+    globalForDemo.__cmMembershipTiers = DEMO_MEMBERSHIP_TIERS.map((t) => ({ ...t }));
+  return globalForDemo.__cmMembershipTiers;
+}
+export function getDemoTiers(campaignId: string): MembershipTier[] {
+  return tierStore().filter((t) => t.campaign_id === campaignId).sort((a, b) => a.sort_order - b.sort_order);
+}
+export function addDemoTier(input: Omit<MembershipTier, "id" | "created_at">): MembershipTier {
+  const t: MembershipTier = { ...input, id: `tier-${Date.now()}`, created_at: new Date().toISOString() };
+  tierStore().push(t); return t;
+}
+export function updateDemoTier(id: string, patch: Partial<Omit<MembershipTier, "id" | "campaign_id" | "organization_id" | "created_at">>): MembershipTier | null {
+  const found = tierStore().find((t) => t.id === id);
+  if (!found) return null; Object.assign(found, patch); return found;
+}
+export function deleteDemoTier(id: string): boolean {
+  const arr = tierStore(); const i = arr.findIndex((t) => t.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Adhésions : souscriptions (mode démo) ───────────────────
+function applicationStore(): MembershipApplication[] {
+  if (!globalForDemo.__cmMembershipApplications)
+    globalForDemo.__cmMembershipApplications = DEMO_MEMBERSHIP_APPLICATIONS.map((a) => ({ ...a }));
+  return globalForDemo.__cmMembershipApplications;
+}
+export function getDemoApplications(campaignId: string): MembershipApplication[] {
+  return applicationStore().filter((a) => a.campaign_id === campaignId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function getDemoApplicationsForOrg(orgId: string): MembershipApplication[] {
+  return applicationStore().filter((a) => a.organization_id === orgId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function addDemoApplication(input: Omit<MembershipApplication, "id" | "created_at" | "updated_at">): MembershipApplication {
+  const now = new Date().toISOString();
+  const a: MembershipApplication = { ...input, id: `app-${Date.now()}`, created_at: now, updated_at: now };
+  applicationStore().unshift(a); return a;
+}
+export function updateDemoApplication(id: string, patch: Partial<Omit<MembershipApplication, "id" | "campaign_id" | "organization_id" | "created_at">>): MembershipApplication | null {
+  const found = applicationStore().find((a) => a.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
 }

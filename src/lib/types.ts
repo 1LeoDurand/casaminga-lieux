@@ -132,6 +132,63 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type MembershipCampaignStatus = "brouillon" | "publie" | "prive" | "archive";
+export type MembershipPeriodType = "annee_glissante" | "illimitee" | "personnalisee";
+export type MembershipApplicationStatus = "en_attente" | "confirmee" | "annulee";
+
+export interface MembershipCampaign {
+  id: string;
+  organization_id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  status: MembershipCampaignStatus;
+  period_type: MembershipPeriodType;
+  period_start: string | null;
+  period_end: string | null;
+  max_members: number | null;
+  allow_donation: boolean;
+  donation_amounts: string[];
+  show_member_count: boolean;
+  show_collected: boolean;
+  generate_cards: boolean;
+  photos: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MembershipTier {
+  id: string;
+  campaign_id: string;
+  organization_id: string;
+  name: string;
+  description: string | null;
+  amount: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface MembershipApplication {
+  id: string;
+  campaign_id: string;
+  tier_id: string | null;
+  organization_id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  payer_name: string | null;
+  payer_email: string | null;
+  amount_paid: number;
+  donation_amount: number | null;
+  status: MembershipApplicationStatus;
+  membership_start: string | null;
+  membership_end: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type AutomationTrigger = "demande_recue" | "resa_creee" | "facture_impayee" | "evenement_proche" | "manuel";
 export type AutomationAction = "notification" | "email" | "tache" | "statut";
 

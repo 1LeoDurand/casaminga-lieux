@@ -9,6 +9,9 @@ import type {
   Mandate,
   Media,
   Meeting,
+  MembershipApplication,
+  MembershipCampaign,
+  MembershipTier,
   Organization,
   Partner,
   Person,
@@ -639,6 +642,29 @@ export const DEMO_AUTOMATIONS: Automation[] = [
   { id: "e2c22222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, name: "Relance des factures impayées", trigger_type: "facture_impayee", condition: "Facture impayée depuis plus de 30 jours", action_type: "tache", action_detail: "Créer une tâche de relance pour la trésorière", active: true, last_run_at: "2026-05-28T09:00:00+02:00", run_count: 7, created_at: NOW, updated_at: NOW },
   { id: "e3c33333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, name: "Rappel événement J-2", trigger_type: "evenement_proche", condition: "Événement publié dans 2 jours", action_type: "notification", action_detail: "Notifier l'équipe et les inscrits", active: true, last_run_at: null, run_count: 0, created_at: NOW, updated_at: NOW },
   { id: "e4c44444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, name: "Confirmation de réservation", trigger_type: "resa_creee", condition: "Réservation confirmée", action_type: "email", action_detail: "Envoyer la confirmation au réservant", active: false, last_run_at: null, run_count: 0, created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_MEMBERSHIP_CAMPAIGNS: MembershipCampaign[] = [
+  { id: "aa111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID,
+    title: "Bulletin d'adhésion 2026", slug: "bulletin-adhesion-2026",
+    description: "Rejoignez le tiers-lieu Bernard Kohn ! Votre adhésion soutient la programmation culturelle, les ateliers et les résidences artistiques.",
+    status: "publie", period_type: "personnalisee",
+    period_start: "2026-05-31", period_end: "2027-05-31",
+    max_members: null, allow_donation: true, donation_amounts: ["30","50","100"],
+    show_member_count: true, show_collected: true, generate_cards: true,
+    photos: ["https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=60"],
+    created_at: NOW, updated_at: NOW },
+];
+export const DEMO_MEMBERSHIP_TIERS: MembershipTier[] = [
+  { id: "ab111111-1111-4111-8111-111111111111", campaign_id: "aa111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, name: "Adhésion événement", description: "Valable pour un seul événement ou atelier (montant minimum)", amount: 1, sort_order: 0, created_at: NOW },
+  { id: "ab222222-2222-4222-8222-222222222222", campaign_id: "aa111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, name: "Membre associé", description: "Soutien à nos activités", amount: 15, sort_order: 1, created_at: NOW },
+  { id: "ab333333-3333-4333-8333-333333333333", campaign_id: "aa111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, name: "Membre actif", description: "Adhésion pleine avec droit de vote à l'AG", amount: 25, sort_order: 2, created_at: NOW },
+  { id: "ab444444-4444-4444-8444-444444444444", campaign_id: "aa111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, name: "Membre d'honneur bienfaiteur", description: "Cotisation minimum — merci pour votre générosité !", amount: 50, sort_order: 3, created_at: NOW },
+];
+export const DEMO_MEMBERSHIP_APPLICATIONS: MembershipApplication[] = [
+  { id: "ac111111-1111-4111-8111-111111111111", campaign_id: "aa111111-1111-4111-8111-111111111111", tier_id: "ab333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, first_name: "Camille", last_name: "Aubry", email: "camille.aubry@example.org", phone: "+33 6 12 34 56 78", payer_name: "Camille Aubry", payer_email: "camille.aubry@example.org", amount_paid: 25, donation_amount: 30, status: "confirmee", membership_start: "2026-05-31", membership_end: "2027-05-31", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "ac222222-2222-4222-8222-222222222222", campaign_id: "aa111111-1111-4111-8111-111111111111", tier_id: "ab222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, first_name: "Sofiane", last_name: "Merabet", email: "sofiane.merabet@example.org", phone: "+33 6 23 45 67 89", payer_name: "Sofiane Merabet", payer_email: "sofiane.merabet@example.org", amount_paid: 15, donation_amount: null, status: "confirmee", membership_start: "2026-06-01", membership_end: "2027-06-01", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "ac333333-3333-4333-8333-333333333333", campaign_id: "aa111111-1111-4111-8111-111111111111", tier_id: "ab111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, first_name: "Marc", last_name: "Lefèvre", email: "marc.lefevre@example.org", phone: null, payer_name: "Marc Lefèvre", payer_email: "marc.lefevre@example.org", amount_paid: 1, donation_amount: null, status: "en_attente", membership_start: null, membership_end: null, notes: null, created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

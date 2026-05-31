@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrganizationBySlug, getPublicSiteBySlug } from "@/lib/data";
+import { getMembershipCampaignsForOrg, getOrganizationBySlug, getPublicSiteBySlug } from "@/lib/data";
 import { PublicContactForm } from "@/components/mc/public-contact-form";
 
 export async function generateMetadata({
@@ -38,6 +38,8 @@ export default async function PublicSitePage({
   const org = await getOrganizationBySlug(slug);
   if (!site || !org) notFound();
 
+  const campaigns = (await getMembershipCampaignsForOrg(org.id)).filter((c) => c.status === "publie");
+
   return (
     <main className="min-h-screen bg-cream">
       {/* Nav */}
@@ -47,6 +49,7 @@ export default async function PublicSitePage({
           <nav className="ml-auto flex items-center gap-5 text-sm text-muted-foreground">
             <a href="#lieu" className="hover:text-coral-dark">Le lieu</a>
             <a href="#agenda" className="hover:text-coral-dark">Agenda</a>
+            {campaigns.length > 0 ? <a href="#adherer" className="hover:text-coral-dark">Adhérer</a> : null}
             <a href="#contact" className="hover:text-coral-dark">Contact</a>
           </nav>
         </div>
@@ -91,6 +94,30 @@ export default async function PublicSitePage({
           Aucun événement publié pour le moment.
         </div>
       </section>
+
+      {/* Adhérer */}
+      {campaigns.length > 0 ? (
+        <section id="adherer" className="mx-auto max-w-5xl px-6 py-14">
+          <h2 className="font-heading text-2xl font-bold">Adhérer</h2>
+          <p className="mt-2 text-muted-foreground">
+            Rejoignez le lieu et soutenez le projet. L&apos;adhésion se fait en ligne, en quelques minutes.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {campaigns.map((c) => (
+              <div key={c.id} className="flex flex-col rounded-2xl border border-border/60 bg-white p-6 shadow-[0_4px_20px_rgba(255,138,101,0.07)]">
+                <h3 className="font-heading text-lg font-bold">{c.title}</h3>
+                {c.description ? <p className="mt-2 flex-1 text-sm text-muted-foreground">{c.description}</p> : <div className="flex-1" />}
+                <Link
+                  href={`/site/${org.slug}/adhesion/${c.slug}`}
+                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-coral px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark"
+                >
+                  Adhérer
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Contact */}
       <section id="contact" className="mx-auto max-w-5xl px-6 py-14">
