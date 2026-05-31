@@ -46,6 +46,17 @@ Chaque lieu est une **organisation** ; toutes les données métier sont rattach�
 > cockpit « Espaces au catalogue » câblée sur le décompte réel. Primitives `mc-*` ajoutées
 > (space-card, space-cover, space-badges, space-meta, space-price, space-hero) + états
 > vide/loading/erreur/succès.
+>
+> **v1.7 — module Réservations (planning des créneaux).** Quatrième module reconstruit selon le
+> modèle de portage. Nouvelle table `reservations` (migration idempotente `0004_reservations.sql`,
+> RLS membre-only, contrainte EXCLUDE gist anti-chevauchement) et vue `reservations-view.tsx` :
+> 5 KPIs réels (total, aujourd'hui, demandées, confirmées, annulées), **3 vues** (Kanban par statut,
+> Agenda groupé par jour, Tableau), recherche, filtres à chips (espace/statut), cartes de créneau,
+> drawer détail (plage + durée, espace, réservant·e, prix, notes, actions rapides de statut),
+> formulaire modal de création/édition, confirmation avant suppression. **Anti-chevauchement** à
+> double garde (pre-check applicatif + contrainte SQL GIST). Tuile « Réservations du jour » du
+> cockpit câblée sur le décompte réel. Primitives `mc-*` ajoutées (kanban, resa-card, agenda) +
+> états vide/loading/erreur/succès.
 
 ---
 

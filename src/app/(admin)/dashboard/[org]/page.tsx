@@ -6,7 +6,14 @@ import { KpiTile } from "@/components/mc/kpi-tile";
 import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
 import { StatusBadge } from "@/components/mc/status-badge";
-import { getOrganizationBySlug, getPersonsForOrg, getRequestsForOrg, getSpacesForOrg } from "@/lib/data";
+import {
+  getOrganizationBySlug,
+  getPersonsForOrg,
+  getRequestsForOrg,
+  getReservationsForOrg,
+  getSpacesForOrg,
+} from "@/lib/data";
+import { isToday } from "@/lib/reservations-meta";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -34,10 +41,11 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons, spaces] = await Promise.all([
+  const [requests, persons, spaces, reservations] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
+    getReservationsForOrg(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
@@ -45,6 +53,9 @@ export default async function DashboardOverview({
   const recent = requests.slice(0, 5);
   const activeMembers = persons.filter((p) => p.status === "actif").length;
   const availableSpaces = spaces.filter((s) => s.status === "disponible").length;
+  const reservationsToday = reservations.filter(
+    (r) => r.status !== "annulee" && isToday(r.start_at)
+  ).length;
 
   const now = new Date();
   const dayLabel = new Intl.DateTimeFormat("fr-FR", {
@@ -56,7 +67,7 @@ export default async function DashboardOverview({
   const dateTag = `${dayLabel.charAt(0).toUpperCase()}${dayLabel.slice(1)} · semaine ${weekNumber(now)}`;
 
   const todayItems: TodayItem[] = [
-    { key: "resa", icon: "resa", iconBg: "#ffefea", iconColor: "var(--coral-dark)", num: 4, label: "Réservations du jour", segment: undefined },
+    { key: "resa", icon: "resa", iconBg: "#ffefea", iconColor: "var(--coral-dark)", num: reservationsToday, label: "Réservations du jour", segment: "reservations" },
     { key: "event", icon: "event", iconBg: "#f4e7ff", iconColor: "#6b3aa0", num: 7, label: "Événements cette semaine", segment: undefined },
     { key: "demande", icon: "demande", iconBg: "#fff3de", iconColor: "#a06800", num: openRequests.length, label: "Demandes à traiter", segment: "demandes" },
     { key: "impayes", icon: "alert", iconBg: "#fdeae4", iconColor: "var(--coral-dark)", num: 2, extra: "480 €", label: "Impayés en attente", warn: true, segment: undefined },

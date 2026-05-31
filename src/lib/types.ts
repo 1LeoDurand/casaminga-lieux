@@ -111,6 +111,27 @@ export interface Space {
   updated_at: string;
 }
 
+export type ReservationStatus =
+  | "demandee"
+  | "confirmee"
+  | "terminee"
+  | "annulee";
+
+export interface Reservation {
+  id: string;
+  organization_id: string;
+  space_id: string;
+  person_id: string | null;
+  title: string | null;
+  start_at: string; // ISO (timestamptz)
+  end_at: string; // ISO (timestamptz)
+  status: ReservationStatus;
+  price: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PublicSite {
   organization_id: string;
   slug: string;

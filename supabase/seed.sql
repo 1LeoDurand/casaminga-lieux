@@ -102,6 +102,36 @@ values
    array[]::text[], 'maintenance')
 on conflict (id) do nothing;
 
+-- Réservations de démonstration (créneaux) — UUID fixes pour des liens stables
+insert into public.reservations
+  (id, organization_id, space_id, person_id, title, start_at, end_at, status, price, notes)
+values
+  ('e1111111-1111-4111-8111-111111111111', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'd1111111-1111-4111-8111-111111111111', 'c1111111-1111-4111-8111-111111111111',
+   'Répétition exposition', '2026-05-30T14:00:00+02:00', '2026-05-30T17:00:00+02:00',
+   'confirmee', 105.0, 'Accrochage et derniers réglages avant le vernissage.'),
+  ('e2222222-2222-4222-8222-222222222222', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'd2222222-2222-4222-8222-222222222222', 'c4444444-4444-4444-8444-444444444444',
+   'Atelier poterie débutants', '2026-05-31T10:00:00+02:00', '2026-05-31T13:00:00+02:00',
+   'demandee', 54.0, 'Groupe de 8 personnes, prévoir les tabliers.'),
+  ('e3333333-3333-4333-8333-333333333333', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'd3333333-3333-4333-8333-333333333333', 'c2222222-2222-4222-8222-222222222222',
+   'Journée coworking', '2026-06-02T09:00:00+02:00', '2026-06-02T18:00:00+02:00',
+   'confirmee', 40.0, 'Poste fixe réservé à la journée.'),
+  ('e4444444-4444-4444-8444-444444444444', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'd1111111-1111-4111-8111-111111111111', 'c3333333-3333-4333-8333-333333333333',
+   'Concert associatif', '2026-06-05T18:00:00+02:00', '2026-06-05T23:00:00+02:00',
+   'demandee', 220.0, 'Soirée musicale ouverte au public.'),
+  ('e5555555-5555-4555-8555-555555555555', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'd4444444-4444-4444-8444-444444444444', 'c5555555-5555-4555-8555-555555555555',
+   'Marché de créateurs', '2026-05-24T12:00:00+02:00', '2026-05-24T16:00:00+02:00',
+   'terminee', 150.0, 'Édition de printemps, météo clémente.'),
+  ('e6666666-6666-4666-8666-666666666666', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+   'd5555555-5555-4555-8555-555555555555', 'c6666666-6666-4666-8666-666666666666',
+   'Réunion partenaires', '2026-06-03T14:00:00+02:00', '2026-06-03T16:00:00+02:00',
+   'annulee', 24.0, 'Reportée à une date ultérieure.')
+on conflict (id) do nothing;
+
 -- ────────────────────────────────────────────────────────────
 -- Pour devenir membre admin du lieu démo :
 -- 1) crée ton compte via l'app (login),

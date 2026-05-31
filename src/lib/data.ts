@@ -4,14 +4,20 @@ import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
   addDemoPerson,
   addDemoRequest,
+  addDemoReservation,
   addDemoSpace,
   deleteDemoPerson,
+  deleteDemoReservation,
   deleteDemoSpace,
+  findDemoReservationConflict,
   getDemoPersons,
   getDemoRequests,
+  getDemoReservationById,
+  getDemoReservations,
   getDemoSpaces,
   updateDemoPerson,
   updateDemoRequestStatus,
+  updateDemoReservation,
   updateDemoSpace,
 } from "@/lib/demo/store";
 import type {
@@ -19,6 +25,7 @@ import type {
   Organization,
   Person,
   PublicSite,
+  Reservation,
   RequestStatus,
   Space,
 } from "@/lib/types";
@@ -272,5 +279,131 @@ export async function deleteSpace(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("spaces").delete().eq("id", id);
   if (error) console.error("deleteSpace: échec suppression Supabase", error);
+  return !error;
+}
+
+// ── Réservations ────────────────────────────────────────────
+export async function getReservationsForOrg(
+  orgId: string
+): Promise<Reservation[]> {
+  if (!isSupabaseConfigured()) return getDemoReservations(orgId);
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("reservations")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("start_at", { ascending: true });
+  return data ?? [];
+}
+
+export interface ReservationInput {
+  organization_id: string;
+  space_id: string;
+  person_id: string | null;
+  title: string | null;
+  start_at: string;
+  end_at: string;
+  status: Reservation["status"];
+  price: number | null;
+  notes: string | null;
+}
+
+/** Résultat d'écriture : `conflict` distingue un chevauchement de créneau. */
+export interface ReservationWriteResult {
+  ok: boolean;
+  conflict?: boolean;
+}
+
+// Code Postgres d'une violation de contrainte EXCLUDE (anti-chevauchement).
+const PG_EXCLUSION_VIOLATION = "23P01";
+
+/** Crée une réservation (refuse les chevauchements d'espace). Membre uniquement. */
+export async function createReservation(
+  input: ReservationInput
+): Promise<ReservationWriteResult> {
+  if (!isSupabaseConfigured()) {
+    if (input.status !== "annulee") {
+      const clash = findDemoReservationConflict(
+        input.organization_id,
+        input.space_id,
+        input.start_at,
+        input.end_at
+      );
+      if (clash) return { ok: false, conflict: true };
+    }
+    addDemoReservation(input);
+    return { ok: true };
+  }
+
+  const supabase = await createClient();
+
+  // Pré-contrôle pour un message clair (la contrainte EXCLUDE reste le garde-fou).
+  if (input.status !== "annulee") {
+    const { data: clash } = await supabase
+      .from("reservations")
+      .select("id")
+      .eq("organization_id", input.organization_id)
+      .eq("space_id", input.space_id)
+      .neq("status", "annulee")
+      .lt("start_at", input.end_at)
+      .gt("end_at", input.start_at)
+      .limit(1);
+    if (clash && clash.length) return { ok: false, conflict: true };
+  }
+
+  const { error } = await supabase.from("reservations").insert(input);
+  if (error) {
+    if (error.code === PG_EXCLUSION_VIOLATION) return { ok: false, conflict: true };
+    console.error("createReservation: échec insertion Supabase", error);
+    return { ok: false };
+  }
+  return { ok: true };
+}
+
+/** Met à jour une réservation (refuse les chevauchements). */
+export async function updateReservation(
+  id: string,
+  patch: Partial<ReservationInput>
+): Promise<ReservationWriteResult> {
+  if (!isSupabaseConfigured()) {
+    const current = getDemoReservationById(id);
+    if (!current) return { ok: false };
+    // Calcule le créneau effectif (fusion) AVANT toute mutation.
+    const effective = { ...current, ...patch };
+    if (effective.status !== "annulee") {
+      const clash = findDemoReservationConflict(
+        effective.organization_id,
+        effective.space_id,
+        effective.start_at,
+        effective.end_at,
+        id
+      );
+      if (clash) return { ok: false, conflict: true };
+    }
+    return updateDemoReservation(id, patch) ? { ok: true } : { ok: false };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("reservations")
+    .update(patch)
+    .eq("id", id);
+  if (error) {
+    if (error.code === PG_EXCLUSION_VIOLATION) return { ok: false, conflict: true };
+    console.error("updateReservation: échec maj Supabase", error);
+    return { ok: false };
+  }
+  return { ok: true };
+}
+
+/** Supprime une réservation. */
+export async function deleteReservation(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return deleteDemoReservation(id);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("reservations").delete().eq("id", id);
+  if (error) console.error("deleteReservation: échec suppression Supabase", error);
   return !error;
 }

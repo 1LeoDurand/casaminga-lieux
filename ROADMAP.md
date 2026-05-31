@@ -114,8 +114,32 @@ Troisième module reconstruit selon le modèle de portage. **Nouvelle table mét
 - **Supabase** : `getSpacesForOrg` / `createSpace` / `updateSpace` / `deleteSpace` (demo ⇆
   Supabase), server actions avec `revalidatePath` ; jamais de `service_role` côté front.
 
+### v1.7 — module Réservations (planning des créneaux) ✅
+Quatrième module reconstruit selon le modèle de portage. **Nouvelle table métier + UI fidèle.**
+- **Migration `0004_reservations.sql`** (idempotente) : table `reservations` (`organization_id` FK,
+  `space_id` FK cascade, `person_id` FK set null, `title`, `start_at`/`end_at` timestamptz,
+  `status`, `price`, `notes`, timestamps), index `(org, status)`, `(org, space, start)`,
+  trigger `set_updated_at`, **contrainte EXCLUDE gist** anti-chevauchement (`btree_gist`),
+  **RLS membre-only** (`reservations_member_all` via `is_org_member`). Seed : 6 réservations démo.
+- **Primitives `mc-*`** ajoutées à `globals.css` : `mc-kanban`/`mc-kanban-col`/`mc-kanban-head`,
+  `mc-resa-card`/`mc-resa-title`/`mc-resa-line`, `mc-agenda`/`mc-agenda-day`/`mc-agenda-date`.
+- **Écran Réservations** (`reservations-view.tsx`) : `PageHeader` fidèle, **5 KPIs réels** (total,
+  aujourd'hui, demandées, confirmées, annulées), toolbar (recherche + **3 vues kanban/agenda/table**
+  + Nouvelle + reset), **filtres à chips** (espace/statut), **Kanban** 4 colonnes (Demandée /
+  Confirmée / Terminée / Annulée), **Agenda** groupé par jour (today surligné), **Tableau** trié
+  chronologiquement, clic → **drawer détail** (plage + durée, espace + type, réservant·e, prix,
+  notes, **actions rapides** Confirmer / Terminer / Annuler, Modifier / Supprimer), **formulaire
+  modal** création/édition (`reservation-form.tsx`), **confirmation** avant suppression.
+- **Anti-chevauchement** double garde : pre-check applicatif (demo + Supabase) + contrainte SQL
+  `EXCLUDE USING gist` → toast clair « Ce créneau chevauche une autre réservation ».
+  Retour `{ ok, conflict? }` pour distinguer chevauchement d'erreur générique.
+- **4 états couverts** : vide (`mc-empty`), loading (`loading.tsx`), succès (toasts `sonner`).
+- **Supabase** : `getReservationsForOrg` / `createReservation` / `updateReservation` /
+  `deleteReservation` (demo ⇆ Supabase), server actions avec `revalidatePath` ; jamais de
+  `service_role` côté front. Tuile cockpit « Réservations du jour » câblée sur données réelles.
+
 ### Prochaines versions (ordre MVP)
-Réservations → Résidences → Événements → modules Structure / Publication /
+Événements → Résidences → Documents → Finances → modules Publication /
 Système. Chaque module = **une version**, livré avec UI fidèle **et** liaison Supabase ensemble.
 Chaque table métier reste liée à `organization_id` avec RLS. Détail dans
 [`docs/PLAN_RECONSTRUCTION.md`](docs/PLAN_RECONSTRUCTION.md).
@@ -161,3 +185,4 @@ Historique des versions :
 | v1.4    | `v1.4-demandes`         | `3356b68` | `archives\casa-minga-lieux-v1.4-demandes.zip`            |
 | v1.5    | `v1.5-personnes`        | `72459c1` | `archives\casa-minga-lieux-v1.5-personnes.zip`          |
 | v1.6    | `v1.6-espaces`          | `fed88f1` | `archives\casa-minga-lieux-v1.6-espaces.zip`            |
+| v1.7    | `v1.7-reservations`     | _à venir_ | `archives\casa-minga-lieux-v1.7-reservations.zip`       |

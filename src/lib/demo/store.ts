@@ -1,5 +1,16 @@
-import { DEMO_PERSONS, DEMO_REQUESTS, DEMO_SPACES } from "@/lib/demo/data";
-import type { IncomingRequest, Person, RequestStatus, Space } from "@/lib/types";
+import {
+  DEMO_PERSONS,
+  DEMO_REQUESTS,
+  DEMO_RESERVATIONS,
+  DEMO_SPACES,
+} from "@/lib/demo/data";
+import type {
+  IncomingRequest,
+  Person,
+  Reservation,
+  RequestStatus,
+  Space,
+} from "@/lib/types";
 
 /**
  * Store mutable en mémoire pour le MODE DÉMO uniquement.
@@ -16,6 +27,7 @@ const globalForDemo = globalThis as unknown as {
   __cmRequests?: IncomingRequest[];
   __cmPersons?: Person[];
   __cmSpaces?: Space[];
+  __cmReservations?: Reservation[];
 };
 
 function store(): IncomingRequest[] {
@@ -140,6 +152,80 @@ export function updateDemoSpace(
 export function deleteDemoSpace(id: string): boolean {
   const arr = spaceStore();
   const i = arr.findIndex((s) => s.id === id);
+  if (i === -1) return false;
+  arr.splice(i, 1);
+  return true;
+}
+
+// ── Réservations (mode démo) ────────────────────────────────
+function reservationStore(): Reservation[] {
+  if (!globalForDemo.__cmReservations) {
+    globalForDemo.__cmReservations = DEMO_RESERVATIONS.map((r) => ({ ...r }));
+  }
+  return globalForDemo.__cmReservations;
+}
+
+export function getDemoReservations(orgId: string): Reservation[] {
+  return reservationStore()
+    .filter((r) => r.organization_id === orgId)
+    .sort((a, b) => a.start_at.localeCompare(b.start_at));
+}
+
+export function getDemoReservationById(id: string): Reservation | null {
+  return reservationStore().find((r) => r.id === id) ?? null;
+}
+
+/**
+ * Cherche un créneau en conflit sur le même espace (statut ≠ annulée).
+ * `excludeId` permet d'ignorer la réservation en cours de modification.
+ */
+export function findDemoReservationConflict(
+  orgId: string,
+  spaceId: string,
+  startAt: string,
+  endAt: string,
+  excludeId?: string
+): Reservation | null {
+  return (
+    reservationStore().find(
+      (r) =>
+        r.organization_id === orgId &&
+        r.space_id === spaceId &&
+        r.status !== "annulee" &&
+        r.id !== excludeId &&
+        startAt < r.end_at &&
+        endAt > r.start_at
+    ) ?? null
+  );
+}
+
+export function addDemoReservation(
+  input: Omit<Reservation, "id" | "created_at" | "updated_at">
+): Reservation {
+  const now = new Date().toISOString();
+  const created: Reservation = {
+    ...input,
+    id: `resa-${Date.now()}`,
+    created_at: now,
+    updated_at: now,
+  };
+  reservationStore().unshift(created);
+  return created;
+}
+
+export function updateDemoReservation(
+  id: string,
+  patch: Partial<Omit<Reservation, "id" | "organization_id" | "created_at">>
+): Reservation | null {
+  const found = reservationStore().find((r) => r.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() });
+  return found;
+}
+
+export function deleteDemoReservation(id: string): boolean {
+  const arr = reservationStore();
+  const i = arr.findIndex((r) => r.id === id);
   if (i === -1) return false;
   arr.splice(i, 1);
   return true;
