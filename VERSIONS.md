@@ -155,34 +155,59 @@ Table `transactions` (recettes/dépenses, catégories). Vue `finances-view.tsx` 
 
 ---
 
-## 🔜 Ce qui reste (v2+)
-**Priorité** : haute · **Dépend de** : Espaces, Personnes
+## ✅ Série v2 — modules transverses (TOUS livrés)
 
-**Ce qu'il faut faire :**
-- Table `events` : `id`, `organization_id`, `space_id?`, `title`, `start_at`, `end_at`,
-  `type` (atelier/concert/expo/reunion/autre), `status` (brouillon/publie/annule),
-  `capacity`, `price`, `description`, `photos text[]`, timestamps + RLS membre.
-- ⚠️ La table `evenements` **existe déjà** en Supabase (vide, RLS active) — inspecter sa structure
-  avant de créer la migration pour ne pas dupliquer ou casser.
-- Vue : cartes événements + agenda + KPIs (à venir, cette semaine, publiés, brouillons).
-- KPI cockpit « Événements à venir » câblé (aujourd'hui illustratif hardcodé).
-- `src/lib/events-meta.ts` : types, statuts, badges, formatters.
+> Chaque version v2 : migration via **MCP Supabase** → seed → **audit `get_advisors` (security)** →
+> code → lint/build → check route → commit → tag → archive. Audit de chaque table : RLS + policy
+> présentes, aucun nouveau risque (warnings restants = helpers `security_definer` voulus + config auth).
 
-> **Note dev** : les événements peuvent avoir ou non un espace associé (conférence en ligne = pas
-> d'espace). `space_id` nullable. Chevauchement d'espace à vérifier comme pour les réservations
-> (mais optionnel : un événement sans espace ne peut pas chevaucher).
+### v2.0 — Tâches & alertes ✅
+**Commit** `9583ead` · **Tag** `v2.0-taches`
+Table `tasks`. Kanban à faire/en cours/fait, priorités, échéances, alerte de retard calculée
+(`isOverdue`), assignation aux personnes. KPI cockpit « Tâches urgentes » câblé (haute priorité OU en retard).
+
+### v2.1 — Communauté ✅
+**Commit** `ff7b42d` · **Tag** `v2.1-communaute`
+Table `community_posts`. Fil d'entraide entre membres : offre/demande/entraide/info, workflow
+actif→résolu→archivé, auteur lié aux personnes.
+
+### v2.2 — Gouvernance ✅
+**Commit** `13cfdae` · **Tag** `v2.2-gouvernance`
+Tables `meetings` + `mandates`. Onglets Réunions (CA/AG/bureau, ordre du jour, CR, marquer tenue)
+et Mandats (rôle, personne, période, actif/terminé).
+
+### v2.3 — Partenaires ✅
+**Commit** `90eedbc` · **Tag** `v2.3-partenaires`
+Table `partners`. Annuaire à cartes : type public/privé/associatif/fondation, contact lié,
+email/téléphone/site web cliquables.
+
+### v2.4 — Impact ✅
+**Commit** `dd63079` · **Tag** `v2.4-impact`
+Table `impact_indicators` + **agrégats automatiques temps réel** (réservations, événements,
+personnes, espaces, solde net finances) calculés côté serveur, + indicateurs manuels CRUD.
+
+> **Note dev** : la page Impact agrège les données réelles des autres modules dans `page.tsx`
+> (serveur) et passe `AutoStats` à la vue. Les indicateurs manuels sont en base.
+
+### v2.5 — Automatisations ✅
+**Commit** `b66089f` · **Tag** `v2.5-automatisations`
+Table `automations`. Règles « si… alors… » (déclencheur/condition/action), toggle actif,
+compteur d'exécutions. **L'exécution réelle relève de la logique serveur** — aucun secret côté front.
 
 ---
 
-### v2.0 — Gouvernance / Impact / Automatisations + améliorations
-**Priorité** : basse (v2, après validation terrain)
+## 🎉 État : les 19 modules sont `ready`
 
-- **Gouvernance** : procès-verbaux, votes, mandats (`governance_records`)
-- **Impact** : indicateurs agrégés depuis tous les modules
-- **Automatisations** : règles déclencheur/condition/action (`automations`)
-- **Upload réel** Supabase Storage pour Documents et Médiathèque
-- **Communauté & Partenaires** : annuaires internes
-- **Site public** enrichi côté public : sections espaces + événements sur `/site/[slug]`
+Toute la navigation est en ligne. `src/lib/modules.ts` ne contient plus aucun `ready: false`.
+Build complet vert (19 routes `/dashboard/[org]/*`), lint 100% clean.
+
+### Pistes d'amélioration futures (non bloquantes)
+- **Upload réel** Supabase Storage pour Documents & Médiathèque (actuellement = URL libre).
+- **Site public enrichi** côté visiteur : sections espaces + événements sur `/site/[slug]`.
+- **Paramètres** : édition de la fiche organisation (actuellement lecture seule).
+- **Exécution réelle** des automatisations via Edge Functions Supabase.
+- Avertissements `get_advisors` cosmétiques : `search_path` sur `set_updated_at`, `btree_gist`
+  en schéma public, activation « leaked password protection » dans Auth.
 
 ---
 
