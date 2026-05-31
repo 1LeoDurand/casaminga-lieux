@@ -1,4 +1,5 @@
 import {
+  DEMO_DOCUMENTS,
   DEMO_EVENEMENTS,
   DEMO_PERSONS,
   DEMO_REQUESTS,
@@ -7,6 +8,7 @@ import {
   DEMO_SPACES,
 } from "@/lib/demo/data";
 import type {
+  Document,
   Evenement,
   IncomingRequest,
   Person,
@@ -34,6 +36,7 @@ const globalForDemo = globalThis as unknown as {
   __cmReservations?: Reservation[];
   __cmEvenements?: Evenement[];
   __cmResidences?: Residence[];
+  __cmDocuments?: Document[];
 };
 
 function store(): IncomingRequest[] {
@@ -302,5 +305,32 @@ export function updateDemoResidence(id: string, patch: Partial<Omit<Residence, "
 export function deleteDemoResidence(id: string): boolean {
   const arr = residenceStore();
   const i = arr.findIndex((r) => r.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Documents (mode démo) ───────────────────────────────────
+function documentStore(): Document[] {
+  if (!globalForDemo.__cmDocuments) {
+    globalForDemo.__cmDocuments = DEMO_DOCUMENTS.map((d) => ({ ...d }));
+  }
+  return globalForDemo.__cmDocuments;
+}
+export function getDemoDocuments(orgId: string): Document[] {
+  return documentStore().filter((d) => d.organization_id === orgId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function addDemoDocument(input: Omit<Document, "id" | "created_at" | "updated_at">): Document {
+  const now = new Date().toISOString();
+  const d: Document = { ...input, id: `doc-${Date.now()}`, created_at: now, updated_at: now };
+  documentStore().unshift(d); return d;
+}
+export function updateDemoDocument(id: string, patch: Partial<Omit<Document, "id" | "organization_id" | "created_at">>): Document | null {
+  const found = documentStore().find((d) => d.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoDocument(id: string): boolean {
+  const arr = documentStore();
+  const i = arr.findIndex((d) => d.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }

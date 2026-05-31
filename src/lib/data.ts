@@ -2,18 +2,21 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
+  addDemoDocument,
   addDemoEvenement,
   addDemoPerson,
   addDemoResidence,
   addDemoRequest,
   addDemoReservation,
   addDemoSpace,
+  deleteDemoDocument,
   deleteDemoEvenement,
   deleteDemoPerson,
   deleteDemoResidence,
   deleteDemoReservation,
   deleteDemoSpace,
   findDemoReservationConflict,
+  getDemoDocuments,
   getDemoEvenements,
   getDemoPersons,
   getDemoResidences,
@@ -21,6 +24,7 @@ import {
   getDemoReservationById,
   getDemoReservations,
   getDemoSpaces,
+  updateDemoDocument,
   updateDemoEvenement,
   updateDemoPerson,
   updateDemoResidence,
@@ -29,6 +33,7 @@ import {
   updateDemoSpace,
 } from "@/lib/demo/store";
 import type {
+  Document,
   Evenement,
   IncomingRequest,
   Organization,
@@ -518,5 +523,49 @@ export async function deleteResidence(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("residences").delete().eq("id", id);
   if (error) console.error("deleteResidence:", error);
+  return !error;
+}
+
+// ── Documents ────────────────────────────────────────────────
+export async function getDocumentsForOrg(orgId: string): Promise<Document[]> {
+  if (!isSupabaseConfigured()) return getDemoDocuments(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("documents").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface DocumentInput {
+  organization_id: string;
+  person_id: string | null;
+  title: string;
+  type: string;
+  status: Document["status"];
+  file_url: string | null;
+  file_name: string | null;
+  notes: string | null;
+}
+
+export async function createDocument(input: DocumentInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoDocument(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("documents").insert(input);
+  if (error) console.error("createDocument:", error);
+  return !error;
+}
+
+export async function updateDocument(id: string, patch: Partial<DocumentInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoDocument(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("documents").update(patch).eq("id", id);
+  if (error) console.error("updateDocument:", error);
+  return !error;
+}
+
+export async function deleteDocument(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoDocument(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("documents").delete().eq("id", id);
+  if (error) console.error("deleteDocument:", error);
   return !error;
 }

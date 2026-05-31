@@ -132,6 +132,23 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type DocumentType = "contrat" | "devis" | "facture" | "convention" | "rapport" | "autre";
+export type DocumentStatus = "brouillon" | "envoye" | "signe" | "archive";
+
+export interface Document {
+  id: string;
+  organization_id: string;
+  person_id: string | null;
+  title: string;
+  type: string;
+  status: DocumentStatus;
+  file_url: string | null;
+  file_name: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ResidenceDiscipline =
   | "ceramique" | "peinture" | "musique" | "danse"
   | "theatre" | "litterature" | "numerique" | "autre";

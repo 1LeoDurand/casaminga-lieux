@@ -1,4 +1,5 @@
 import type {
+  Document,
   Evenement,
   IncomingRequest,
   Organization,
@@ -470,6 +471,32 @@ export const DEMO_RESIDENCES: Residence[] = [
     start_date: null, end_date: null,
     description: "Candidature non retenue pour la session printemps 2026.",
     notes: "Profil intéressant, à recontacter pour la session automne.", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_DOCUMENTS: Document[] = [
+  { id: "41111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID,
+    person_id: "c1111111-1111-4111-8111-111111111111",
+    title: "Convention résidence — Camille Aubry 2026", type: "convention", status: "signe",
+    file_url: "https://example.com/docs/convention-aubry.pdf", file_name: "convention-aubry.pdf",
+    notes: "Signée par les deux parties le 28 mai 2026.", created_at: NOW, updated_at: NOW },
+  { id: "42222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID,
+    person_id: "c2222222-2222-4222-8222-222222222222",
+    title: "Devis coworking — Sofiane Merabet", type: "devis", status: "envoye",
+    file_url: null, file_name: null,
+    notes: "Devis mensuel pour poste fixe, en attente de validation.", created_at: NOW, updated_at: NOW },
+  { id: "43333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID,
+    person_id: null, title: "Rapport activités S1 2026", type: "rapport", status: "brouillon",
+    file_url: null, file_name: null,
+    notes: "En cours de rédaction — à finaliser avant le 15 juillet.", created_at: NOW, updated_at: NOW },
+  { id: "44444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID,
+    person_id: "c6666666-6666-4666-8666-666666666666",
+    title: "Contrat de travail — Hélène Roy", type: "contrat", status: "signe",
+    file_url: "https://example.com/docs/contrat-roy.pdf", file_name: "contrat-roy.pdf",
+    notes: null, created_at: NOW, updated_at: NOW },
+  { id: "45555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID,
+    person_id: null, title: "Facture location Grande Salle — juin 2026", type: "facture", status: "envoye",
+    file_url: null, file_name: null,
+    notes: "Studio Halle Nord, 220 € TTC — paiement attendu sous 30 jours.", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {
