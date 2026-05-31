@@ -8,6 +8,7 @@ import type {
   Media,
   Meeting,
   Organization,
+  Partner,
   Person,
   PublicSite,
   Reservation,
@@ -613,6 +614,14 @@ export const DEMO_MANDATES: Mandate[] = [
   { id: "b2222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, person_id: "c2222222-2222-4222-8222-222222222222", role: "Trésorier", start_date: "2025-06-01", end_date: "2027-06-01", status: "actif", created_at: NOW, updated_at: NOW },
   { id: "b3333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, person_id: "c3333333-3333-4333-8333-333333333333", role: "Secrétaire", start_date: "2025-06-01", end_date: "2027-06-01", status: "actif", created_at: NOW, updated_at: NOW },
   { id: "b4444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, person_id: "c4444444-4444-4444-8444-444444444444", role: "Référente ateliers", start_date: "2024-01-01", end_date: "2026-01-01", status: "termine", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_PARTNERS: Partner[] = [
+  { id: "c1a11111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, contact_id: "c6666666-6666-4666-8666-666666666666", name: "Mairie de Saint-Mandé", type: "public", status: "actif", email: "culture@saintmande.fr", phone: "+33 1 49 57 78 00", website: "https://saintmande.fr", notes: "Partenaire institutionnel principal. Subvention annuelle.", created_at: NOW, updated_at: NOW },
+  { id: "c2a22222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, contact_id: null, name: "Fondation de France", type: "fondation", status: "actif", email: "contact@fdf.org", phone: null, website: "https://fondationdefrance.org", notes: "Financement du programme de résidences 2026.", created_at: NOW, updated_at: NOW },
+  { id: "c3a33333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, contact_id: null, name: "Studio Halle Nord", type: "prive", status: "actif", email: "contact@hallenord.fr", phone: null, website: "https://hallenord.fr", notes: "Location régulière de la grande salle pour expositions.", created_at: NOW, updated_at: NOW },
+  { id: "c4a44444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, contact_id: null, name: "Collectif Terre & Feu", type: "associatif", status: "prospect", email: "hello@terrefeu.org", phone: null, website: null, notes: "Échanges en cours pour un partenariat céramique.", created_at: NOW, updated_at: NOW },
+  { id: "c5a55555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, contact_id: null, name: "Région Île-de-France", type: "public", status: "prospect", email: "culture@iledefrance.fr", phone: null, website: "https://iledefrance.fr", notes: "Dossier de subvention déposé, en attente de réponse.", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

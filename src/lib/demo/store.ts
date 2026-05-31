@@ -6,6 +6,7 @@ import {
   DEMO_MANDATES,
   DEMO_MEDIA,
   DEMO_MEETINGS,
+  DEMO_PARTNERS,
   DEMO_PERSONS,
   DEMO_REQUESTS,
   DEMO_RESERVATIONS,
@@ -23,6 +24,7 @@ import type {
   Mandate,
   Media,
   Meeting,
+  Partner,
   Person,
   Reservation,
   RequestStatus,
@@ -58,6 +60,7 @@ const globalForDemo = globalThis as unknown as {
   __cmCommunity?: CommunityPost[];
   __cmMeetings?: Meeting[];
   __cmMandates?: Mandate[];
+  __cmPartners?: Partner[];
 };
 
 function store(): IncomingRequest[] {
@@ -533,5 +536,27 @@ export function updateDemoMandate(id: string, patch: Partial<Omit<Mandate, "id" 
 }
 export function deleteDemoMandate(id: string): boolean {
   const arr = mandateStore(); const i = arr.findIndex((m) => m.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Partenaires (mode démo) ─────────────────────────────────
+function partnerStore(): Partner[] {
+  if (!globalForDemo.__cmPartners) globalForDemo.__cmPartners = DEMO_PARTNERS.map((p) => ({ ...p }));
+  return globalForDemo.__cmPartners;
+}
+export function getDemoPartners(orgId: string): Partner[] {
+  return partnerStore().filter((p) => p.organization_id === orgId).sort((a, b) => a.name.localeCompare(b.name));
+}
+export function addDemoPartner(input: Omit<Partner, "id" | "created_at" | "updated_at">): Partner {
+  const now = new Date().toISOString();
+  const p: Partner = { ...input, id: `partner-${Date.now()}`, created_at: now, updated_at: now };
+  partnerStore().unshift(p); return p;
+}
+export function updateDemoPartner(id: string, patch: Partial<Omit<Partner, "id" | "organization_id" | "created_at">>): Partner | null {
+  const found = partnerStore().find((p) => p.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoPartner(id: string): boolean {
+  const arr = partnerStore(); const i = arr.findIndex((p) => p.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }

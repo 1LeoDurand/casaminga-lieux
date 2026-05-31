@@ -7,6 +7,7 @@ import {
   addDemoDocument,
   addDemoMandate,
   addDemoMeeting,
+  addDemoPartner,
   addDemoEvenement,
   addDemoMedia,
   addDemoPerson,
@@ -21,6 +22,7 @@ import {
   deleteDemoDocument,
   deleteDemoMandate,
   deleteDemoMeeting,
+  deleteDemoPartner,
   deleteDemoEvenement,
   deleteDemoMedia,
   deleteDemoPerson,
@@ -35,6 +37,7 @@ import {
   getDemoDocuments,
   getDemoMandates,
   getDemoMeetings,
+  getDemoPartners,
   getDemoEvenements,
   getDemoMedia,
   getDemoPersons,
@@ -50,6 +53,7 @@ import {
   updateDemoDocument,
   updateDemoMandate,
   updateDemoMeeting,
+  updateDemoPartner,
   updateDemoEvenement,
   updateDemoMedia,
   updateDemoPerson,
@@ -70,6 +74,7 @@ import type {
   Media,
   Meeting,
   Organization,
+  Partner,
   Person,
   PublicSite,
   Reservation,
@@ -878,4 +883,35 @@ export async function deleteMandate(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("mandates").delete().eq("id", id);
   if (error) console.error("deleteMandate:", error); return !error;
+}
+
+// ── Partenaires ──────────────────────────────────────────────
+export async function getPartnersForOrg(orgId: string): Promise<Partner[]> {
+  if (!isSupabaseConfigured()) return getDemoPartners(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("partners").select("*").eq("organization_id", orgId).order("name", { ascending: true });
+  return data ?? [];
+}
+export interface PartnerInput {
+  organization_id: string; contact_id: string | null; name: string;
+  type: Partner["type"]; status: Partner["status"];
+  email: string | null; phone: string | null; website: string | null; notes: string | null;
+}
+export async function createPartner(input: PartnerInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoPartner(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("partners").insert(input);
+  if (error) console.error("createPartner:", error); return !error;
+}
+export async function updatePartner(id: string, patch: Partial<PartnerInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoPartner(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("partners").update(patch).eq("id", id);
+  if (error) console.error("updatePartner:", error); return !error;
+}
+export async function deletePartner(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoPartner(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("partners").delete().eq("id", id);
+  if (error) console.error("deletePartner:", error); return !error;
 }

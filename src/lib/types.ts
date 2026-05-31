@@ -132,6 +132,24 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type PartnerType = "public" | "prive" | "associatif" | "fondation" | "autre";
+export type PartnerStatus = "actif" | "prospect" | "inactif";
+
+export interface Partner {
+  id: string;
+  organization_id: string;
+  contact_id: string | null;
+  name: string;
+  type: PartnerType;
+  status: PartnerStatus;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type MeetingType = "ca" | "ag" | "bureau" | "autre";
 export type MeetingStatus = "planifiee" | "tenue" | "annulee";
 
