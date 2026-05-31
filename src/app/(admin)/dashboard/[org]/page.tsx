@@ -7,6 +7,7 @@ import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
 import { StatusBadge } from "@/components/mc/status-badge";
 import {
+  getEvenementsForOrg,
   getOrganizationBySlug,
   getPersonsForOrg,
   getRequestsForOrg,
@@ -14,6 +15,7 @@ import {
   getSpacesForOrg,
 } from "@/lib/data";
 import { isToday } from "@/lib/reservations-meta";
+import { isFuture, isThisWeek } from "@/lib/events-meta";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -41,17 +43,24 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons, spaces, reservations] = await Promise.all([
+  const [requests, persons, spaces, reservations, evenements] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
     getReservationsForOrg(organization.id),
+    getEvenementsForOrg(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   );
   const recent = requests.slice(0, 5);
   const activeMembers = persons.filter((p) => p.status === "actif").length;
+  const eventsThisWeek = evenements.filter(
+    (e) => e.status !== "annule" && isThisWeek(e.start_at)
+  ).length;
+  const eventsFuture = evenements.filter(
+    (e) => e.status === "publie" && isFuture(e.start_at)
+  ).length;
   const availableSpaces = spaces.filter((s) => s.status === "disponible").length;
   const reservationsToday = reservations.filter(
     (r) => r.status !== "annulee" && isToday(r.start_at)
@@ -68,7 +77,7 @@ export default async function DashboardOverview({
 
   const todayItems: TodayItem[] = [
     { key: "resa", icon: "resa", iconBg: "#ffefea", iconColor: "var(--coral-dark)", num: reservationsToday, label: "Réservations du jour", segment: "reservations" },
-    { key: "event", icon: "event", iconBg: "#f4e7ff", iconColor: "#6b3aa0", num: 7, label: "Événements cette semaine", segment: undefined },
+    { key: "event", icon: "event", iconBg: "#f4e7ff", iconColor: "#6b3aa0", num: eventsThisWeek, label: "Événements cette semaine", segment: "evenements" },
     { key: "demande", icon: "demande", iconBg: "#fff3de", iconColor: "#a06800", num: openRequests.length, label: "Demandes à traiter", segment: "demandes" },
     { key: "impayes", icon: "alert", iconBg: "#fdeae4", iconColor: "var(--coral-dark)", num: 2, extra: "480 €", label: "Impayés en attente", warn: true, segment: undefined },
     { key: "sign", icon: "sign", iconBg: "#e8f1fe", iconColor: "#1d4ed8", num: 3, label: "Documents à signer", segment: undefined },
@@ -127,9 +136,10 @@ export default async function DashboardOverview({
           icon={<CalendarDays className="size-[18px]" />}
           iconBg="#f4e7ff"
           iconColor="#6b3aa0"
-          value="7"
+          value={eventsFuture}
           caption="Événements à venir"
-          trend="cette semaine"
+          trend={`${eventsThisWeek} cette semaine`}
+          href={`/dashboard/${organization.slug}/evenements`}
         />
         <KpiTile
           icon={<Wallet className="size-[18px]" />}

@@ -36,7 +36,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
       { key: "espaces", label: "Espaces", segment: "espaces", ready: true },
       { key: "reservations", label: "Réservations", segment: "reservations", ready: true },
       { key: "residences", label: "Résidences", segment: "residences", ready: false },
-      { key: "evenements", label: "Événements", segment: "evenements", ready: false },
+      { key: "evenements", label: "Événements", segment: "evenements", ready: true },
     ],
   },
   {

@@ -2,25 +2,30 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
+  addDemoEvenement,
   addDemoPerson,
   addDemoRequest,
   addDemoReservation,
   addDemoSpace,
+  deleteDemoEvenement,
   deleteDemoPerson,
   deleteDemoReservation,
   deleteDemoSpace,
   findDemoReservationConflict,
+  getDemoEvenements,
   getDemoPersons,
   getDemoRequests,
   getDemoReservationById,
   getDemoReservations,
   getDemoSpaces,
+  updateDemoEvenement,
   updateDemoPerson,
   updateDemoRequestStatus,
   updateDemoReservation,
   updateDemoSpace,
 } from "@/lib/demo/store";
 import type {
+  Evenement,
   IncomingRequest,
   Organization,
   Person,
@@ -405,5 +410,62 @@ export async function deleteReservation(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("reservations").delete().eq("id", id);
   if (error) console.error("deleteReservation: échec suppression Supabase", error);
+  return !error;
+}
+
+// ── Événements ───────────────────────────────────────────────
+export async function getEvenementsForOrg(orgId: string): Promise<Evenement[]> {
+  if (!isSupabaseConfigured()) return getDemoEvenements(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("evenements")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("start_at", { ascending: true });
+  return data ?? [];
+}
+
+export interface EvenementInput {
+  organization_id: string;
+  space_id: string | null;
+  title: string;
+  type: string;
+  status: Evenement["status"];
+  start_at: string;
+  end_at: string;
+  capacity: number | null;
+  price: number | null;
+  description: string | null;
+  photos: string[];
+}
+
+export async function createEvenement(input: EvenementInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    addDemoEvenement(input);
+    return true;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("evenements").insert(input);
+  if (error) console.error("createEvenement: échec insertion Supabase", error);
+  return !error;
+}
+
+export async function updateEvenement(id: string, patch: Partial<EvenementInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return updateDemoEvenement(id, patch) !== null;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("evenements").update(patch).eq("id", id);
+  if (error) console.error("updateEvenement: échec maj Supabase", error);
+  return !error;
+}
+
+export async function deleteEvenement(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return deleteDemoEvenement(id);
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("evenements").delete().eq("id", id);
+  if (error) console.error("deleteEvenement: échec suppression Supabase", error);
   return !error;
 }

@@ -1,10 +1,12 @@
 import {
+  DEMO_EVENEMENTS,
   DEMO_PERSONS,
   DEMO_REQUESTS,
   DEMO_RESERVATIONS,
   DEMO_SPACES,
 } from "@/lib/demo/data";
 import type {
+  Evenement,
   IncomingRequest,
   Person,
   Reservation,
@@ -28,6 +30,7 @@ const globalForDemo = globalThis as unknown as {
   __cmPersons?: Person[];
   __cmSpaces?: Space[];
   __cmReservations?: Reservation[];
+  __cmEvenements?: Evenement[];
 };
 
 function store(): IncomingRequest[] {
@@ -226,6 +229,47 @@ export function updateDemoReservation(
 export function deleteDemoReservation(id: string): boolean {
   const arr = reservationStore();
   const i = arr.findIndex((r) => r.id === id);
+  if (i === -1) return false;
+  arr.splice(i, 1);
+  return true;
+}
+
+// ── Événements (mode démo) ──────────────────────────────────
+function evenementStore(): Evenement[] {
+  if (!globalForDemo.__cmEvenements) {
+    globalForDemo.__cmEvenements = DEMO_EVENEMENTS.map((e) => ({ ...e, photos: [...e.photos] }));
+  }
+  return globalForDemo.__cmEvenements;
+}
+
+export function getDemoEvenements(orgId: string): Evenement[] {
+  return evenementStore()
+    .filter((e) => e.organization_id === orgId)
+    .sort((a, b) => a.start_at.localeCompare(b.start_at));
+}
+
+export function addDemoEvenement(
+  input: Omit<Evenement, "id" | "created_at" | "updated_at">
+): Evenement {
+  const now = new Date().toISOString();
+  const created: Evenement = { ...input, id: `event-${Date.now()}`, created_at: now, updated_at: now };
+  evenementStore().unshift(created);
+  return created;
+}
+
+export function updateDemoEvenement(
+  id: string,
+  patch: Partial<Omit<Evenement, "id" | "organization_id" | "created_at">>
+): Evenement | null {
+  const found = evenementStore().find((e) => e.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() });
+  return found;
+}
+
+export function deleteDemoEvenement(id: string): boolean {
+  const arr = evenementStore();
+  const i = arr.findIndex((e) => e.id === id);
   if (i === -1) return false;
   arr.splice(i, 1);
   return true;

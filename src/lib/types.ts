@@ -132,6 +132,33 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type EvenementType =
+  | "atelier"
+  | "concert"
+  | "exposition"
+  | "conference"
+  | "marche"
+  | "autre";
+
+export type EvenementStatus = "brouillon" | "publie" | "annule";
+
+export interface Evenement {
+  id: string;
+  organization_id: string;
+  space_id: string | null;
+  title: string;
+  type: string;
+  status: EvenementStatus;
+  start_at: string;
+  end_at: string;
+  capacity: number | null;
+  price: number | null;
+  description: string | null;
+  photos: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PublicSite {
   organization_id: string;
   slug: string;
