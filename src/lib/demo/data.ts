@@ -1,5 +1,6 @@
 import type {
   Announcement,
+  CommunityPost,
   Document,
   Evenement,
   IncomingRequest,
@@ -579,6 +580,19 @@ export const DEMO_TASKS: Task[] = [
   { id: "85555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, assignee_id: "c3333333-3333-4333-8333-333333333333",
     title: "Vérifier le matériel son pour le concert", description: "Test de la sono avant le 4 juillet.",
     priority: "basse", status: "a_faire", due_date: "2026-07-01", related_label: "Événements", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_COMMUNITY_POSTS: CommunityPost[] = [
+  { id: "91111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, author_id: "c2222222-2222-4222-8222-222222222222",
+    type: "offre", title: "Prêt de matériel photo", content: "Je dispose d'un trépied et de softbox que je peux prêter aux membres pour leurs projets.", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "92222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, author_id: "c4444444-4444-4444-8444-444444444444",
+    type: "demande", title: "Cherche bénévoles pour le marché", content: "Besoin de 3 personnes pour aider à l'installation du marché des créateurs le 21 juin.", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "93333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, author_id: "c1111111-1111-4111-8111-111111111111",
+    type: "entraide", title: "Covoiturage atelier céramique", content: "Je peux prendre 2 personnes depuis le centre-ville les mardis matin.", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "94444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, author_id: "c6666666-6666-4666-8666-666666666666",
+    type: "info", title: "Nouveau planning d'ouverture", content: "À partir de juillet, le lieu ouvre aussi le dimanche après-midi (14h-18h).", status: "actif", created_at: NOW, updated_at: NOW },
+  { id: "95555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, author_id: "c3333333-3333-4333-8333-333333333333",
+    type: "demande", title: "Recherche peintures acryliques", content: "Quelqu'un aurait des restes de peinture acrylique à partager ?", status: "resolu", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

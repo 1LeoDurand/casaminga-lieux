@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
   addDemoAnnouncement,
+  addDemoCommunityPost,
   addDemoDocument,
   addDemoEvenement,
   addDemoMedia,
@@ -14,6 +15,7 @@ import {
   addDemoReservation,
   addDemoSpace,
   deleteDemoAnnouncement,
+  deleteDemoCommunityPost,
   deleteDemoDocument,
   deleteDemoEvenement,
   deleteDemoMedia,
@@ -25,6 +27,7 @@ import {
   deleteDemoSpace,
   findDemoReservationConflict,
   getDemoAnnouncements,
+  getDemoCommunityPosts,
   getDemoDocuments,
   getDemoEvenements,
   getDemoMedia,
@@ -37,6 +40,7 @@ import {
   getDemoReservations,
   getDemoSpaces,
   updateDemoAnnouncement,
+  updateDemoCommunityPost,
   updateDemoDocument,
   updateDemoEvenement,
   updateDemoMedia,
@@ -50,6 +54,7 @@ import {
 } from "@/lib/demo/store";
 import type {
   Announcement,
+  CommunityPost,
   Document,
   Evenement,
   IncomingRequest,
@@ -760,5 +765,47 @@ export async function deleteTask(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").delete().eq("id", id);
   if (error) console.error("deleteTask:", error);
+  return !error;
+}
+
+// ── Communauté ───────────────────────────────────────────────
+export async function getCommunityPostsForOrg(orgId: string): Promise<CommunityPost[]> {
+  if (!isSupabaseConfigured()) return getDemoCommunityPosts(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("community_posts").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export interface CommunityPostInput {
+  organization_id: string;
+  author_id: string | null;
+  type: CommunityPost["type"];
+  title: string;
+  content: string;
+  status: CommunityPost["status"];
+}
+
+export async function createCommunityPost(input: CommunityPostInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoCommunityPost(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("community_posts").insert(input);
+  if (error) console.error("createCommunityPost:", error);
+  return !error;
+}
+
+export async function updateCommunityPost(id: string, patch: Partial<CommunityPostInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoCommunityPost(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("community_posts").update(patch).eq("id", id);
+  if (error) console.error("updateCommunityPost:", error);
+  return !error;
+}
+
+export async function deleteCommunityPost(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoCommunityPost(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("community_posts").delete().eq("id", id);
+  if (error) console.error("deleteCommunityPost:", error);
   return !error;
 }

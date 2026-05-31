@@ -1,5 +1,6 @@
 import {
   DEMO_ANNOUNCEMENTS,
+  DEMO_COMMUNITY_POSTS,
   DEMO_DOCUMENTS,
   DEMO_EVENEMENTS,
   DEMO_MEDIA,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/demo/data";
 import type {
   Announcement,
+  CommunityPost,
   Document,
   Evenement,
   IncomingRequest,
@@ -49,6 +51,7 @@ const globalForDemo = globalThis as unknown as {
   __cmMedia?: Media[];
   __cmAnnouncements?: Announcement[];
   __cmTasks?: Task[];
+  __cmCommunity?: CommunityPost[];
 };
 
 function store(): IncomingRequest[] {
@@ -452,5 +455,32 @@ export function updateDemoTask(id: string, patch: Partial<Omit<Task, "id" | "org
 export function deleteDemoTask(id: string): boolean {
   const arr = taskStore();
   const i = arr.findIndex((t) => t.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Communauté (mode démo) ──────────────────────────────────
+function communityStore(): CommunityPost[] {
+  if (!globalForDemo.__cmCommunity) {
+    globalForDemo.__cmCommunity = DEMO_COMMUNITY_POSTS.map((p) => ({ ...p }));
+  }
+  return globalForDemo.__cmCommunity;
+}
+export function getDemoCommunityPosts(orgId: string): CommunityPost[] {
+  return communityStore().filter((p) => p.organization_id === orgId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function addDemoCommunityPost(input: Omit<CommunityPost, "id" | "created_at" | "updated_at">): CommunityPost {
+  const now = new Date().toISOString();
+  const p: CommunityPost = { ...input, id: `cpost-${Date.now()}`, created_at: now, updated_at: now };
+  communityStore().unshift(p); return p;
+}
+export function updateDemoCommunityPost(id: string, patch: Partial<Omit<CommunityPost, "id" | "organization_id" | "created_at">>): CommunityPost | null {
+  const found = communityStore().find((p) => p.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoCommunityPost(id: string): boolean {
+  const arr = communityStore();
+  const i = arr.findIndex((p) => p.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }

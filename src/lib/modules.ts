@@ -32,7 +32,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Gestion du lieu",
     modules: [
-      { key: "communaute", label: "Communauté", segment: "communaute", ready: false },
+      { key: "communaute", label: "Communauté", segment: "communaute", ready: true },
       { key: "espaces", label: "Espaces", segment: "espaces", ready: true },
       { key: "reservations", label: "Réservations", segment: "reservations", ready: true },
       { key: "residences", label: "Résidences", segment: "residences", ready: true },

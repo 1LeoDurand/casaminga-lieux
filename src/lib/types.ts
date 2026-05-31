@@ -132,6 +132,21 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type CommunityType = "offre" | "demande" | "info" | "entraide";
+export type CommunityStatus = "actif" | "resolu" | "archive";
+
+export interface CommunityPost {
+  id: string;
+  organization_id: string;
+  author_id: string | null;
+  type: CommunityType;
+  title: string;
+  content: string;
+  status: CommunityStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export type TaskPriority = "haute" | "normale" | "basse";
 export type TaskStatus = "a_faire" | "en_cours" | "fait";
 
