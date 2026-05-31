@@ -132,6 +132,24 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type TransactionType = "recette" | "depense";
+export type TransactionStatus = "en_attente" | "validee" | "annulee";
+
+export interface Transaction {
+  id: string;
+  organization_id: string;
+  person_id: string | null;
+  type: TransactionType;
+  category: string;
+  amount: number;
+  date: string;
+  label: string;
+  status: TransactionStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type DocumentType = "contrat" | "devis" | "facture" | "convention" | "rapport" | "autre";
 export type DocumentStatus = "brouillon" | "envoye" | "signe" | "archive";
 

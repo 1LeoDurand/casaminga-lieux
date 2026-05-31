@@ -6,6 +6,7 @@ import {
   DEMO_RESERVATIONS,
   DEMO_RESIDENCES,
   DEMO_SPACES,
+  DEMO_TRANSACTIONS,
 } from "@/lib/demo/data";
 import type {
   Document,
@@ -16,6 +17,7 @@ import type {
   RequestStatus,
   Residence,
   Space,
+  Transaction,
 } from "@/lib/types";
 
 /**
@@ -37,6 +39,7 @@ const globalForDemo = globalThis as unknown as {
   __cmEvenements?: Evenement[];
   __cmResidences?: Residence[];
   __cmDocuments?: Document[];
+  __cmTransactions?: Transaction[];
 };
 
 function store(): IncomingRequest[] {
@@ -332,5 +335,32 @@ export function updateDemoDocument(id: string, patch: Partial<Omit<Document, "id
 export function deleteDemoDocument(id: string): boolean {
   const arr = documentStore();
   const i = arr.findIndex((d) => d.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Transactions / Finances (mode démo) ────────────────────
+function txStore(): Transaction[] {
+  if (!globalForDemo.__cmTransactions) {
+    globalForDemo.__cmTransactions = DEMO_TRANSACTIONS.map((t) => ({ ...t }));
+  }
+  return globalForDemo.__cmTransactions;
+}
+export function getDemoTransactions(orgId: string): Transaction[] {
+  return txStore().filter((t) => t.organization_id === orgId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+export function addDemoTransaction(input: Omit<Transaction, "id" | "created_at" | "updated_at">): Transaction {
+  const now = new Date().toISOString();
+  const t: Transaction = { ...input, id: `tx-${Date.now()}`, created_at: now, updated_at: now };
+  txStore().unshift(t); return t;
+}
+export function updateDemoTransaction(id: string, patch: Partial<Omit<Transaction, "id" | "organization_id" | "created_at">>): Transaction | null {
+  const found = txStore().find((t) => t.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoTransaction(id: string): boolean {
+  const arr = txStore();
+  const i = arr.findIndex((t) => t.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }

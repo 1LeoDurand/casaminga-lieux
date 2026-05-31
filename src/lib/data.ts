@@ -6,6 +6,7 @@ import {
   addDemoEvenement,
   addDemoPerson,
   addDemoResidence,
+  addDemoTransaction,
   addDemoRequest,
   addDemoReservation,
   addDemoSpace,
@@ -13,6 +14,7 @@ import {
   deleteDemoEvenement,
   deleteDemoPerson,
   deleteDemoResidence,
+  deleteDemoTransaction,
   deleteDemoReservation,
   deleteDemoSpace,
   findDemoReservationConflict,
@@ -20,6 +22,7 @@ import {
   getDemoEvenements,
   getDemoPersons,
   getDemoResidences,
+  getDemoTransactions,
   getDemoRequests,
   getDemoReservationById,
   getDemoReservations,
@@ -28,6 +31,7 @@ import {
   updateDemoEvenement,
   updateDemoPerson,
   updateDemoResidence,
+  updateDemoTransaction,
   updateDemoRequestStatus,
   updateDemoReservation,
   updateDemoSpace,
@@ -43,6 +47,7 @@ import type {
   RequestStatus,
   Residence,
   Space,
+  Transaction,
 } from "@/lib/types";
 
 /**
@@ -567,5 +572,50 @@ export async function deleteDocument(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("documents").delete().eq("id", id);
   if (error) console.error("deleteDocument:", error);
+  return !error;
+}
+
+// ── Transactions / Finances ──────────────────────────────────
+export async function getTransactionsForOrg(orgId: string): Promise<Transaction[]> {
+  if (!isSupabaseConfigured()) return getDemoTransactions(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("transactions").select("*")
+    .eq("organization_id", orgId).order("date", { ascending: false });
+  return data ?? [];
+}
+
+export interface TransactionInput {
+  organization_id: string;
+  person_id: string | null;
+  type: Transaction["type"];
+  category: string;
+  amount: number;
+  date: string;
+  label: string;
+  status: Transaction["status"];
+  notes: string | null;
+}
+
+export async function createTransaction(input: TransactionInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoTransaction(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("transactions").insert(input);
+  if (error) console.error("createTransaction:", error);
+  return !error;
+}
+
+export async function updateTransaction(id: string, patch: Partial<TransactionInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoTransaction(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("transactions").update(patch).eq("id", id);
+  if (error) console.error("updateTransaction:", error);
+  return !error;
+}
+
+export async function deleteTransaction(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoTransaction(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("transactions").delete().eq("id", id);
+  if (error) console.error("deleteTransaction:", error);
   return !error;
 }

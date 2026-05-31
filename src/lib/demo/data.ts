@@ -8,6 +8,7 @@ import type {
   Reservation,
   Residence,
   Space,
+  Transaction,
 } from "@/lib/types";
 
 /**
@@ -497,6 +498,33 @@ export const DEMO_DOCUMENTS: Document[] = [
     person_id: null, title: "Facture location Grande Salle — juin 2026", type: "facture", status: "envoye",
     file_url: null, file_name: null,
     notes: "Studio Halle Nord, 220 € TTC — paiement attendu sous 30 jours.", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_TRANSACTIONS: Transaction[] = [
+  { id: "51111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, person_id: null,
+    type: "recette", category: "location", amount: 220, date: "2026-06-07",
+    label: "Location Grande Salle — Studio Halle Nord", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "52222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, person_id: "c1111111-1111-4111-8111-111111111111",
+    type: "recette", category: "cotisation", amount: 450, date: "2026-06-01",
+    label: "Résidence Camille Aubry — acompte 50%", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "53333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, person_id: null,
+    type: "recette", category: "prestation", amount: 250, date: "2026-06-14",
+    label: "Atelier poterie — 10 participants x 25€", status: "en_attente", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "54444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, person_id: null,
+    type: "depense", category: "loyer", amount: 1200, date: "2026-06-01",
+    label: "Loyer local juin 2026", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "55555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, person_id: "c6666666-6666-4666-8666-666666666666",
+    type: "depense", category: "salaire", amount: 1800, date: "2026-06-28",
+    label: "Salaire Hélène Roy — juin 2026", status: "en_attente", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "56666666-6666-4666-8666-666666666666", organization_id: BK_ORG_ID, person_id: null,
+    type: "depense", category: "achat", amount: 180, date: "2026-06-10",
+    label: "Matériel céramique — argile et outils", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "57777777-7777-4777-8777-777777777777", organization_id: BK_ORG_ID, person_id: null,
+    type: "recette", category: "subvention", amount: 3000, date: "2026-05-15",
+    label: "Subvention mairie St-Mandé — prog. culturelle", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
+  { id: "58888888-8888-4888-8888-888888888888", organization_id: BK_ORG_ID, person_id: null,
+    type: "depense", category: "autre", amount: 95, date: "2026-06-05",
+    label: "Fournitures bureau et communication", status: "validee", notes: null, created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

@@ -13,9 +13,11 @@ import {
   getRequestsForOrg,
   getReservationsForOrg,
   getSpacesForOrg,
+  getTransactionsForOrg,
 } from "@/lib/data";
 import { isToday } from "@/lib/reservations-meta";
 import { isFuture, isThisWeek } from "@/lib/events-meta";
+import { formatAmount } from "@/lib/finances-meta";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -43,12 +45,13 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons, spaces, reservations, evenements] = await Promise.all([
+  const [requests, persons, spaces, reservations, evenements, transactions] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
     getReservationsForOrg(organization.id),
     getEvenementsForOrg(organization.id),
+    getTransactionsForOrg(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
@@ -61,6 +64,8 @@ export default async function DashboardOverview({
   const eventsFuture = evenements.filter(
     (e) => e.status === "publie" && isFuture(e.start_at)
   ).length;
+  const validTx = transactions.filter((t) => t.status !== "annulee");
+  const solde = validTx.reduce((s, t) => s + (t.type === "recette" ? Number(t.amount) : -Number(t.amount)), 0);
   const availableSpaces = spaces.filter((s) => s.status === "disponible").length;
   const reservationsToday = reservations.filter(
     (r) => r.status !== "annulee" && isToday(r.start_at)
@@ -145,9 +150,10 @@ export default async function DashboardOverview({
           icon={<Wallet className="size-[18px]" />}
           iconBg="#fff5f0"
           iconColor="var(--coral-dark)"
-          value="18 420 €"
-          caption="Trésorerie estimée"
-          trend="au 30 du mois"
+          value={formatAmount(solde)}
+          caption="Solde net"
+          trend="recettes − dépenses"
+          href={`/dashboard/${organization.slug}/finances`}
         />
       </div>
 

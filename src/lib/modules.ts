@@ -42,7 +42,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Structure",
     modules: [
-      { key: "finances", label: "Finances", segment: "finances", ready: false },
+      { key: "finances", label: "Finances", segment: "finances", ready: true },
       { key: "documents", label: "Documents", segment: "documents", ready: true },
       { key: "gouvernance", label: "Gouvernance", segment: "gouvernance", ready: false },
       { key: "impact", label: "Impact", segment: "impact", ready: false },
