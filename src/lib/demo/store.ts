@@ -8,6 +8,7 @@ import {
   DEMO_RESERVATIONS,
   DEMO_RESIDENCES,
   DEMO_SPACES,
+  DEMO_TASKS,
   DEMO_TRANSACTIONS,
 } from "@/lib/demo/data";
 import type {
@@ -21,6 +22,7 @@ import type {
   RequestStatus,
   Residence,
   Space,
+  Task,
   Transaction,
 } from "@/lib/types";
 
@@ -46,6 +48,7 @@ const globalForDemo = globalThis as unknown as {
   __cmTransactions?: Transaction[];
   __cmMedia?: Media[];
   __cmAnnouncements?: Announcement[];
+  __cmTasks?: Task[];
 };
 
 function store(): IncomingRequest[] {
@@ -422,5 +425,32 @@ export function updateDemoAnnouncement(id: string, patch: Partial<Omit<Announcem
 export function deleteDemoAnnouncement(id: string): boolean {
   const arr = announcementStore();
   const i = arr.findIndex((a) => a.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Tâches (mode démo) ──────────────────────────────────────
+function taskStore(): Task[] {
+  if (!globalForDemo.__cmTasks) {
+    globalForDemo.__cmTasks = DEMO_TASKS.map((t) => ({ ...t }));
+  }
+  return globalForDemo.__cmTasks;
+}
+export function getDemoTasks(orgId: string): Task[] {
+  return taskStore().filter((t) => t.organization_id === orgId)
+    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+}
+export function addDemoTask(input: Omit<Task, "id" | "created_at" | "updated_at">): Task {
+  const now = new Date().toISOString();
+  const t: Task = { ...input, id: `task-${Date.now()}`, created_at: now, updated_at: now };
+  taskStore().unshift(t); return t;
+}
+export function updateDemoTask(id: string, patch: Partial<Omit<Task, "id" | "organization_id" | "created_at">>): Task | null {
+  const found = taskStore().find((t) => t.id === id);
+  if (!found) return null;
+  Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoTask(id: string): boolean {
+  const arr = taskStore();
+  const i = arr.findIndex((t) => t.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }

@@ -8,6 +8,7 @@ import {
   addDemoMedia,
   addDemoPerson,
   addDemoResidence,
+  addDemoTask,
   addDemoTransaction,
   addDemoRequest,
   addDemoReservation,
@@ -18,6 +19,7 @@ import {
   deleteDemoMedia,
   deleteDemoPerson,
   deleteDemoResidence,
+  deleteDemoTask,
   deleteDemoTransaction,
   deleteDemoReservation,
   deleteDemoSpace,
@@ -28,6 +30,7 @@ import {
   getDemoMedia,
   getDemoPersons,
   getDemoResidences,
+  getDemoTasks,
   getDemoTransactions,
   getDemoRequests,
   getDemoReservationById,
@@ -39,6 +42,7 @@ import {
   updateDemoMedia,
   updateDemoPerson,
   updateDemoResidence,
+  updateDemoTask,
   updateDemoTransaction,
   updateDemoRequestStatus,
   updateDemoReservation,
@@ -57,6 +61,7 @@ import type {
   RequestStatus,
   Residence,
   Space,
+  Task,
   Transaction,
 } from "@/lib/types";
 
@@ -711,5 +716,49 @@ export async function deleteAnnouncement(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("announcements").delete().eq("id", id);
   if (error) console.error("deleteAnnouncement:", error);
+  return !error;
+}
+
+// ── Tâches ───────────────────────────────────────────────────
+export async function getTasksForOrg(orgId: string): Promise<Task[]> {
+  if (!isSupabaseConfigured()) return getDemoTasks(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("tasks").select("*")
+    .eq("organization_id", orgId).order("due_date", { ascending: true, nullsFirst: false });
+  return data ?? [];
+}
+
+export interface TaskInput {
+  organization_id: string;
+  assignee_id: string | null;
+  title: string;
+  description: string | null;
+  priority: Task["priority"];
+  status: Task["status"];
+  due_date: string | null;
+  related_label: string | null;
+}
+
+export async function createTask(input: TaskInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoTask(input); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("tasks").insert(input);
+  if (error) console.error("createTask:", error);
+  return !error;
+}
+
+export async function updateTask(id: string, patch: Partial<TaskInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoTask(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("tasks").update(patch).eq("id", id);
+  if (error) console.error("updateTask:", error);
+  return !error;
+}
+
+export async function deleteTask(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoTask(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  if (error) console.error("deleteTask:", error);
   return !error;
 }

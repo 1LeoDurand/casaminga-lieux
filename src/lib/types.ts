@@ -132,6 +132,23 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type TaskPriority = "haute" | "normale" | "basse";
+export type TaskStatus = "a_faire" | "en_cours" | "fait";
+
+export interface Task {
+  id: string;
+  organization_id: string;
+  assignee_id: string | null;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  due_date: string | null;
+  related_label: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type MediaType = "photo" | "video" | "audio" | "document";
 
 export interface Media {

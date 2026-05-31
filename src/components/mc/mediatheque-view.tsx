@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { X, Search, RotateCcw, Plus, Pencil, Trash2, Image, ExternalLink } from "lucide-react";
+import { X, Search, RotateCcw, Plus, Pencil, Trash2, Image as ImageIcon, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { createMediaAction, deleteMediaAction, updateMediaAction } from "@/app/(admin)/dashboard/[org]/mediatheque/actions";
@@ -117,7 +117,7 @@ export function MediathequeView({ media, orgSlug, orgId }: { media: Media[]; org
   if (media.length === 0) return (
     <>
       <div className="mc-card"><div className="mc-empty">
-        <span className="mc-empty-ic"><Image className="size-6" strokeWidth={1.8} /></span>
+        <span className="mc-empty-ic"><ImageIcon className="size-6" strokeWidth={1.8} /></span>
         <div className="mc-empty-title">Médiathèque vide</div>
         <p className="mc-empty-sub">Photos, vidéos, audios — centralisez les médias du lieu.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Ajouter un média</button>

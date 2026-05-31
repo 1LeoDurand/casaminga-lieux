@@ -13,8 +13,10 @@ import {
   getRequestsForOrg,
   getReservationsForOrg,
   getSpacesForOrg,
+  getTasksForOrg,
   getTransactionsForOrg,
 } from "@/lib/data";
+import { isOverdue } from "@/lib/tasks-meta";
 import { isToday } from "@/lib/reservations-meta";
 import { isFuture, isThisWeek } from "@/lib/events-meta";
 import { formatAmount } from "@/lib/finances-meta";
@@ -45,14 +47,18 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons, spaces, reservations, evenements, transactions] = await Promise.all([
+  const [requests, persons, spaces, reservations, evenements, transactions, tasks] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
     getReservationsForOrg(organization.id),
     getEvenementsForOrg(organization.id),
     getTransactionsForOrg(organization.id),
+    getTasksForOrg(organization.id),
   ]);
+  const urgentTasks = tasks.filter(
+    (t) => t.status !== "fait" && (t.priority === "haute" || isOverdue(t.due_date, t.status))
+  ).length;
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   );
@@ -86,7 +92,7 @@ export default async function DashboardOverview({
     { key: "demande", icon: "demande", iconBg: "#fff3de", iconColor: "#a06800", num: openRequests.length, label: "Demandes à traiter", segment: "demandes" },
     { key: "impayes", icon: "alert", iconBg: "#fdeae4", iconColor: "var(--coral-dark)", num: 2, extra: "480 €", label: "Impayés en attente", warn: true, segment: undefined },
     { key: "sign", icon: "sign", iconBg: "#e8f1fe", iconColor: "#1d4ed8", num: 3, label: "Documents à signer", segment: undefined },
-    { key: "tasks", icon: "task", iconBg: "#fff8e0", iconColor: "#a06800", num: 2, label: "Tâches urgentes", warn: true, segment: undefined },
+    { key: "tasks", icon: "task", iconBg: "#fff8e0", iconColor: "#a06800", num: urgentTasks, label: "Tâches urgentes", warn: urgentTasks > 0, segment: "taches" },
   ];
 
   return (

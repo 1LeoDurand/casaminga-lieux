@@ -10,6 +10,7 @@ import type {
   Reservation,
   Residence,
   Space,
+  Task,
   Transaction,
 } from "@/lib/types";
 
@@ -560,6 +561,24 @@ export const DEMO_ANNOUNCEMENTS: Announcement[] = [
     title: "Réunion équipe — bilan S1",
     content: "Bilan du premier semestre : programmation, finances, résidences. Présence obligatoire pour l'équipe.",
     status: "brouillon", audience: "membres", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_TASKS: Task[] = [
+  { id: "81111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, assignee_id: "c6666666-6666-4666-8666-666666666666",
+    title: "Relancer Studio Halle Nord (facture juin)", description: "Facture de 220€ envoyée, paiement attendu sous 30 jours.",
+    priority: "haute", status: "a_faire", due_date: "2026-06-20", related_label: "Finances", created_at: NOW, updated_at: NOW },
+  { id: "82222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, assignee_id: "c6666666-6666-4666-8666-666666666666",
+    title: "Préparer l'AG 2026", description: "Rédiger l'ordre du jour et convoquer les membres.",
+    priority: "haute", status: "en_cours", due_date: "2026-06-25", related_label: "Gouvernance", created_at: NOW, updated_at: NOW },
+  { id: "83333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, assignee_id: "c4444444-4444-4444-8444-444444444444",
+    title: "Commander argile pour atelier", description: "Stock à renouveler avant la session de juin.",
+    priority: "normale", status: "fait", due_date: "2026-06-08", related_label: "Espaces", created_at: NOW, updated_at: NOW },
+  { id: "84444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, assignee_id: null,
+    title: "Publier l'appel à candidatures résidences", description: "Diffuser sur le site et les réseaux.",
+    priority: "normale", status: "a_faire", due_date: "2026-06-15", related_label: "Communication", created_at: NOW, updated_at: NOW },
+  { id: "85555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, assignee_id: "c3333333-3333-4333-8333-333333333333",
+    title: "Vérifier le matériel son pour le concert", description: "Test de la sono avant le 4 juillet.",
+    priority: "basse", status: "a_faire", due_date: "2026-07-01", related_label: "Événements", created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {
