@@ -185,4 +185,4 @@ Historique des versions :
 | v1.4    | `v1.4-demandes`         | `3356b68` | `archives\casa-minga-lieux-v1.4-demandes.zip`            |
 | v1.5    | `v1.5-personnes`        | `72459c1` | `archives\casa-minga-lieux-v1.5-personnes.zip`          |
 | v1.6    | `v1.6-espaces`          | `fed88f1` | `archives\casa-minga-lieux-v1.6-espaces.zip`            |
-| v1.7    | `v1.7-reservations`     | _à venir_ | `archives\casa-minga-lieux-v1.7-reservations.zip`       |
+| v1.7    | `v1.7-reservations`     | `e4ccdf3` | `archives\casa-minga-lieux-v1.7-reservations.zip`       |
