@@ -132,6 +132,24 @@ export interface Reservation {
   updated_at: string;
 }
 
+export type AutomationTrigger = "demande_recue" | "resa_creee" | "facture_impayee" | "evenement_proche" | "manuel";
+export type AutomationAction = "notification" | "email" | "tache" | "statut";
+
+export interface Automation {
+  id: string;
+  organization_id: string;
+  name: string;
+  trigger_type: AutomationTrigger;
+  condition: string | null;
+  action_type: AutomationAction;
+  action_detail: string | null;
+  active: boolean;
+  last_run_at: string | null;
+  run_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ImpactCategory = "frequentation" | "diversite" | "environnement" | "economie" | "autre";
 
 export interface ImpactIndicator {

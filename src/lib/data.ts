@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
   addDemoAnnouncement,
+  addDemoAutomation,
   addDemoCommunityPost,
   addDemoDocument,
   addDemoImpactIndicator,
@@ -19,6 +20,7 @@ import {
   addDemoReservation,
   addDemoSpace,
   deleteDemoAnnouncement,
+  deleteDemoAutomation,
   deleteDemoCommunityPost,
   deleteDemoDocument,
   deleteDemoImpactIndicator,
@@ -35,6 +37,7 @@ import {
   deleteDemoSpace,
   findDemoReservationConflict,
   getDemoAnnouncements,
+  getDemoAutomations,
   getDemoCommunityPosts,
   getDemoDocuments,
   getDemoImpactIndicators,
@@ -52,6 +55,7 @@ import {
   getDemoReservations,
   getDemoSpaces,
   updateDemoAnnouncement,
+  updateDemoAutomation,
   updateDemoCommunityPost,
   updateDemoDocument,
   updateDemoImpactIndicator,
@@ -70,6 +74,7 @@ import {
 } from "@/lib/demo/store";
 import type {
   Announcement,
+  Automation,
   CommunityPost,
   Document,
   Evenement,
@@ -949,4 +954,35 @@ export async function deleteImpactIndicator(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("impact_indicators").delete().eq("id", id);
   if (error) console.error("deleteImpactIndicator:", error); return !error;
+}
+
+// ── Automatisations ──────────────────────────────────────────
+export async function getAutomationsForOrg(orgId: string): Promise<Automation[]> {
+  if (!isSupabaseConfigured()) return getDemoAutomations(orgId);
+  const supabase = await createClient();
+  const { data } = await supabase.from("automations").select("*").eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+export interface AutomationInput {
+  organization_id: string; name: string;
+  trigger_type: Automation["trigger_type"]; condition: string | null;
+  action_type: Automation["action_type"]; action_detail: string | null; active: boolean;
+}
+export async function createAutomation(input: AutomationInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) { addDemoAutomation({ ...input, last_run_at: null, run_count: 0 }); return true; }
+  const supabase = await createClient();
+  const { error } = await supabase.from("automations").insert(input);
+  if (error) console.error("createAutomation:", error); return !error;
+}
+export async function updateAutomation(id: string, patch: Partial<AutomationInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return updateDemoAutomation(id, patch) !== null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("automations").update(patch).eq("id", id);
+  if (error) console.error("updateAutomation:", error); return !error;
+}
+export async function deleteAutomation(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return deleteDemoAutomation(id);
+  const supabase = await createClient();
+  const { error } = await supabase.from("automations").delete().eq("id", id);
+  if (error) console.error("deleteAutomation:", error); return !error;
 }

@@ -1,5 +1,6 @@
 import type {
   Announcement,
+  Automation,
   CommunityPost,
   Document,
   Evenement,
@@ -631,6 +632,13 @@ export const DEMO_IMPACT_INDICATORS: ImpactIndicator[] = [
   { id: "d3b33333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, label: "Part de femmes parmi les intervenant·es", value: 62, unit: "%", period: "2026", category: "diversite", created_at: NOW, updated_at: NOW },
   { id: "d4b44444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, label: "Déchets recyclés", value: 850, unit: "kg", period: "2026", category: "environnement", created_at: NOW, updated_at: NOW },
   { id: "d5b55555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID, label: "Emplois soutenus (ETP)", value: 4, unit: "ETP", period: "2026", category: "economie", created_at: NOW, updated_at: NOW },
+];
+
+export const DEMO_AUTOMATIONS: Automation[] = [
+  { id: "e1c11111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID, name: "Accusé de réception des demandes", trigger_type: "demande_recue", condition: "Toute nouvelle demande", action_type: "email", action_detail: "Envoyer un email de confirmation au demandeur", active: true, last_run_at: "2026-05-29T10:00:00+02:00", run_count: 42, created_at: NOW, updated_at: NOW },
+  { id: "e2c22222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID, name: "Relance des factures impayées", trigger_type: "facture_impayee", condition: "Facture impayée depuis plus de 30 jours", action_type: "tache", action_detail: "Créer une tâche de relance pour la trésorière", active: true, last_run_at: "2026-05-28T09:00:00+02:00", run_count: 7, created_at: NOW, updated_at: NOW },
+  { id: "e3c33333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID, name: "Rappel événement J-2", trigger_type: "evenement_proche", condition: "Événement publié dans 2 jours", action_type: "notification", action_detail: "Notifier l'équipe et les inscrits", active: true, last_run_at: null, run_count: 0, created_at: NOW, updated_at: NOW },
+  { id: "e4c44444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID, name: "Confirmation de réservation", trigger_type: "resa_creee", condition: "Réservation confirmée", action_type: "email", action_detail: "Envoyer la confirmation au réservant", active: false, last_run_at: null, run_count: 0, created_at: NOW, updated_at: NOW },
 ];
 
 export function demoOrgBySlug(slug: string): Organization | undefined {

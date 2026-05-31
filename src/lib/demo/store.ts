@@ -1,5 +1,6 @@
 import {
   DEMO_ANNOUNCEMENTS,
+  DEMO_AUTOMATIONS,
   DEMO_COMMUNITY_POSTS,
   DEMO_DOCUMENTS,
   DEMO_EVENEMENTS,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/demo/data";
 import type {
   Announcement,
+  Automation,
   CommunityPost,
   Document,
   Evenement,
@@ -64,6 +66,7 @@ const globalForDemo = globalThis as unknown as {
   __cmMandates?: Mandate[];
   __cmPartners?: Partner[];
   __cmImpact?: ImpactIndicator[];
+  __cmAutomations?: Automation[];
 };
 
 function store(): IncomingRequest[] {
@@ -583,5 +586,27 @@ export function updateDemoImpactIndicator(id: string, patch: Partial<Omit<Impact
 }
 export function deleteDemoImpactIndicator(id: string): boolean {
   const arr = impactStore(); const i = arr.findIndex((x) => x.id === id);
+  if (i === -1) return false; arr.splice(i, 1); return true;
+}
+
+// ── Automatisations (mode démo) ─────────────────────────────
+function automationStore(): Automation[] {
+  if (!globalForDemo.__cmAutomations) globalForDemo.__cmAutomations = DEMO_AUTOMATIONS.map((a) => ({ ...a }));
+  return globalForDemo.__cmAutomations;
+}
+export function getDemoAutomations(orgId: string): Automation[] {
+  return automationStore().filter((a) => a.organization_id === orgId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+export function addDemoAutomation(input: Omit<Automation, "id" | "created_at" | "updated_at">): Automation {
+  const now = new Date().toISOString();
+  const a: Automation = { ...input, id: `auto-${Date.now()}`, created_at: now, updated_at: now };
+  automationStore().unshift(a); return a;
+}
+export function updateDemoAutomation(id: string, patch: Partial<Omit<Automation, "id" | "organization_id" | "created_at">>): Automation | null {
+  const found = automationStore().find((a) => a.id === id);
+  if (!found) return null; Object.assign(found, patch, { updated_at: new Date().toISOString() }); return found;
+}
+export function deleteDemoAutomation(id: string): boolean {
+  const arr = automationStore(); const i = arr.findIndex((a) => a.id === id);
   if (i === -1) return false; arr.splice(i, 1); return true;
 }
