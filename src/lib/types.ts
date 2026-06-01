@@ -340,6 +340,20 @@ export interface Grant {
   updated_at: string;
 }
 
+// ── Équipe / membres de l'organisation ────────────────────────
+export type TeamMemberStatus = "actif" | "invite" | "suspendu";
+
+export interface TeamMember {
+  user_id: string;
+  organization_id: string;
+  role: OrgRole;
+  zones: string[];
+  status: string;
+  created_at: string;
+  full_name: string | null;
+  email: string | null;
+}
+
 export type GrantTrancheStatus = "en_attente" | "recu" | "en_retard";
 
 export interface GrantTranche {

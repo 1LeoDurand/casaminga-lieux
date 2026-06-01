@@ -24,6 +24,7 @@ import {
   Megaphone,
   Image as ImageIcon,
   Zap,
+  UsersRound,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -50,6 +51,7 @@ const ICONS: Record<string, LucideIcon> = {
   communication: Megaphone,
   mediatheque: ImageIcon,
   automatisations: Zap,
+  equipe: UsersRound,
   parametres: Settings,
 };
 

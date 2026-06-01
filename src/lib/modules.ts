@@ -64,6 +64,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     title: "Système",
     modules: [
       { key: "automatisations", label: "Automatisations", segment: "automatisations", ready: true },
+      { key: "equipe", label: "Équipe", segment: "equipe", ready: true },
       { key: "parametres", label: "Paramètres", segment: "parametres", ready: true },
     ],
   },

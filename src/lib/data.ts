@@ -113,6 +113,8 @@ import type {
   GrantTranche,
   Artist,
   ArtistMilestone,
+  TeamMember,
+  OrgRole,
 } from "@/lib/types";
 
 /**
@@ -1325,5 +1327,63 @@ export async function deleteMilestone(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("artist_milestones").delete().eq("id", id);
   if (error) console.error("deleteMilestone:", error);
+  return !error;
+}
+
+// ── Équipe / membres de l'organisation ────────────────────────
+export async function getTeamMembers(orgId: string): Promise<TeamMember[]> {
+  if (!isSupabaseConfigured()) {
+    // Démo : un seul admin fictif
+    return [{
+      user_id: "demo-user", organization_id: orgId, role: "admin",
+      zones: [], status: "actif", created_at: new Date().toISOString(),
+      full_name: "Léo Durand", email: "leo@example.org",
+    }];
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("user_id, organization_id, role, zones, status, created_at, profiles(full_name, email)")
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: true });
+  if (error) { console.error("getTeamMembers:", error); return []; }
+  return (data ?? []).map((m: Record<string, unknown>) => {
+    const profile = m.profiles as { full_name: string | null; email: string | null } | null;
+    return {
+      user_id: m.user_id as string,
+      organization_id: m.organization_id as string,
+      role: m.role as OrgRole,
+      zones: (m.zones as string[]) ?? [],
+      status: (m.status as string) ?? "actif",
+      created_at: m.created_at as string,
+      full_name: profile?.full_name ?? null,
+      email: profile?.email ?? null,
+    };
+  });
+}
+
+export async function updateTeamMemberRole(
+  orgId: string, userId: string, role: OrgRole, zones: string[]
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organization_members")
+    .update({ role, zones })
+    .eq("organization_id", orgId)
+    .eq("user_id", userId);
+  if (error) console.error("updateTeamMemberRole:", error);
+  return !error;
+}
+
+export async function removeTeamMember(orgId: string, userId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organization_members")
+    .delete()
+    .eq("organization_id", orgId)
+    .eq("user_id", userId);
+  if (error) console.error("removeTeamMember:", error);
   return !error;
 }
