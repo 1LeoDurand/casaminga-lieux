@@ -630,7 +630,8 @@ export function getDemoCampaigns(orgId: string): MembershipCampaign[] {
   return campaignStore().filter((c) => c.organization_id === orgId).sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 export function getDemoCampaignBySlug(orgId: string, slug: string): MembershipCampaign | null {
-  return campaignStore().find((c) => c.organization_id === orgId && c.slug === slug) ?? null;
+  // Filtrer par status "publie" : une campagne brouillon ne doit pas être accessible publiquement
+  return campaignStore().find((c) => c.organization_id === orgId && c.slug === slug && c.status === "publie") ?? null;
 }
 export function addDemoCampaign(input: Omit<MembershipCampaign, "id" | "created_at" | "updated_at">): MembershipCampaign {
   const now = new Date().toISOString();

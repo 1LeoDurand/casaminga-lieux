@@ -41,8 +41,8 @@ function BarChart({ data }: { data: { label: string; recettes: number; depenses:
 }
 
 // UX-017 — Export CSV côté client, sans back-end
-function exportCsv(transactions: import("@/lib/types").Transaction[], orgSlug: string, catLabel: (c: string) => string, statLabel: (s: string) => string) {
-  const BOM = "﻿";
+function exportCsv(transactions: Transaction[], orgSlug: string, catLabel: (c: string) => string, statLabel: (s: string) => string) {
+  const BOM = "﻿"; // BOM UTF-8 pour Excel
   const headers = ["Date", "Libellé", "Type", "Catégorie", "Statut", "Montant (€)"].join(";");
   const rows = transactions.map((t) =>
     [

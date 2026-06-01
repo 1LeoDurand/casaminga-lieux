@@ -8,8 +8,10 @@ import {
 
 function refresh(s: string) { revalidatePath(`/dashboard/${s}/adhesions`); }
 
-export async function createCampaignAction(orgSlug: string, input: MembershipCampaignInput): Promise<{ ok: boolean }> {
-  const ok = await createMembershipCampaign(input); if (ok) refresh(orgSlug); return { ok };
+export async function createCampaignAction(orgSlug: string, input: MembershipCampaignInput): Promise<{ ok: boolean; id?: string }> {
+  const id = await createMembershipCampaign(input);
+  if (id) { refresh(orgSlug); return { ok: true, id }; }
+  return { ok: false };
 }
 export async function updateCampaignAction(orgSlug: string, id: string, patch: Partial<MembershipCampaignInput>): Promise<{ ok: boolean }> {
   const ok = await updateMembershipCampaign(id, patch); if (ok) refresh(orgSlug); return { ok };

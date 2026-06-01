@@ -33,8 +33,11 @@ export default async function PublicSitePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const site = await getPublicSiteBySlug(slug);
-  const org = await getOrganizationBySlug(slug);
+  // Parallélisation des deux appels DB indépendants
+  const [site, org] = await Promise.all([
+    getPublicSiteBySlug(slug),
+    getOrganizationBySlug(slug),
+  ]);
   if (!site || !org) notFound();
 
   const campaigns = (await getMembershipCampaignsForOrg(org.id)).filter(
@@ -73,9 +76,11 @@ export default async function PublicSitePage({
               {org.name}
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">{org.description}</p>
-            <p className="mt-4 text-sm text-muted-foreground">
-              {org.address} · {org.hours}
-            </p>
+            {(org.address || org.hours) ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                {[org.address, org.hours].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
             {/* CTA héro mobile — UX-025 */}
             {campaigns.length > 0 ? (
               <a

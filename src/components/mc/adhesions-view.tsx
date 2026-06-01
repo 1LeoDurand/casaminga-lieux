@@ -24,8 +24,9 @@ interface Step1 { title: string; slug: string; description: string; status: Memb
 interface Step2 { tiers: { id?: string; name: string; description: string; amount: string; sort_order: number }[]; allow_donation: boolean; donation_amounts: string; show_member_count: boolean; show_collected: boolean; generate_cards: boolean; max_members: string; }
 
 // ── Wizard de création / édition campagne ────────────────────
-function CampaignWizard({ campaign, orgId, orgSlug, onClose, onSaved }: {
+function CampaignWizard({ campaign, existingTiers, orgId, orgSlug, onClose, onSaved }: {
   campaign: MembershipCampaign | null;
+  existingTiers?: MembershipTier[];
   orgId: string; orgSlug: string;
   onClose: () => void; onSaved: () => void;
 }) {
@@ -41,7 +42,10 @@ function CampaignWizard({ campaign, orgId, orgSlug, onClose, onSaved }: {
     period_start: campaign?.period_start ?? "", period_end: campaign?.period_end ?? "",
   });
   const [s2, setS2] = useState<Step2>({
-    tiers: [],
+    // Pré-charger les formules existantes quand on édite
+    tiers: (existingTiers ?? []).map((t) => ({
+      id: t.id, name: t.name, description: t.description ?? "", amount: String(t.amount), sort_order: t.sort_order,
+    })),
     allow_donation: campaign?.allow_donation ?? false,
     donation_amounts: (campaign?.donation_amounts ?? ["30","50","100"]).join(", "),
     show_member_count: campaign?.show_member_count ?? false,
@@ -88,10 +92,12 @@ function CampaignWizard({ campaign, orgId, orgSlug, onClose, onSaved }: {
         const r = await updateCampaignAction(orgSlug, id, payload); if (!r.ok) { toast.error("Erreur."); return; }
       } else {
         const r = await createCampaignAction(orgSlug, { ...payload, organization_id: orgId });
-        if (!r.ok) { toast.error("Erreur."); return; }
-        // In real app get id back; for demo we move forward
+        if (!r.ok || !r.id) { toast.error("Erreur lors de la création."); return; }
+        setSavedCampaignId(r.id);
+        setStep(1);
+        return;
       }
-      setSavedCampaignId(id ?? `camp-${Date.now()}`);
+      setSavedCampaignId(id);
       setStep(1);
     });
   }
@@ -502,7 +508,7 @@ export function AdhesionsView({ campaigns, tiersMap, applicationsMap, orgSlug, o
       </div>
 
       {wizardOpen ? (
-        <CampaignWizard campaign={editingCampaign} orgId={orgId} orgSlug={orgSlug}
+        <CampaignWizard campaign={editingCampaign} existingTiers={editingCampaign ? tiersMap[editingCampaign.id] : undefined} orgId={orgId} orgSlug={orgSlug}
           onClose={() => { setWizardOpen(false); setEditingCampaign(null); }}
           onSaved={() => { setWizardOpen(false); setEditingCampaign(null); }} />
       ) : null}
