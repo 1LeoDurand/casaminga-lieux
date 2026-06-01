@@ -303,6 +303,52 @@ export interface Task {
   updated_at: string;
 }
 
+// ── Subventions ───────────────────────────────────────────────
+export type GrantFunderType = "public" | "prive" | "fondation" | "europe";
+export type GrantStatus =
+  | "candidature"
+  | "accordee"
+  | "en_cours"
+  | "solde"
+  | "refuse"
+  | "annule";
+
+export interface Grant {
+  id: string;
+  organization_id: string;
+  title: string;
+  funder: string;
+  funder_type: GrantFunderType;
+  amount: number;
+  amount_received: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: GrantStatus;
+  convention_ref: string | null;
+  description: string | null;
+  reporting_due_date: string | null;
+  kpi_beneficiaires: number | null;
+  kpi_heures: number | null;
+  kpi_artistes: number | null;
+  kpi_evenements: number | null;
+  kpi_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GrantTrancheStatus = "en_attente" | "recu" | "en_retard";
+
+export interface GrantTranche {
+  id: string;
+  grant_id: string;
+  label: string;
+  amount: number;
+  due_date: string | null;
+  received_date: string | null;
+  status: GrantTrancheStatus;
+  created_at: string;
+}
+
 export type MediaType = "photo" | "video" | "audio" | "document";
 
 export interface Media {

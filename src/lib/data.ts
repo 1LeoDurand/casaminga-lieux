@@ -109,6 +109,8 @@ import type {
   Space,
   Task,
   Transaction,
+  Grant,
+  GrantTranche,
 } from "@/lib/types";
 
 /**
@@ -1127,4 +1129,98 @@ export async function updateMembershipApplication(id: string, patch: Partial<Mem
   const supabase = await createClient();
   const { error } = await supabase.from("membership_applications").update(patch).eq("id", id);
   if (error) console.error("updateMembershipApplication:", error); return !error;
+}
+
+// ── Subventions ───────────────────────────────────────────────
+export async function getGrantsForOrg(orgId: string): Promise<Grant[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("grants").select("*")
+    .eq("organization_id", orgId).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function getGrantTranches(grantId: string): Promise<GrantTranche[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("grant_tranches").select("*")
+    .eq("grant_id", grantId).order("due_date", { ascending: true });
+  return data ?? [];
+}
+
+export interface GrantInput {
+  organization_id: string;
+  title: string;
+  funder: string;
+  funder_type: Grant["funder_type"];
+  amount: number;
+  amount_received: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: Grant["status"];
+  convention_ref: string | null;
+  description: string | null;
+  reporting_due_date: string | null;
+  kpi_beneficiaires: number | null;
+  kpi_heures: number | null;
+  kpi_artistes: number | null;
+  kpi_evenements: number | null;
+  kpi_note: string | null;
+}
+
+export async function createGrant(input: GrantInput): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("grants").insert(input).select("id").single();
+  if (error) { console.error("createGrant:", error); return null; }
+  return data?.id ?? null;
+}
+
+export async function updateGrant(id: string, patch: Partial<GrantInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("grants").update(patch).eq("id", id);
+  if (error) console.error("updateGrant:", error);
+  return !error;
+}
+
+export async function deleteGrant(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("grants").delete().eq("id", id);
+  if (error) console.error("deleteGrant:", error);
+  return !error;
+}
+
+export interface GrantTrancheInput {
+  grant_id: string;
+  label: string;
+  amount: number;
+  due_date: string | null;
+  received_date: string | null;
+  status: GrantTranche["status"];
+}
+
+export async function createGrantTranche(input: GrantTrancheInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("grant_tranches").insert(input);
+  if (error) console.error("createGrantTranche:", error);
+  return !error;
+}
+
+export async function updateGrantTranche(id: string, patch: Partial<GrantTrancheInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("grant_tranches").update(patch).eq("id", id);
+  if (error) console.error("updateGrantTranche:", error);
+  return !error;
+}
+
+export async function deleteGrantTranche(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("grant_tranches").delete().eq("id", id);
+  if (error) console.error("deleteGrantTranche:", error);
+  return !error;
 }
