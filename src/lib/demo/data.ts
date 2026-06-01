@@ -453,37 +453,39 @@ export const DEMO_EVENEMENTS: Evenement[] = [
   },
 ];
 
+const RESIDENCE_DEFAULTS = { artist_id: null, budget: null, logement_fourni: false, logement_notes: null, convention_signee: false, convention_date: null, restitution_date: null, restitution_status: "non_prevu" as const, projet_description: null };
+
 export const DEMO_RESIDENCES: Residence[] = [
   { id: "31111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID,
     space_id: "d2222222-2222-4222-8222-222222222222", person_id: "c1111111-1111-4111-8111-111111111111",
     title: "Résidence céramique — Camille Aubry", discipline: "ceramique", status: "en_cours",
     start_date: "2026-06-01", end_date: "2026-06-28",
     description: "Résidence de création centrée sur la céramique utilitaire et l'objet de design.",
-    notes: "Camille dispose de l'atelier le mardi, jeudi et samedi matin.", created_at: NOW, updated_at: NOW },
+    notes: "Camille dispose de l'atelier le mardi, jeudi et samedi matin.", ...RESIDENCE_DEFAULTS, created_at: NOW, updated_at: NOW },
   { id: "32222222-2222-4222-8222-222222222222", organization_id: BK_ORG_ID,
     space_id: "d1111111-1111-4111-8111-111111111111", person_id: null,
     title: "Résidence théâtre — Compagnie du Mouvement", discipline: "theatre", status: "acceptee",
     start_date: "2026-07-10", end_date: "2026-07-25",
     description: "Création d'une pièce courte sur l'espace partagé et la mémoire collective.",
-    notes: null, created_at: NOW, updated_at: NOW },
+    notes: null, ...RESIDENCE_DEFAULTS, created_at: NOW, updated_at: NOW },
   { id: "33333333-3333-4333-8333-333333333333", organization_id: BK_ORG_ID,
     space_id: null, person_id: "c4444444-4444-4444-8444-444444444444",
     title: "Résidence poterie enfants — Léa Fontaine", discipline: "ceramique", status: "terminee",
     start_date: "2026-05-05", end_date: "2026-05-16",
     description: "Ateliers de découverte de la poterie pour enfants 7-12 ans, 5 sessions.",
-    notes: "Bilan très positif. Prévoir une nouvelle session à l'automne.", created_at: NOW, updated_at: NOW },
+    notes: "Bilan très positif. Prévoir une nouvelle session à l'automne.", ...RESIDENCE_DEFAULTS, created_at: NOW, updated_at: NOW },
   { id: "34444444-4444-4444-8444-444444444444", organization_id: BK_ORG_ID,
     space_id: null, person_id: null,
     title: "Résidence numérique — Artiste en candidature", discipline: "numerique", status: "candidature",
     start_date: null, end_date: null,
     description: "Projet de création sonore et vidéo interactive. Dossier reçu le 20 mai.",
-    notes: "En attente de la commission de sélection.", created_at: NOW, updated_at: NOW },
+    notes: "En attente de la commission de sélection.", ...RESIDENCE_DEFAULTS, created_at: NOW, updated_at: NOW },
   { id: "35555555-5555-4555-8555-555555555555", organization_id: BK_ORG_ID,
     space_id: null, person_id: null,
     title: "Résidence peinture — Non retenue", discipline: "peinture", status: "refusee",
     start_date: null, end_date: null,
     description: "Candidature non retenue pour la session printemps 2026.",
-    notes: "Profil intéressant, à recontacter pour la session automne.", created_at: NOW, updated_at: NOW },
+    notes: "Profil intéressant, à recontacter pour la session automne.", ...RESIDENCE_DEFAULTS, created_at: NOW, updated_at: NOW },
 ];
 
 export const DEMO_DOCUMENTS: Document[] = [

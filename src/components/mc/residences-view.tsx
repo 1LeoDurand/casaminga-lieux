@@ -68,9 +68,13 @@ export function ResidencesView({ residences, spaces, persons, orgSlug, orgId }: 
   function submitForm(values: ResidenceFormValues) {
     const payload = {
       space_id: values.spaceId || null, person_id: values.personId || null,
+      artist_id: null,
       title: values.title, discipline: values.discipline, status: values.status,
       start_date: values.startDate || null, end_date: values.endDate || null,
       description: values.description.trim() || null, notes: values.notes.trim() || null,
+      budget: null, logement_fourni: false, logement_notes: null,
+      convention_signee: false, convention_date: null,
+      restitution_date: null, restitution_status: "non_prevu" as const, projet_description: null,
     };
     startTransition(async () => {
       const res = editing

@@ -425,6 +425,7 @@ export interface Residence {
   organization_id: string;
   space_id: string | null;
   person_id: string | null;
+  artist_id: string | null;
   title: string;
   discipline: string;
   status: ResidenceStatus;
@@ -432,8 +433,52 @@ export interface Residence {
   end_date: string | null;
   description: string | null;
   notes: string | null;
+  budget: number | null;
+  logement_fourni: boolean;
+  logement_notes: string | null;
+  convention_signee: boolean;
+  convention_date: string | null;
+  restitution_date: string | null;
+  restitution_status: "non_prevu" | "planifiee" | "realisee" | "annulee";
+  projet_description: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ── Artistes ──────────────────────────────────────────────────
+export type ArtistStatus = "actif" | "inactif" | "prospect";
+
+export interface Artist {
+  id: string;
+  organization_id: string;
+  name: string;
+  discipline: string;
+  bio: string | null;
+  portfolio_url: string | null;
+  website: string | null;
+  email: string | null;
+  phone: string | null;
+  origin_city: string | null;
+  nationality: string | null;
+  instagram: string | null;
+  tags: string[];
+  photo_url: string | null;
+  status: ArtistStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MilestoneStatus = "a_faire" | "en_cours" | "fait";
+
+export interface ArtistMilestone {
+  id: string;
+  residence_id: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  done_at: string | null;
+  status: MilestoneStatus;
+  created_at: string;
 }
 
 export type EvenementType =

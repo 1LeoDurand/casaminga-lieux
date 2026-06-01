@@ -111,6 +111,8 @@ import type {
   Transaction,
   Grant,
   GrantTranche,
+  Artist,
+  ArtistMilestone,
 } from "@/lib/types";
 
 /**
@@ -561,6 +563,7 @@ export interface ResidenceInput {
   organization_id: string;
   space_id: string | null;
   person_id: string | null;
+  artist_id: string | null;
   title: string;
   discipline: string;
   status: Residence["status"];
@@ -568,6 +571,14 @@ export interface ResidenceInput {
   end_date: string | null;
   description: string | null;
   notes: string | null;
+  budget: number | null;
+  logement_fourni: boolean;
+  logement_notes: string | null;
+  convention_signee: boolean;
+  convention_date: string | null;
+  restitution_date: string | null;
+  restitution_status: Residence["restitution_status"];
+  projet_description: string | null;
 }
 
 export async function createResidence(input: ResidenceInput): Promise<boolean> {
@@ -1222,5 +1233,97 @@ export async function deleteGrantTranche(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("grant_tranches").delete().eq("id", id);
   if (error) console.error("deleteGrantTranche:", error);
+  return !error;
+}
+
+// ── Artistes ──────────────────────────────────────────────────
+export async function getArtistsForOrg(orgId: string): Promise<Artist[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("artists").select("*")
+    .eq("organization_id", orgId).order("name", { ascending: true });
+  return data ?? [];
+}
+
+export interface ArtistInput {
+  organization_id: string;
+  name: string;
+  discipline: string;
+  bio: string | null;
+  portfolio_url: string | null;
+  website: string | null;
+  email: string | null;
+  phone: string | null;
+  origin_city: string | null;
+  nationality: string | null;
+  instagram: string | null;
+  tags: string[];
+  photo_url: string | null;
+  status: Artist["status"];
+}
+
+export async function createArtist(input: ArtistInput): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("artists").insert(input).select("id").single();
+  if (error) { console.error("createArtist:", error); return null; }
+  return data?.id ?? null;
+}
+
+export async function updateArtist(id: string, patch: Partial<ArtistInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("artists").update(patch).eq("id", id);
+  if (error) console.error("updateArtist:", error);
+  return !error;
+}
+
+export async function deleteArtist(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("artists").delete().eq("id", id);
+  if (error) console.error("deleteArtist:", error);
+  return !error;
+}
+
+// ── Jalons de résidence ───────────────────────────────────────
+export async function getMilestonesForResidence(residenceId: string): Promise<ArtistMilestone[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("artist_milestones").select("*")
+    .eq("residence_id", residenceId).order("due_date", { ascending: true });
+  return data ?? [];
+}
+
+export interface ArtistMilestoneInput {
+  residence_id: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  done_at: string | null;
+  status: ArtistMilestone["status"];
+}
+
+export async function createMilestone(input: ArtistMilestoneInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("artist_milestones").insert(input);
+  if (error) console.error("createMilestone:", error);
+  return !error;
+}
+
+export async function updateMilestone(id: string, patch: Partial<ArtistMilestoneInput>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("artist_milestones").update(patch).eq("id", id);
+  if (error) console.error("updateMilestone:", error);
+  return !error;
+}
+
+export async function deleteMilestone(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("artist_milestones").delete().eq("id", id);
+  if (error) console.error("deleteMilestone:", error);
   return !error;
 }
