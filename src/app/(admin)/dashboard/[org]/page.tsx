@@ -6,6 +6,7 @@ import { KpiTile } from "@/components/mc/kpi-tile";
 import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
 import { OnboardingChecklist, type OnboardingStep } from "@/components/mc/onboarding-checklist";
+import { WhatsNew } from "@/components/mc/whats-new";
 import { getMembershipCampaignsForOrg } from "@/lib/data";
 import { StatusBadge } from "@/components/mc/status-badge";
 import {
@@ -285,6 +286,9 @@ export default async function DashboardOverview({
           )}
         </div>
       </div>
+
+      {/* Nouveautés Casa Minga */}
+      <WhatsNew orgSlug={organization.slug} />
     </div>
   );
 }
