@@ -42,10 +42,10 @@ export function DashboardQuickbar({ orgSlug }: { orgSlug: string }) {
       <button
         type="button"
         className="mc-dq-btn primary"
-        onClick={() => soon("Facture")}
+        onClick={() => router.push(`/dashboard/${orgSlug}/finances`)}
       >
         <Receipt className="mc-dq-ic size-3.5" />
-        <span>Facture</span>
+        <span>Transaction</span>
       </button>
     </>
   );

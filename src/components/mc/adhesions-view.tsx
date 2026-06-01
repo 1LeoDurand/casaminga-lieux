@@ -270,6 +270,19 @@ function CampaignWizard({ campaign, orgId, orgSlug, onClose, onSaved }: {
   );
 }
 
+// ── Labels mode de paiement (UX-015) ─────────────────────────
+const PAYMENT_METHODS = [
+  { value: "",          label: "— Mode de paiement —" },
+  { value: "cheque",    label: "Chèque" },
+  { value: "virement",  label: "Virement" },
+  { value: "especes",   label: "Espèces" },
+  { value: "en_ligne",  label: "En ligne" },
+  { value: "exonere",   label: "Exonéré" },
+];
+function paymentLabel(v: string | null) {
+  return PAYMENT_METHODS.find((m) => m.value === (v ?? ""))?.label ?? v ?? "—";
+}
+
 // ── Drawer administration d'une campagne ────────────────────
 function CampaignAdmin({ campaign, tiers, applications, orgSlug, onClose }: {
   campaign: MembershipCampaign; tiers: MembershipTier[];
@@ -295,6 +308,14 @@ function CampaignAdmin({ campaign, tiers, applications, orgSlug, onClose }: {
       const r = await updateApplicationAction(orgSlug, id, patch as Parameters<typeof updateApplicationAction>[2]);
       if (r.ok) toast.success(`Adhésion ${status === "confirmee" ? "confirmée" : "annulée"}`);
       else toast.error("Erreur.");
+    });
+  }
+
+  // UX-015 — enregistrer le mode de paiement
+  function setPayment(id: string, method: string) {
+    startT(async () => {
+      const r = await updateApplicationAction(orgSlug, id, { payment_method: method || null });
+      if (!r.ok) toast.error("Erreur.");
     });
   }
 
@@ -326,11 +347,30 @@ function CampaignAdmin({ campaign, tiers, applications, orgSlug, onClose }: {
               {applications.map((a) => (
                 <div key={a.id} className="rounded-xl bg-white p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="font-semibold text-foreground">{a.first_name} {a.last_name}</div>
                       <div className="text-[12px] text-warmgray">{tierMap.get(a.tier_id ?? "")?.name ?? "—"} · {formatAmount(a.amount_paid)}{a.donation_amount ? ` + don ${formatAmount(a.donation_amount)}` : ""}</div>
                       {a.email ? <div className="text-[12px] text-warmgray">{a.email}</div> : null}
                       {a.membership_start ? <div className="text-[11px] text-warmgray">{formatDate(a.membership_start)} → {formatDate(a.membership_end)}</div> : null}
+                      {/* UX-015 — mode de paiement */}
+                      {a.status === "confirmee" ? (
+                        <div className="mt-2">
+                          {a.payment_method ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-[#e8f5ee] px-2 py-0.5 text-[11px] font-semibold text-[#2f8a4c]">
+                              ✓ {paymentLabel(a.payment_method)}{a.payment_ref ? ` · ${a.payment_ref}` : ""}
+                            </span>
+                          ) : (
+                            <select
+                              className="rounded-md border border-input bg-cream px-2 py-1 text-[11px] text-warmgray"
+                              defaultValue=""
+                              disabled={pending}
+                              onChange={(e) => { if (e.target.value) setPayment(a.id, e.target.value); }}
+                            >
+                              {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`mc-badge ${appStatusBadge(a.status)}`}>{appStatusLabel(a.status)}</span>
@@ -430,8 +470,13 @@ export function AdhesionsView({ campaigns, tiersMap, applicationsMap, orgSlug, o
                   <div className="mc-campaign-title">{c.title}</div>
                   <span className={`mc-badge ${campaignStatusBadge(c.status)} flex-none`}>{campaignStatusLabel(c.status)}</span>
                 </div>
+                {/* UX-009 — période lisible pour tous les types */}
                 {c.period_type === "personnalisee" && c.period_start ? (
                   <div className="text-[12px] text-warmgray">{formatDate(c.period_start)} → {formatDate(c.period_end)}</div>
+                ) : c.period_type === "annee_glissante" ? (
+                  <div className="text-[12px] text-warmgray">1 an glissant à partir de l&apos;adhésion</div>
+                ) : c.period_type === "illimitee" ? (
+                  <div className="text-[12px] text-warmgray">Sans limite de durée</div>
                 ) : null}
                 <div className="mc-campaign-stats">
                   <div><div className="mc-campaign-stat-val">{confirmed}</div><div className="text-[11px]">adhérents</div></div>
@@ -439,12 +484,16 @@ export function AdhesionsView({ campaigns, tiersMap, applicationsMap, orgSlug, o
                 </div>
               </div>
               <div className="mc-campaign-actions">
-                <button type="button" className="mc-btn mc-btn-lime flex-1 mc-btn-sm" onClick={() => setAdminCampaign(c)}>Administrer <ArrowRight className="size-3.5" /></button>
-                <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" disabled={pending} onClick={() => toggleStatus(c)}>{c.status === "publie" ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
-                <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => { setEditingCampaign(c); setWizardOpen(true); }}><Pencil className="size-4" /></button>
-                <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => setConfirmDelete(c)}><Trash2 className="size-4" /></button>
+                {/* UX-016 — libellé "Voir les adhérents" + count pour clarifier l'action */}
+                <button type="button" className="mc-btn mc-btn-lime flex-1 mc-btn-sm" onClick={() => setAdminCampaign(c)}>
+                  Adhérents ({apps.filter((a) => a.status === "confirmee").length}) <ArrowRight className="size-3.5" />
+                </button>
+                {/* UX-007 — title sur chaque icône */}
+                <button type="button" title={c.status === "publie" ? "Dépublier" : "Publier"} className="mc-btn mc-btn-outline mc-btn-sm" disabled={pending} onClick={() => toggleStatus(c)}>{c.status === "publie" ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button>
+                <button type="button" title="Modifier la campagne" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => { setEditingCampaign(c); setWizardOpen(true); }}><Pencil className="size-4" /></button>
+                <button type="button" title="Supprimer la campagne" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => setConfirmDelete(c)}><Trash2 className="size-4" /></button>
                 {c.status === "publie" ? (
-                  <a href={`/site/${orgSlug}/adhesion/${c.slug}`} target="_blank" rel="noopener noreferrer" className="mc-btn mc-btn-outline mc-btn-sm"><ExternalLink className="size-4" /></a>
+                  <a href={`/site/${orgSlug}/adhesion/${c.slug}`} target="_blank" rel="noopener noreferrer" title="Voir le tunnel public" className="mc-btn mc-btn-outline mc-btn-sm"><ExternalLink className="size-4" /></a>
                 ) : null}
               </div>
             </div>

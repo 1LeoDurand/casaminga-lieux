@@ -1108,6 +1108,7 @@ export interface MembershipApplicationInput {
   amount_paid: number; donation_amount: number | null;
   status: MembershipApplication["status"];
   membership_start: string | null; membership_end: string | null; notes: string | null;
+  payment_method?: string | null | undefined; payment_ref?: string | null | undefined;
 }
 
 /** Souscription publique (anon). */

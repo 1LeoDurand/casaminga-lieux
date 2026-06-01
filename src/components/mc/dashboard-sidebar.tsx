@@ -132,7 +132,10 @@ export function DashboardSidebar({
             <span className="truncate font-heading text-[15px] font-extrabold text-white">
               {orgName}
             </span>
-            <span className="shrink-0 rounded-md bg-coral px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white">
+            <span
+              className="shrink-0 rounded-md bg-coral px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white"
+              title="Mode démo : données d'exemple. Connectez Supabase dans les paramètres pour passer en production."
+            >
               Démo
             </span>
           </div>

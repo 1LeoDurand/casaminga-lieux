@@ -38,8 +38,8 @@ export default async function AdhesionTunnelPage({
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border/60 bg-cream/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-6 py-4">
-          <Link href={`/site/${org.slug}`} className="font-heading text-lg font-extrabold">{org.name}</Link>
-          <span className="ml-auto text-sm text-muted-foreground">Adhésion</span>
+          <Link href={`/site/${org.slug}`} className="min-w-0 truncate font-heading text-base font-extrabold">{org.name}</Link>
+          <span className="ml-auto shrink-0 text-sm text-muted-foreground">Adhésion</span>
         </div>
       </header>
 
@@ -47,7 +47,7 @@ export default async function AdhesionTunnelPage({
         <span className="inline-block rounded-full border border-coral/30 bg-peach-pale px-3 py-1 text-xs font-semibold uppercase tracking-wide text-coral-dark">
           Rejoindre {org.name}
         </span>
-        <h1 className="mt-4 font-heading text-3xl font-extrabold leading-tight tracking-tight">{campaign.title}</h1>
+        <h1 className="mt-4 font-heading text-2xl font-extrabold leading-tight tracking-tight md:text-3xl">{campaign.title}</h1>
         <p className="mt-2 text-muted-foreground">
           Adhérez en quelques minutes. Vos informations arrivent directement à l&apos;équipe.
         </p>

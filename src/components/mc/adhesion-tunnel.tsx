@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Check, ChevronLeft, ChevronRight, Heart, Users } from "lucide-react";
 import type { MembershipCampaign, MembershipTier } from "@/lib/types";
@@ -25,10 +25,12 @@ export function AdhesionTunnel({
   campaign: MembershipCampaign;
   tiers: MembershipTier[];
 }) {
+  const SESSION_KEY = `adhesion-${campaign.id}`;
   const steps = ["Formule", "Adhérent", "Coordonnées", "Récapitulatif"];
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const restoredRef = useRef(false);
 
   const [tierId, setTierId] = useState<string | null>(tiers[0]?.id ?? null);
   const [donation, setDonation] = useState<number>(0);
@@ -41,7 +43,37 @@ export function AdhesionTunnel({
   const [payerName, setPayerName] = useState("");
   const [payerEmail, setPayerEmail] = useState("");
 
-  const selectedTier = useMemo(() => tiers.find((t) => t.id === tierId) ?? null, [tiers, tierId]);
+  // UX-028 — Restore from sessionStorage on mount
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof s.step === "number" && s.step > 0) setStep(s.step);
+      if (typeof s.tierId === "string") setTierId(s.tierId);
+      if (s.adherent && typeof s.adherent === "object") setAdherent(s.adherent as AdherentForm);
+      if (typeof s.payerSame === "boolean") setPayerSame(s.payerSame);
+      if (typeof s.payerName === "string") setPayerName(s.payerName);
+      if (typeof s.payerEmail === "string") setPayerEmail(s.payerEmail);
+      if (typeof s.donation === "number") setDonation(s.donation);
+      if (typeof s.donationCustom === "string") setDonationCustom(s.donationCustom);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function persistSession(patch: Record<string, unknown>) {
+    try {
+      const existing = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "{}");
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...existing, ...patch }));
+    } catch {}
+  }
+  function clearSession() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+  }
+
+  const selectedTier = tiers.find((t) => t.id === tierId) ?? null;
   const donationAmounts = campaign.donation_amounts ?? [];
   const effectiveDonation = donationCustom ? Number(donationCustom) || 0 : donation;
   const total = (selectedTier ? Number(selectedTier.amount) : 0) + effectiveDonation;
@@ -50,8 +82,13 @@ export function AdhesionTunnel({
     setAdherent((p) => ({ ...p, [k]: v }));
   }
 
+  // UX-027 — scroll-to-top on step change
+  function scrollTop() { window.scrollTo({ top: 0, behavior: "smooth" }); }
+
   function nextFromTier() {
     if (!tierId) { toast.error("Choisissez une formule."); return; }
+    persistSession({ step: 1, tierId, donation, donationCustom });
+    scrollTop();
     setStep(1);
   }
   function nextFromAdherent() {
@@ -59,6 +96,8 @@ export function AdhesionTunnel({
       toast.error("Prénom et nom sont requis."); return;
     }
     if (!/.+@.+\..+/.test(adherent.email)) { toast.error("Email invalide."); return; }
+    persistSession({ step: 2, adherent });
+    scrollTop();
     setStep(2);
   }
   function nextFromPayer() {
@@ -66,6 +105,8 @@ export function AdhesionTunnel({
       if (!payerName.trim()) { toast.error("Nom du payeur requis."); return; }
       if (!/.+@.+\..+/.test(payerEmail)) { toast.error("Email du payeur invalide."); return; }
     }
+    persistSession({ step: 3, payerSame, payerName, payerEmail });
+    scrollTop();
     setStep(3);
   }
 
@@ -90,6 +131,7 @@ export function AdhesionTunnel({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data.error ?? "Envoi impossible. Réessayez."); return; }
+      clearSession();
       setDone(true);
     } catch {
       toast.error("Erreur réseau. Réessayez.");
@@ -104,9 +146,9 @@ export function AdhesionTunnel({
         <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-mint/15 text-[#15803d]">
           <Check className="size-7" strokeWidth={2.2} />
         </span>
-        <h2 className="mt-4 font-heading text-2xl font-bold">Adhésion enregistrée — merci !</h2>
+        <h2 className="mt-4 font-heading text-2xl font-bold">Adhésion enregistrée — merci&nbsp;!</h2>
         <p className="mt-2 text-muted-foreground">
-          Votre demande d&apos;adhésion à « {campaign.title} » a bien été reçue.
+          Votre demande d&apos;adhésion à «&nbsp;{campaign.title}&nbsp;» a bien été reçue.
           L&apos;équipe la validera et vous recontactera à l&apos;adresse {adherent.email}.
         </p>
         <div className="mt-5 inline-flex items-center gap-2 rounded-xl bg-cream px-4 py-2.5 text-sm font-semibold">
@@ -159,31 +201,36 @@ export function AdhesionTunnel({
             </div>
           )}
 
+          {/* UX-029 — Don : grille 3 col + champ libre sur sa propre ligne */}
           {campaign.allow_donation && (
             <div className="rounded-xl bg-cream p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Heart className="size-4 text-coral-dark" /> Ajouter un don de soutien
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-2">
                 {donationAmounts.map((a) => {
                   const val = Number(a);
                   const active = !donationCustom && donation === val;
                   return (
                     <button type="button" key={a} onClick={() => { setDonation(val); setDonationCustom(""); }}
-                      className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                      className={`rounded-lg border py-3 text-sm font-semibold transition-colors ${
                         active ? "border-coral bg-coral text-white" : "border-input bg-white hover:border-peach"
                       }`}>
                       {formatAmount(val)}
                     </button>
                   );
                 })}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
                 <input
                   inputMode="decimal" value={donationCustom}
                   onChange={(e) => { setDonationCustom(e.target.value); setDonation(0); }}
-                  placeholder="Libre €" className={`${inputClass} w-28`} />
+                  placeholder="Montant libre €" className={`${inputClass} flex-1`} />
                 {(donation > 0 || donationCustom) ? (
                   <button type="button" onClick={() => { setDonation(0); setDonationCustom(""); }}
-                    className="text-sm font-medium text-muted-foreground hover:text-coral-dark">Retirer</button>
+                    className="shrink-0 text-sm font-medium text-muted-foreground hover:text-coral-dark">
+                    Retirer
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -196,7 +243,7 @@ export function AdhesionTunnel({
         <div className="flex flex-col gap-4">
           <h2 className="font-heading text-xl font-bold">Vos informations</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <input value={adherent.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Prénom *" className={inputClass} />
+            <input value={adherent.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Prénom *" className={inputClass} autoFocus />
             <input value={adherent.last_name} onChange={(e) => set("last_name", e.target.value)} placeholder="Nom *" className={inputClass} />
             <input type="email" value={adherent.email} onChange={(e) => set("email", e.target.value)} placeholder="Email *" className={inputClass} />
             <input value={adherent.phone} onChange={(e) => set("phone", e.target.value)} placeholder="Téléphone" className={inputClass} />
@@ -214,7 +261,7 @@ export function AdhesionTunnel({
           </label>
           {!payerSame && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <input value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="Nom du payeur *" className={inputClass} />
+              <input value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="Nom du payeur *" className={inputClass} autoFocus />
               <input type="email" value={payerEmail} onChange={(e) => setPayerEmail(e.target.value)} placeholder="Email du payeur *" className={inputClass} />
             </div>
           )}
@@ -253,17 +300,22 @@ export function AdhesionTunnel({
         </div>
       )}
 
-      {/* Nav */}
+      {/* Nav — UX-005: total provisoire en step 0 */}
       <div className="mt-7 flex items-center justify-between gap-3">
         <div>
           {step > 0 ? (
-            <button type="button" onClick={() => setStep((s) => s - 1)} disabled={loading}
+            <button type="button" onClick={() => { scrollTop(); setStep((s) => s - 1); }} disabled={loading}
               className="inline-flex items-center gap-1 rounded-lg border border-input px-4 py-2.5 text-sm font-semibold hover:border-peach disabled:opacity-60">
               <ChevronLeft className="size-4" /> Retour
             </button>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
               <Users className="size-3.5" /> {tiers.length} formule{tiers.length > 1 ? "s" : ""}
+              {selectedTier ? (
+                <span className="ml-2 font-semibold text-coral-dark">
+                  {formatAmount(total)}
+                </span>
+              ) : null}
             </span>
           )}
         </div>
@@ -276,7 +328,7 @@ export function AdhesionTunnel({
         ) : (
           <button type="button" onClick={submit} disabled={loading}
             className="inline-flex items-center gap-1.5 rounded-lg bg-coral px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark disabled:opacity-60">
-            <Check className="size-4" /> {loading ? "Envoi…" : `Valider l'adhésion — ${formatAmount(total)}`}
+            <Check className="size-4" /> {loading ? "Envoi…" : `Valider — ${formatAmount(total)}`}
           </button>
         )}
       </div>

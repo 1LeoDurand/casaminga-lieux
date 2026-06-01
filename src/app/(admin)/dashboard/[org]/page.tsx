@@ -7,6 +7,7 @@ import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
 import { StatusBadge } from "@/components/mc/status-badge";
 import {
+  getDocumentsForOrg,
   getEvenementsForOrg,
   getOrganizationBySlug,
   getPersonsForOrg,
@@ -47,7 +48,7 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons, spaces, reservations, evenements, transactions, tasks] = await Promise.all([
+  const [requests, persons, spaces, reservations, evenements, transactions, tasks, documents] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
@@ -55,6 +56,7 @@ export default async function DashboardOverview({
     getEvenementsForOrg(organization.id),
     getTransactionsForOrg(organization.id),
     getTasksForOrg(organization.id),
+    getDocumentsForOrg(organization.id),
   ]);
   const urgentTasks = tasks.filter(
     (t) => t.status !== "fait" && (t.priority === "haute" || isOverdue(t.due_date, t.status))
@@ -78,6 +80,16 @@ export default async function DashboardOverview({
   ).length;
 
   const now = new Date();
+  // UX-012 — revenus du mois courant (calculé, pas hardcodé)
+  const currentMonth = now.toISOString().slice(0, 7);
+  const revenusMois = validTx
+    .filter((t) => t.type === "recette" && t.date?.slice(0, 7) === currentMonth)
+    .reduce((s, t) => s + Number(t.amount), 0);
+  // UX-013 — impayés réels (recettes en attente)
+  const impayes = transactions.filter((t) => t.status === "en_attente" && t.type === "recette");
+  const impayesTotal = impayes.reduce((s, t) => s + Number(t.amount), 0);
+  // UX-014 — documents à signer (statut "envoye")
+  const docsASigner = documents.filter((d) => d.status === "envoye").length;
   const dayLabel = new Intl.DateTimeFormat("fr-FR", {
     weekday: "long",
     day: "numeric",
@@ -90,8 +102,8 @@ export default async function DashboardOverview({
     { key: "resa", icon: "resa", iconBg: "#ffefea", iconColor: "var(--coral-dark)", num: reservationsToday, label: "Réservations du jour", segment: "reservations" },
     { key: "event", icon: "event", iconBg: "#f4e7ff", iconColor: "#6b3aa0", num: eventsThisWeek, label: "Événements cette semaine", segment: "evenements" },
     { key: "demande", icon: "demande", iconBg: "#fff3de", iconColor: "#a06800", num: openRequests.length, label: "Demandes à traiter", segment: "demandes" },
-    { key: "impayes", icon: "alert", iconBg: "#fdeae4", iconColor: "var(--coral-dark)", num: 2, extra: "480 €", label: "Impayés en attente", warn: true, segment: undefined },
-    { key: "sign", icon: "sign", iconBg: "#e8f1fe", iconColor: "#1d4ed8", num: 3, label: "Documents à signer", segment: undefined },
+    { key: "impayes", icon: "alert", iconBg: "#fdeae4", iconColor: "var(--coral-dark)", num: impayes.length, extra: impayesTotal > 0 ? formatAmount(impayesTotal) : undefined, label: "Impayés en attente", warn: impayes.length > 0, segment: "finances" },
+    { key: "sign", icon: "sign", iconBg: "#e8f1fe", iconColor: "#1d4ed8", num: docsASigner, label: "Documents à signer", warn: docsASigner > 0, segment: "documents" },
     { key: "tasks", icon: "task", iconBg: "#fff8e0", iconColor: "#a06800", num: urgentTasks, label: "Tâches urgentes", warn: urgentTasks > 0, segment: "taches" },
   ];
 
@@ -104,16 +116,17 @@ export default async function DashboardOverview({
         actions={<DashboardQuickbar orgSlug={organization.slug} />}
       />
 
-      {/* Rangée KPI (illustrative en mode démo, sauf « Demandes ») */}
+      {/* Rangée KPI — UX-012: revenus du mois calculés depuis les vraies transactions */}
       <div className="mc-kpi-row">
         <KpiTile
           icon={<Euro className="size-[18px]" />}
           iconBg="#ffefea"
           iconColor="var(--coral-dark)"
-          value="3 840 €"
+          value={formatAmount(revenusMois)}
           caption="Revenus du mois"
-          trend="↑ +8 % vs mois dernier"
-          trendTone="up"
+          trend={revenusMois > 0 ? "recettes confirmées" : "aucune recette ce mois"}
+          trendTone={revenusMois > 0 ? "up" : undefined}
+          href={`/dashboard/${organization.slug}/finances`}
         />
         <KpiTile
           icon={<Building2 className="size-[18px]" />}

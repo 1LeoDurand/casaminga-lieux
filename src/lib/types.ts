@@ -185,6 +185,8 @@ export interface MembershipApplication {
   membership_start: string | null;
   membership_end: string | null;
   notes: string | null;
+  payment_method?: string | null; // cheque | virement | especes | en_ligne | exonere
+  payment_ref?: string | null;
   created_at: string;
   updated_at: string;
 }

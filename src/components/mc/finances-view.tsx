@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { X, Search, RotateCcw, Plus, TrendingUp, TrendingDown, Pencil, Trash2, Euro } from "lucide-react";
+import { X, Search, RotateCcw, Plus, TrendingUp, TrendingDown, Pencil, Trash2, Euro, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { TransactionForm, type TransactionFormValues } from "@/components/mc/transaction-form";
@@ -38,6 +38,30 @@ function BarChart({ data }: { data: { label: string; recettes: number; depenses:
       </div>
     </div>
   );
+}
+
+// UX-017 — Export CSV côté client, sans back-end
+function exportCsv(transactions: import("@/lib/types").Transaction[], orgSlug: string, catLabel: (c: string) => string, statLabel: (s: string) => string) {
+  const BOM = "﻿";
+  const headers = ["Date", "Libellé", "Type", "Catégorie", "Statut", "Montant (€)"].join(";");
+  const rows = transactions.map((t) =>
+    [
+      t.date ?? "",
+      `"${(t.label ?? "").replace(/"/g, '""')}"`,
+      t.type === "recette" ? "Recette" : "Dépense",
+      catLabel(t.category),
+      statLabel(t.status),
+      (t.type === "recette" ? "" : "-") + Number(t.amount).toFixed(2),
+    ].join(";")
+  );
+  const csv = BOM + [headers, ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `transactions-${orgSlug}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function FinancesView({ transactions, persons, orgSlug, orgId }: {
@@ -137,20 +161,40 @@ export function FinancesView({ transactions, persons, orgSlug, orgId }: {
           <div className="mc-stat-val" style={{ color: kpis.solde >= 0 ? "#2f8a4c" : "var(--coral-dark)" }}>{formatAmount(kpis.solde)}</div>
           <div className="mc-stat-lbl">Solde net</div>
         </div>
-        <div className="mc-stat">
+        {/* UX-018 — KPI "En attente" cliquable → filtre la liste */}
+        <button
+          type="button"
+          className="mc-stat cursor-pointer text-left hover:border-coral"
+          title="Cliquer pour filtrer les transactions en attente"
+          onClick={() => setStatF(new Set(["en_attente"]))}
+        >
           <div className="mc-stat-val" style={{ color: "#a06800" }}>{kpis.enAttente}</div>
-          <div className="mc-stat-lbl">En attente</div>
-        </div>
+          <div className="mc-stat-lbl">En attente ↗</div>
+        </button>
         <div className="mc-stat">
           <div className="mc-stat-val">{kpis.total}</div>
           <div className="mc-stat-lbl">Transactions</div>
         </div>
       </div>
 
-      {/* Graphique mensuel */}
+      {/* UX-022 — lien de synthèse vers Adhésions pour le trésorier */}
+      <div className="rounded-xl border border-border/60 bg-white px-4 py-3 text-[13px] text-warmgray flex items-center justify-between gap-3">
+        <span>Les cotisations perçues via les campagnes d&apos;adhésion ne sont pas encore remontées ici automatiquement.</span>
+        <a href={`/dashboard/${orgSlug}/adhesions`} className="shrink-0 font-semibold text-coral-dark hover:underline">Voir les adhésions →</a>
+      </div>
+
+      {/* Graphique mensuel — UX-020: libellé de période */}
       {monthData.length > 0 ? (
         <div className="mc-card px-5 py-4">
-          <h3 className="mb-3 text-[13px] font-semibold text-foreground">Recettes vs Dépenses par mois</h3>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-[13px] font-semibold text-foreground">Recettes vs Dépenses par mois</h3>
+            <span className="text-[11px] text-warmgray">
+              {monthData.length === 1
+                ? monthData[0].label
+                : `${monthData[0].label} – ${monthData[monthData.length - 1].label}`}
+              {" "}· {monthData.length} mois
+            </span>
+          </div>
           <BarChart data={monthData} />
         </div>
       ) : null}
@@ -162,7 +206,10 @@ export function FinancesView({ transactions, persons, orgSlug, orgId }: {
             <input className="mc-input" placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouvelle</button>
-          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => { setSearch(""); setTypeF("all"); setStatF(new Set()); }} disabled={!hasFilters}><RotateCcw className="size-3.5" /> Réinitialiser</button>
+          {/* UX-019 — "Réinitialiser" → "Effacer les filtres" pour lever l'ambiguïté */}
+          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => { setSearch(""); setTypeF("all"); setStatF(new Set()); }} disabled={!hasFilters}><RotateCcw className="size-3.5" /> Effacer les filtres</button>
+          {/* UX-017 — Export CSV côté client */}
+          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => exportCsv(filtered, orgSlug, categoryLabel, txStatusLabel)} title="Exporter en CSV (Excel)"><Download className="size-3.5" /> Exporter</button>
         </div>
         <div className="mc-filter-row"><span className="mc-filter-lbl">Type</span>
           <div className="mc-chips">
@@ -185,7 +232,7 @@ export function FinancesView({ transactions, persons, orgSlug, orgId }: {
         <div className="mc-card"><div className="mc-empty">
           <span className="mc-empty-ic"><Search className="size-6" strokeWidth={1.8} /></span>
           <div className="mc-empty-title">Aucun résultat</div>
-          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm mt-1" onClick={() => { setSearch(""); setTypeF("all"); setStatF(new Set()); }}><RotateCcw className="size-3.5" /> Réinitialiser</button>
+          <button type="button" className="mc-btn mc-btn-outline mc-btn-sm mt-1" onClick={() => { setSearch(""); setTypeF("all"); setStatF(new Set()); }}><RotateCcw className="size-3.5" /> Effacer les filtres</button>
         </div></div>
       ) : (
         <div className="mc-card overflow-hidden">
