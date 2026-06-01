@@ -23,6 +23,7 @@ Développeur : **Léo** (solo, équipe à venir).
 
 ## Conventions
 - Commits : **anglais** (ex: `feat: add export CSV`, `fix: null address on public site`)
+- **Tags** : créer un tag git annoté après chaque module livré → `git tag vX.Y-nom-module <hash> -m "description"` + `git push origin <tag>`
 - Commentaires de code : anglais
 - Réponses Claude : **français**, court et direct, sans récapitulatif superflu
 - Migrations Supabase : nommées `vX_Y_description` (ex: `v2_6_adhesions_payment_fields`)
