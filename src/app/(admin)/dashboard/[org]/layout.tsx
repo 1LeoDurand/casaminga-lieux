@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { DashboardSidebar } from "@/components/mc/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
 import { FeedbackWidget } from "@/components/mc/feedback-widget";
+import { HelpWidget } from "@/components/mc/help-widget";
 import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
@@ -34,6 +35,7 @@ export default async function DashboardLayout({
       <DashboardTopbar orgSlug={organization.slug} />
       <main className="overflow-y-auto p-7">{children}</main>
       <FeedbackWidget orgSlug={organization.slug} />
+      <HelpWidget />
     </div>
   );
 }
