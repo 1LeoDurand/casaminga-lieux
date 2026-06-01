@@ -1,0 +1,191 @@
+"use client";
+
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { usePathname } from "next/navigation";
+
+type FeedbackType = "bug" | "amélioration";
+type Priority = "low" | "medium" | "high" | "critical";
+
+const PRIORITY_LABELS: Record<Priority, string> = {
+  low: "Faible",
+  medium: "Moyen",
+  high: "Élevé",
+  critical: "Critique",
+};
+
+const PRIORITY_COLORS: Record<Priority, string> = {
+  low: "bg-slate-100 text-slate-600 border-slate-200",
+  medium: "bg-amber-50 text-amber-700 border-amber-200",
+  high: "bg-orange-50 text-orange-700 border-orange-200",
+  critical: "bg-red-50 text-red-700 border-red-200",
+};
+
+export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<FeedbackType>("bug");
+  const [priority, setPriority] = useState<Priority>("medium");
+  const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const pathname = usePathname();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!description.trim()) return;
+
+    setLoading(true);
+    const supabase = createClient();
+
+    const { error } = await supabase.from("feedback").insert({
+      type,
+      priority,
+      description: description.trim(),
+      url: typeof window !== "undefined" ? window.location.href : pathname,
+      page_title: typeof document !== "undefined" ? document.title : "",
+      org_slug: orgSlug ?? null,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error("Erreur lors de l'envoi du ticket");
+      return;
+    }
+
+    toast.success("Ticket enregistré ✓");
+    setDescription("");
+    setType("bug");
+    setPriority("medium");
+    setOpen(false);
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Panel */}
+      {open && (
+        <div className="fixed bottom-20 right-4 z-50 w-80 rounded-xl border border-slate-200 bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <span className="text-sm font-semibold text-slate-800">
+              Signaler un retour
+            </span>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            {/* Type */}
+            <div className="grid grid-cols-2 gap-2">
+              {(["bug", "amélioration"] as FeedbackType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                    type === t
+                      ? t === "bug"
+                        ? "border-red-300 bg-red-50 text-red-700"
+                        : "border-emerald-300 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+                  }`}
+                >
+                  {t === "bug" ? "🐛 Bug" : "✨ Amélioration"}
+                </button>
+              ))}
+            </div>
+
+            {/* Priorité */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                Priorité
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(["low", "medium", "high", "critical"] as Priority[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPriority(p)}
+                    className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-all ${
+                      priority === p
+                        ? PRIORITY_COLORS[p] + " ring-1 ring-current"
+                        : "border-slate-200 bg-white text-slate-400 hover:border-slate-300"
+                    }`}
+                  >
+                    {PRIORITY_LABELS[p]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={
+                  type === "bug"
+                    ? "Décris ce qui ne fonctionne pas..."
+                    : "Décris ton idée d'amélioration..."
+                }
+                rows={4}
+                required
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none"
+              />
+            </div>
+
+            {/* URL actuelle */}
+            <p className="text-[10px] text-slate-400 truncate">
+              📍 {typeof window !== "undefined" ? window.location.pathname : pathname}
+            </p>
+
+            <button
+              type="submit"
+              disabled={loading || !description.trim()}
+              className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {loading ? "Envoi…" : "Envoyer le ticket"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Bouton flottant */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title="Signaler un bug ou une amélioration"
+        className={`fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${
+          open
+            ? "bg-slate-700 text-white"
+            : "bg-slate-900 text-white hover:bg-slate-700"
+        }`}
+      >
+        {open ? (
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 4v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </button>
+    </>
+  );
+}
