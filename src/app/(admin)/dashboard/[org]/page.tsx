@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/mc/page-header";
 import { KpiTile } from "@/components/mc/kpi-tile";
 import { DashboardQuickbar } from "@/components/mc/dashboard-quickbar";
 import { DashboardToday, type TodayItem } from "@/components/mc/dashboard-today";
+import { OnboardingChecklist, type OnboardingStep } from "@/components/mc/onboarding-checklist";
+import { getMembershipCampaignsForOrg } from "@/lib/data";
 import { StatusBadge } from "@/components/mc/status-badge";
 import {
   getDocumentsForOrg,
@@ -48,7 +50,7 @@ export default async function DashboardOverview({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [requests, persons, spaces, reservations, evenements, transactions, tasks, documents] = await Promise.all([
+  const [requests, persons, spaces, reservations, evenements, transactions, tasks, documents, campaigns] = await Promise.all([
     getRequestsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
@@ -57,6 +59,7 @@ export default async function DashboardOverview({
     getTransactionsForOrg(organization.id),
     getTasksForOrg(organization.id),
     getDocumentsForOrg(organization.id),
+    getMembershipCampaignsForOrg(organization.id),
   ]);
   const urgentTasks = tasks.filter(
     (t) => t.status !== "fait" && (t.priority === "haute" || isOverdue(t.due_date, t.status))
@@ -98,6 +101,45 @@ export default async function DashboardOverview({
   }).format(now);
   const dateTag = `${dayLabel.charAt(0).toUpperCase()}${dayLabel.slice(1)} · semaine ${weekNumber(now)}`;
 
+  // Onboarding — étapes "Premiers pas" calculées depuis les vraies données
+  const onboardingSteps: OnboardingStep[] = [
+    {
+      key: "members",
+      label: "Ajouter vos premiers membres",
+      description: "Constituez votre base de membres et contacts",
+      href: `/dashboard/${organization.slug}/personnes`,
+      done: persons.length > 0,
+    },
+    {
+      key: "campaign",
+      label: "Créer une campagne d'adhésion",
+      description: "Permettez à vos membres d'adhérer en ligne",
+      href: `/dashboard/${organization.slug}/adhesions`,
+      done: campaigns.length > 0,
+    },
+    {
+      key: "event",
+      label: "Programmer un événement",
+      description: "Atelier, concert, AG — visible sur votre site public",
+      href: `/dashboard/${organization.slug}/evenements`,
+      done: evenements.length > 0,
+    },
+    {
+      key: "space",
+      label: "Déclarer un espace réservable",
+      description: "Salle, atelier, bureau partagé",
+      href: `/dashboard/${organization.slug}/espaces`,
+      done: spaces.length > 0,
+    },
+    {
+      key: "helloasso",
+      label: "Connecter HelloAsso (optionnel)",
+      description: "Synchronisez automatiquement vos adhésions",
+      href: `/dashboard/${organization.slug}/parametres`,
+      done: !!organization.helloasso_connected_at,
+    },
+  ];
+
   const todayItems: TodayItem[] = [
     { key: "resa", icon: "resa", iconBg: "#ffefea", iconColor: "var(--coral-dark)", num: reservationsToday, label: "Réservations du jour", segment: "reservations" },
     { key: "event", icon: "event", iconBg: "#f4e7ff", iconColor: "#6b3aa0", num: eventsThisWeek, label: "Événements cette semaine", segment: "evenements" },
@@ -115,6 +157,9 @@ export default async function DashboardOverview({
         sub="Le cockpit du lieu : ce qui se passe aujourd'hui, ce qui demande votre attention."
         actions={<DashboardQuickbar orgSlug={organization.slug} />}
       />
+
+      {/* Onboarding — checklist "Premiers pas" (auto-masquée si tout est fait ou rejetée) */}
+      <OnboardingChecklist orgSlug={organization.slug} steps={onboardingSteps} />
 
       {/* Rangée KPI — UX-012: revenus du mois calculés depuis les vraies transactions */}
       <div className="mc-kpi-row">

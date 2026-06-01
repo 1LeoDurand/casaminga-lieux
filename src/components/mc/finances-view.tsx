@@ -140,6 +140,7 @@ export function FinancesView({ transactions, persons, orgSlug, orgId }: {
         <div className="mc-empty-title">Aucune transaction pour le moment</div>
         <p className="mc-empty-sub">Enregistrez recettes et dépenses pour suivre la santé financière du lieu.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouvelle transaction</button>
+        <p className="mt-2 text-[11px] text-warmgray/60 max-w-xs">💡 Connectez HelloAsso dans Paramètres pour importer automatiquement vos paiements d'adhésion</p>
       </div></div>
       <TransactionForm key="create-open" open={formOpen} transaction={null} persons={persons} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
     </>

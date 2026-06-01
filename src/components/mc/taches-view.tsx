@@ -104,6 +104,7 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
         <div className="mc-empty-title">Aucune tâche pour le moment</div>
         <p className="mc-empty-sub">Suivez le travail de l&apos;équipe : à faire, en cours, fait.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouvelle tâche</button>
+        <p className="mt-2 text-[11px] text-warmgray/60 max-w-xs">💡 Assignez des tâches à l'équipe, définissez une priorité et suivez l'avancement en temps réel</p>
       </div></div>
       <TaskForm key="create-open" open={formOpen} task={null} persons={persons} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
     </>

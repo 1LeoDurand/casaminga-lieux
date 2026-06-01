@@ -131,6 +131,7 @@ export function PartenairesView({ partners, persons, orgSlug, orgId }: {
         <div className="mc-empty-title">Aucun partenaire</div>
         <p className="mc-empty-sub">Constituez l&apos;annuaire : collectivités, fondations, entreprises, associations.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouveau partenaire</button>
+        <p className="mt-2 text-[11px] text-warmgray/60 max-w-xs">💡 Les partenaires apparaissent sur votre vitrine publique — collectivités, fondations, mécènes</p>
       </div></div>
       <PartnerModal open={formOpen} partner={null} persons={persons} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
     </>

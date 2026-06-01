@@ -159,6 +159,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
             <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={openCreate}>
               <Plus className="size-3.5" /> Nouvel événement
             </button>
+            <p className="mt-2 text-[11px] text-warmgray/60 max-w-xs">💡 Les événements publiés apparaissent automatiquement sur votre site public et sur casaminga.com</p>
           </div>
         </div>
         <EventForm key={formOpen ? "create-open" : "create-closed"} open={formOpen} evenement={null}
