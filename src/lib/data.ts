@@ -1028,11 +1028,13 @@ export interface MembershipCampaignInput {
   show_member_count: boolean; show_collected: boolean; generate_cards: boolean; photos: string[];
 }
 
-export async function createMembershipCampaign(input: MembershipCampaignInput): Promise<boolean> {
-  if (!isSupabaseConfigured()) { addDemoCampaign(input); return true; }
+/** Retourne l'id de la campagne créée, ou null en cas d'erreur. */
+export async function createMembershipCampaign(input: MembershipCampaignInput): Promise<string | null> {
+  if (!isSupabaseConfigured()) { const c = addDemoCampaign(input); return c.id; }
   const supabase = await createClient();
-  const { error } = await supabase.from("membership_campaigns").insert(input);
-  if (error) console.error("createMembershipCampaign:", error); return !error;
+  const { data, error } = await supabase.from("membership_campaigns").insert(input).select("id").single();
+  if (error) { console.error("createMembershipCampaign:", error); return null; }
+  return data?.id ?? null;
 }
 
 export async function updateMembershipCampaign(id: string, patch: Partial<MembershipCampaignInput>): Promise<boolean> {

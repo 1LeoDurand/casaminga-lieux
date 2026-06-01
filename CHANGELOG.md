@@ -2,6 +2,34 @@
 
 ---
 
+## [v2.8] — 2026-06-01 — Audit complet (branche audit/debug-session-01)
+
+### MODULE 1 — Site public
+- **fix:** parallélisation `Promise.all` sur `getPublicSiteBySlug` + `getOrganizationBySlug` (site public ~2× plus rapide)
+- **fix:** `org.address` et `org.hours` null → plus d'affichage "null · null", la ligne est masquée si les deux champs sont vides
+- **fix(DB):** status campagne `"public"` → `"publie"` en base (aligne DB sur le type TypeScript `MembershipCampaignStatus`)
+- **fix(DB):** policies RLS `campaigns_public_read`, `tiers_public_read`, `applications_public_insert` mises à jour → filtrent sur `status = 'publie'` (cohérent avec le reste du code)
+
+### MODULE 2 — Authentification
+- **doc([À VALIDER]):** middleware Next.js au mauvais chemin (`proxy.ts` ≠ `middleware.ts`) → sessions non rafraîchies en mode Supabase réel
+- **doc([À VALIDER]):** redirect post-login hardcodée sur `bernard-kohn` → non multi-tenant
+- **doc([À VALIDER]):** aucune protection des routes `/dashboard/*` côté serveur
+
+### MODULE 3 — Adhésions
+- **fix(critical):** `createMembershipCampaign` retournait `boolean` → retourne maintenant `string | null` (l'ID créé) ; `createCampaignAction` retourne `{ ok, id }` ; le wizard utilise l'ID réel (plus de fake `camp-${Date.now()}` → faux ID causait l'échec silencieux de la création des formules sur une nouvelle campagne)
+- **fix:** wizard édition — formules existantes pré-chargées dans le step 2 (prop `existingTiers` passée au `CampaignWizard`) ; avant, le step 2 était toujours vide lors d'une édition
+- **fix:** `getDemoCampaignBySlug` filtre maintenant par `status === "publie"` → une campagne brouillon n'est plus accessible via le tunnel public en mode démo
+
+### MODULE 4 — Finances
+- **fix(minor):** `exportCsv` — remplacement de l'inline type import `import("@/lib/types").Transaction` par le type déjà importé `Transaction`
+- **fix(minor):** `BOM = "﻿"` — commentaire ajouté pour expliquer le caractère UTF-8 invisible
+
+### MODULES 5–10 — Événements · Réservations · Communauté · Documents · Gouvernance · Automatisations
+- **audit:** aucun bug logique identifié dans les pages et actions
+- **doc([À VALIDER]):** `file_url` Documents rendu sans validation du protocole → XSS potentiel (risque faible, accès admin uniquement)
+
+---
+
 ## [v2.7] — 2026-06-01 — Correctifs UX/bug session de test personas
 
 ### 🔴 Bloquants / Critiques corrigés
