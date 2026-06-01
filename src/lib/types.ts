@@ -22,6 +22,10 @@ export interface Organization {
   hours: string | null;
   plan: string;
   primary_color: string;
+  helloasso_client_id?: string | null;
+  helloasso_client_secret?: string | null;
+  helloasso_org_slug?: string | null;
+  helloasso_connected_at?: string | null;
 }
 
 export type RequestStatus =

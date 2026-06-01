@@ -1,11 +1,27 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
+import { HelloAssoSettings } from "@/components/mc/helloasso-settings";
 import { getOrganizationBySlug } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function ParametresPage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
+
+  // Récupérer les infos HelloAsso (champs sensibles)
+  let haOrgSlug: string | null = null;
+  let haConnected = false;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("organizations")
+      .select("helloasso_org_slug, helloasso_connected_at")
+      .eq("id", organization.id)
+      .single();
+    haOrgSlug = data?.helloasso_org_slug ?? null;
+    haConnected = !!data?.helloasso_connected_at;
+  } catch { /* demo mode */ }
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,6 +72,16 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
             <p className="text-sm leading-relaxed text-warmgray">{organization.description}</p>
           </div>
         ) : null}
+
+        {/* Intégrations */}
+        <div className="md:col-span-2">
+          <h2 className="mb-3 font-heading text-sm font-bold uppercase tracking-wider text-warmgray">Intégrations</h2>
+          <HelloAssoSettings
+            orgSlug={organization.slug}
+            connected={haConnected}
+            haOrgSlug={haOrgSlug}
+          />
+        </div>
       </div>
     </div>
   );
