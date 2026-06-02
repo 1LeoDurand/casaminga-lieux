@@ -1,0 +1,443 @@
+"use client";
+
+import { useState, useTransition, useMemo } from "react";
+import {
+  Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
+  ChevronDown, CheckCircle2, AlertTriangle, Fingerprint, Calculator,
+} from "lucide-react";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/mc/confirm-dialog";
+import {
+  addCashEntryAction, voidCashEntryAction, closeCashRegisterAction, verifyCashChainAction,
+} from "@/app/(admin)/dashboard/[org]/caisse/actions";
+import {
+  PAYMENT_METHODS, CASH_SOURCES, VAT_RATES, CLOSURE_TYPES,
+  paymentLabel, sourceLabel, closureTypeLabel, fmtEuro, fmtDateTime, fmtDate, shortHash, splitVat,
+} from "@/lib/cash-register-meta";
+import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource } from "@/lib/types";
+
+const inputCls = "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400";
+const selectCls = inputCls + " cursor-pointer";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-slate-500">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+// ── Formulaire encaissement ──────────────────────────────────
+interface EntryForm {
+  label: string; amount_ttc: string; vat_rate: string;
+  payment_method: CashPaymentMethod; source: CashSource;
+  operator: string; source_ref: string;
+}
+const EMPTY: EntryForm = {
+  label: "", amount_ttc: "", vat_rate: "0",
+  payment_method: "especes", source: "adhesion", operator: "", source_ref: "",
+};
+
+function EntryDrawer({ open, onClose, orgSlug, orgId }: {
+  open: boolean; onClose: () => void; orgSlug: string; orgId: string;
+}) {
+  const [form, setForm] = useState<EntryForm>(EMPTY);
+  const [pending, start] = useTransition();
+  const set = (k: keyof EntryForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const ttc = parseFloat(form.amount_ttc) || 0;
+  const rate = parseFloat(form.vat_rate) || 0;
+  const { ht, vat } = splitVat(ttc, rate);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.label.trim() || ttc <= 0 || !form.operator.trim()) {
+      toast.error("Libellé, montant (> 0) et opérateur sont requis.");
+      return;
+    }
+    start(async () => {
+      const res = await addCashEntryAction(orgSlug, {
+        organization_id: orgId,
+        label: form.label.trim(),
+        amount_ttc: ttc,
+        vat_rate: rate,
+        payment_method: form.payment_method,
+        source: form.source,
+        operator: form.operator.trim(),
+        source_ref: form.source_ref.trim() || null,
+      });
+      if (res.ok) { toast.success("Encaissement enregistré (écriture scellée)"); setForm(EMPTY); onClose(); }
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  if (!open) return null;
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
+      <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Receipt className="size-4" /> Nouvel encaissement
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="size-5" /></button>
+        </div>
+
+        <form onSubmit={submit} className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-col gap-4 p-6">
+            <Field label="Libellé *">
+              <input required value={form.label} onChange={set("label")} placeholder="ex : Adhésion 2026 — M. Durand" className={inputCls} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Montant TTC (€) *">
+                <input required type="number" min="0.01" step="0.01" value={form.amount_ttc} onChange={set("amount_ttc")} placeholder="0,00" className={inputCls} />
+              </Field>
+              <Field label="Taux de TVA">
+                <select value={form.vat_rate} onChange={set("vat_rate")} className={selectCls}>
+                  {VAT_RATES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </Field>
+            </div>
+
+            {/* Aperçu ventilation */}
+            {ttc > 0 && (
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                <span className="flex items-center gap-1.5"><Calculator className="size-3.5" /> Ventilation</span>
+                <span>HT <b className="text-slate-800">{fmtEuro(ht)}</b> · TVA <b className="text-slate-800">{fmtEuro(vat)}</b></span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Moyen de paiement">
+                <select value={form.payment_method} onChange={set("payment_method")} className={selectCls}>
+                  {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Nature">
+                <select value={form.source} onChange={set("source")} className={selectCls}>
+                  {CASH_SOURCES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </Field>
+            </div>
+            <Field label="Référence (facultatif)">
+              <input value={form.source_ref} onChange={set("source_ref")} placeholder="ex : n° facture, billet…" className={inputCls} />
+            </Field>
+            <Field label="Opérateur / caissier *">
+              <input required value={form.operator} onChange={set("operator")} placeholder="Nom de la personne encaissant" className={inputCls} />
+            </Field>
+
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+              <Lock className="mt-0.5 size-3.5 shrink-0" />
+              <span>Une fois validée, l'écriture est <b>scellée et inaltérable</b> (NF525). Toute erreur se corrige par une écriture d'annulation, jamais par suppression.</span>
+            </div>
+          </div>
+
+          <div className="mt-auto border-t border-slate-100 px-6 py-4">
+            <button type="submit" disabled={pending}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40">
+              <Lock className="size-4" /> {pending ? "Scellement…" : "Valider et sceller l'écriture"}
+            </button>
+          </div>
+        </form>
+      </aside>
+    </>
+  );
+}
+
+// ── Vue principale ───────────────────────────────────────────
+export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
+  entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
+}) {
+  const [tab, setTab] = useState<"ecritures" | "clotures">("ecritures");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [voidTarget, setVoidTarget] = useState<CashEntry | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [voidOperator, setVoidOperator] = useState("");
+  const [closeType, setCloseType] = useState<CashClosureType | null>(null);
+  const [closeOperator, setCloseOperator] = useState("");
+  const [closeMenu, setCloseMenu] = useState(false);
+  const [verify, setVerify] = useState<CashVerifyResult | null>(null);
+  const [pending, start] = useTransition();
+
+  // Seq déjà clôturées (jour) → repère visuel
+  const lastDayClosure = closures.find((c) => c.closure_type === "jour");
+  const closedUpTo = lastDayClosure?.last_entry_seq ?? 0;
+
+  // KPI
+  const lastClosure = closures[0];
+  const perpetual = closures.reduce((max, c) => Math.max(max, c.perpetual_total_ttc), 0);
+  const nonClotured = useMemo(
+    () => entries.filter((e) => e.seq > closedUpTo).reduce((s, e) => s + Number(e.amount_ttc), 0),
+    [entries, closedUpTo],
+  );
+
+  async function runVerify() {
+    start(async () => {
+      const res = await verifyCashChainAction(orgId);
+      setVerify(res);
+      if (res?.ok) toast.success(`Chaîne intègre — ${res.entries_checked} écriture(s) vérifiée(s)`);
+      else if (res) toast.error(`Anomalie détectée à l'écriture #${res.first_broken_seq}`);
+      else toast.error("Vérification impossible");
+    });
+  }
+
+  async function handleVoid() {
+    if (!voidTarget || !voidReason.trim() || !voidOperator.trim()) {
+      toast.error("Motif et opérateur requis.");
+      return;
+    }
+    start(async () => {
+      const res = await voidCashEntryAction(orgSlug, orgId, voidTarget, voidOperator.trim(), voidReason.trim());
+      if (res.ok) { toast.success("Écriture d'annulation enregistrée"); setVoidTarget(null); setVoidReason(""); }
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  async function handleClose() {
+    if (!closeType || !closeOperator.trim()) { toast.error("Opérateur requis."); return; }
+    start(async () => {
+      const res = await closeCashRegisterAction(orgSlug, orgId, closeType, closeOperator.trim());
+      if (res.ok) { toast.success(`${closureTypeLabel(closeType)} effectuée`); setCloseType(null); setCloseOperator(""); }
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* KPI */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 text-amber-600"><Receipt className="size-4" /></div>
+          <div className="text-xl font-bold text-slate-800">{fmtEuro(nonClotured)}</div>
+          <div className="text-xs text-slate-500">À clôturer (depuis dernier Z)</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 text-slate-500"><FileText className="size-4" /></div>
+          <div className="text-xl font-bold text-slate-800">{lastClosure ? fmtEuro(lastClosure.total_ttc) : "—"}</div>
+          <div className="text-xs text-slate-500">{lastClosure ? `Dernière clôture (${lastClosure.period_label})` : "Aucune clôture"}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 text-emerald-600"><Fingerprint className="size-4" /></div>
+          <div className="text-xl font-bold text-slate-800">{fmtEuro(perpetual)}</div>
+          <div className="text-xs text-slate-500">Grand total perpétuel</div>
+        </div>
+        <button onClick={runVerify} disabled={pending}
+          className={`rounded-xl border p-4 text-left transition-colors ${
+            verify ? (verify.ok ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50") : "border-slate-200 bg-white hover:bg-slate-50"
+          }`}>
+          <div className={`mb-1 ${verify ? (verify.ok ? "text-emerald-600" : "text-red-600") : "text-slate-500"}`}>
+            {verify ? (verify.ok ? <ShieldCheck className="size-4" /> : <ShieldAlert className="size-4" />) : <ShieldCheck className="size-4" />}
+          </div>
+          <div className={`text-sm font-bold ${verify ? (verify.ok ? "text-emerald-700" : "text-red-700") : "text-slate-800"}`}>
+            {pending ? "Vérification…" : verify ? (verify.ok ? "Chaîne intègre" : `Anomalie #${verify.first_broken_seq}`) : "Vérifier l'intégrité"}
+          </div>
+          <div className="text-xs text-slate-500">{verify ? `${verify.entries_checked} écriture(s)` : "Contrôle de la piste d'audit"}</div>
+        </button>
+      </div>
+
+      {/* Barre d'outils */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
+          {(["ecritures", "clotures"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                tab === t ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"
+              }`}>
+              {t === "ecritures" ? `Écritures (${entries.length})` : `Clôtures (${closures.length})`}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative ml-auto">
+          <button onClick={() => setCloseMenu((v) => !v)}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Lock className="size-4" /> Clôturer <ChevronDown className="size-3.5" />
+          </button>
+          {closeMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setCloseMenu(false)} />
+              <div className="absolute right-0 z-20 mt-1 w-60 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                {CLOSURE_TYPES.map((c) => (
+                  <button key={c.value} onClick={() => { setCloseType(c.value); setCloseMenu(false); }}
+                    className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-slate-50">
+                    <span className="text-sm font-medium text-slate-800">{c.label}</span>
+                    <span className="text-[11px] text-slate-400">{c.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <button onClick={() => setDrawerOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+          <Plus className="size-4" /> Encaissement
+        </button>
+      </div>
+
+      {verify && !verify.ok && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span>Rupture de la chaîne d'intégrité détectée à l'écriture <b>#{verify.first_broken_seq}</b>. Les données ont pu être altérées hors application — contactez le support.</span>
+        </div>
+      )}
+
+      {/* ── Écritures ── */}
+      {tab === "ecritures" && (
+        entries.length === 0 ? (
+          <EmptyBox icon={<Receipt className="size-8 opacity-30" />} text="Aucun encaissement enregistré." action="Saisir le premier encaissement" onAction={() => setDrawerOpen(true)} />
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs text-slate-500">
+                  <th className="px-3 py-2 font-medium">N°</th>
+                  <th className="px-3 py-2 font-medium">Date</th>
+                  <th className="px-3 py-2 font-medium">Libellé</th>
+                  <th className="px-3 py-2 font-medium">Nature</th>
+                  <th className="px-3 py-2 font-medium">Paiement</th>
+                  <th className="px-3 py-2 text-right font-medium">TTC</th>
+                  <th className="px-3 py-2 font-medium">Sceau</th>
+                  <th className="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e) => {
+                  const closed = e.seq <= closedUpTo;
+                  return (
+                    <tr key={e.id} className={`border-b border-slate-50 last:border-0 ${e.is_void ? "bg-red-50/40" : ""}`}>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500">{e.ticket_ref}</td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{fmtDateTime(e.occurred_at)}</td>
+                      <td className="px-3 py-2">
+                        <span className={e.is_void ? "text-red-700" : "text-slate-800"}>{e.label}</span>
+                        {e.is_void && <span className="ml-1.5 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">Annulation</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{sourceLabel(e.source)}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{paymentLabel(e.payment_method)}</td>
+                      <td className={`px-3 py-2 text-right font-medium tabular-nums ${e.amount_ttc < 0 ? "text-red-600" : "text-slate-800"}`}>{fmtEuro(e.amount_ttc)}</td>
+                      <td className="px-3 py-2">
+                        <span title={e.entry_hash} className="flex items-center gap-1 font-mono text-[10px] text-slate-400">
+                          <Lock className="size-3" /> {shortHash(e.entry_hash)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {!e.is_void && !closed && (
+                          <button onClick={() => { setVoidTarget(e); setVoidOperator(""); setVoidReason(""); }}
+                            title="Annuler par écriture de correction"
+                            className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-600">
+                            <Ban className="size-4" />
+                          </button>
+                        )}
+                        {closed && <Lock className="ml-auto size-3.5 text-slate-300" />}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+
+      {/* ── Clôtures ── */}
+      {tab === "clotures" && (
+        closures.length === 0 ? (
+          <EmptyBox icon={<FileText className="size-8 opacity-30" />} text="Aucune clôture effectuée." />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {closures.map((c) => (
+              <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-medium text-white">{closureTypeLabel(c.closure_type)}</span>
+                  <span className="font-semibold text-slate-800">{c.period_label}</span>
+                  <span className="text-xs text-slate-400">#{c.seq}</span>
+                  <span className="ml-auto text-lg font-bold text-slate-900">{fmtEuro(c.total_ttc)}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+                  <span>{c.entry_count} écriture(s) (#{c.first_entry_seq}→#{c.last_entry_seq})</span>
+                  <span>HT {fmtEuro(c.total_ht)} · TVA {fmtEuro(c.total_vat)}</span>
+                  <span>Cumul perpétuel <b className="text-slate-700">{fmtEuro(c.perpetual_total_ttc)}</b></span>
+                  <span>Clôturé le {fmtDate(c.closed_at)} par {c.operator}</span>
+                </div>
+                {/* Ventilation TVA */}
+                {Array.isArray(c.vat_breakdown) && c.vat_breakdown.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.vat_breakdown.map((v, i) => (
+                      <span key={i} className="rounded-lg bg-slate-50 px-2 py-1 text-[11px] text-slate-600">
+                        TVA {Number(v.rate)} % — HT {fmtEuro(v.ht)} / TVA {fmtEuro(v.vat)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-2 flex items-center gap-1 font-mono text-[10px] text-slate-400" title={c.closure_hash}>
+                  <Fingerprint className="size-3" /> sceau {shortHash(c.closure_hash)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} />
+
+      {/* Dialog annulation */}
+      {voidTarget && (
+        <ConfirmDialog
+          open
+          title={`Annuler l'écriture ${voidTarget.ticket_ref}`}
+          message={
+            <>
+              Conformément à la loi, l'écriture d'origine est conservée. Une écriture de correction (montant inverse) sera ajoutée à la chaîne.
+              <span className="mt-3 flex flex-col gap-2">
+                <input value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder="Motif de l'annulation *" className={inputCls} />
+                <input value={voidOperator} onChange={(e) => setVoidOperator(e.target.value)} placeholder="Opérateur *" className={inputCls} />
+              </span>
+            </>
+          }
+          tone="danger" busy={pending}
+          confirmLabel="Enregistrer l'annulation"
+          onConfirm={handleVoid}
+          onCancel={() => setVoidTarget(null)}
+        />
+      )}
+
+      {/* Dialog clôture */}
+      {closeType && (
+        <ConfirmDialog
+          open
+          title={closureTypeLabel(closeType)}
+          message={
+            <>
+              Cette clôture scelle définitivement toutes les écritures depuis le dernier arrêté de même type et fige les totaux. Action irréversible.
+              <span className="mt-3 flex flex-col gap-2">
+                <span className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                  <span className="text-slate-500">Montant à clôturer</span>
+                  <b className="text-slate-800">{fmtEuro(nonClotured)}</b>
+                </span>
+                <input value={closeOperator} onChange={(e) => setCloseOperator(e.target.value)} placeholder="Opérateur responsable *" className={inputCls} />
+              </span>
+            </>
+          }
+          tone="default" busy={pending}
+          confirmLabel="Confirmer la clôture"
+          onConfirm={handleClose}
+          onCancel={() => setCloseType(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function EmptyBox({ icon, text, action, onAction }: { icon: React.ReactNode; text: string; action?: string; onAction?: () => void }) {
+  return (
+    <div className="rounded-xl border border-dashed border-slate-200 py-16 text-center text-slate-400">
+      <div className="mx-auto mb-3 flex justify-center">{icon}</div>
+      <p className="text-sm">{text}</p>
+      {action && onAction && (
+        <button onClick={onAction} className="mt-3 text-sm text-slate-600 underline underline-offset-2">{action}</button>
+      )}
+    </div>
+  );
+}

@@ -111,6 +111,12 @@ import type {
   Transaction,
   Grant,
   GrantTranche,
+  CashEntry,
+  CashClosure,
+  CashPaymentMethod,
+  CashSource,
+  CashClosureType,
+  CashVerifyResult,
   Artist,
   ArtistMilestone,
   TeamMember,
@@ -1236,6 +1242,88 @@ export async function deleteGrantTranche(id: string): Promise<boolean> {
   const { error } = await supabase.from("grant_tranches").delete().eq("id", id);
   if (error) console.error("deleteGrantTranche:", error);
   return !error;
+}
+
+// ── Caisse certifiée (NF525) ──────────────────────────────────
+export async function getCashEntries(orgId: string, limit = 200): Promise<CashEntry[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("cash_entries").select("*")
+    .eq("organization_id", orgId).order("seq", { ascending: false }).limit(limit);
+  return data ?? [];
+}
+
+export async function getCashClosures(orgId: string): Promise<CashClosure[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("cash_closures").select("*")
+    .eq("organization_id", orgId).order("closed_at", { ascending: false }).limit(100);
+  return data ?? [];
+}
+
+export interface CashEntryInput {
+  organization_id: string;
+  label: string;
+  amount_ttc: number;
+  vat_rate: number;
+  payment_method: CashPaymentMethod;
+  source: CashSource;
+  operator: string;
+  source_ref?: string | null;
+}
+
+/** Ajoute une écriture immuable via la fonction atomique (seq continu + hash chaîné). */
+export async function addCashEntry(input: CashEntryInput): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cash_add_entry", {
+    p_org: input.organization_id,
+    p_label: input.label,
+    p_amount_ttc: input.amount_ttc,
+    p_vat_rate: input.vat_rate,
+    p_payment_method: input.payment_method,
+    p_source: input.source,
+    p_operator: input.operator,
+    p_source_ref: input.source_ref ?? null,
+  });
+  if (error) { console.error("addCashEntry:", error); return { ok: false, error: error.message }; }
+  return { ok: true };
+}
+
+/** Écriture de correction (extourne) : montant négatif lié à une écriture existante. */
+export async function voidCashEntry(orgId: string, target: CashEntry, operator: string, reason: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cash_add_entry", {
+    p_org: orgId,
+    p_label: `Annulation #${target.seq} — ${reason}`.slice(0, 200),
+    p_amount_ttc: -Math.abs(target.amount_ttc),
+    p_vat_rate: target.vat_rate,
+    p_payment_method: target.payment_method,
+    p_source: target.source,
+    p_operator: operator,
+    p_source_ref: target.ticket_ref,
+    p_is_void: true,
+    p_voids_seq: target.seq,
+  });
+  if (error) { console.error("voidCashEntry:", error); return { ok: false, error: error.message }; }
+  return { ok: true };
+}
+
+export async function closeCashRegister(orgId: string, type: CashClosureType, operator: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("cash_close", { p_org: orgId, p_type: type, p_operator: operator });
+  if (error) { console.error("closeCashRegister:", error); return { ok: false, error: error.message }; }
+  return { ok: true };
+}
+
+export async function verifyCashChain(orgId: string): Promise<CashVerifyResult | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("cash_verify", { p_org: orgId });
+  if (error) { console.error("verifyCashChain:", error); return null; }
+  return data as CashVerifyResult;
 }
 
 // ── Artistes ──────────────────────────────────────────────────

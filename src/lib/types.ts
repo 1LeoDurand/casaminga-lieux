@@ -367,6 +367,71 @@ export interface GrantTranche {
   created_at: string;
 }
 
+// ── Caisse certifiée (loi anti-fraude TVA / NF525) ────────────
+export type CashPaymentMethod =
+  | "especes" | "cb" | "cheque" | "virement" | "helloasso" | "autre";
+export type CashSource =
+  | "adhesion" | "billetterie" | "buvette" | "don" | "boutique" | "autre";
+export type CashClosureType = "jour" | "mois" | "annee";
+
+export interface CashEntry {
+  id: string;
+  organization_id: string;
+  seq: number;
+  ticket_ref: string;
+  occurred_at: string;
+  label: string;
+  amount_ttc: number;
+  vat_rate: number;
+  amount_ht: number;
+  amount_vat: number;
+  payment_method: CashPaymentMethod;
+  source: CashSource;
+  source_ref: string | null;
+  operator: string;
+  is_void: boolean;
+  voids_seq: number | null;
+  prev_hash: string;
+  entry_hash: string;
+  created_at: string;
+}
+
+export interface CashVatLine {
+  rate: number;
+  ht: number;
+  vat: number;
+  ttc: number;
+}
+
+export interface CashClosure {
+  id: string;
+  organization_id: string;
+  seq: number;
+  closure_type: CashClosureType;
+  period_label: string;
+  period_start: string;
+  period_end: string;
+  first_entry_seq: number | null;
+  last_entry_seq: number | null;
+  entry_count: number;
+  total_ttc: number;
+  total_ht: number;
+  total_vat: number;
+  vat_breakdown: CashVatLine[];
+  perpetual_total_ttc: number;
+  operator: string;
+  closed_at: string;
+  prev_hash: string;
+  closure_hash: string;
+}
+
+export interface CashVerifyResult {
+  ok: boolean;
+  entries_checked: number;
+  first_broken_seq: number | null;
+  verified_at: string;
+}
+
 export type MediaType = "photo" | "video" | "audio" | "document";
 
 export interface Media {
