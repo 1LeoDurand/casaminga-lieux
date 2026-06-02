@@ -160,21 +160,19 @@ function SectionGroup({
         />
       </button>
 
-      {/* Conteneur animé (grid-rows 0fr → 1fr) */}
+      {/* Conteneur animé (max-height) */}
       <div
-        className="grid transition-[grid-template-rows] duration-200 ease-out"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+        className="overflow-hidden transition-[max-height] duration-200 ease-out"
+        style={{ maxHeight: open ? "500px" : "0px" }}
       >
-        <div className="overflow-hidden">
-          {section.modules.map((m) => (
-            <NavItem
-              key={m.key}
-              orgSlug={orgSlug}
-              m={m}
-              badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
-            />
-          ))}
-        </div>
+        {section.modules.map((m) => (
+          <NavItem
+            key={m.key}
+            orgSlug={orgSlug}
+            m={m}
+            badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
+          />
+        ))}
       </div>
     </div>
   );
