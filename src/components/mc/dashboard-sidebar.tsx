@@ -184,12 +184,14 @@ export function DashboardSidebar({
   openRequests = 0,
   userName = "Léo",
   userRole = "Coordination",
+  isDemo = false,
 }: {
   orgSlug: string;
   orgName: string;
   openRequests?: number;
   userName?: string;
   userRole?: string;
+  isDemo?: boolean;
 }) {
   const initials = userName
     .split(" ")
@@ -221,12 +223,14 @@ export function DashboardSidebar({
             <span className="truncate font-heading text-[15px] font-extrabold text-white">
               {orgName}
             </span>
-            <span
-              className="shrink-0 rounded-md bg-coral px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white"
-              title="Mode démo : données d'exemple. Connectez Supabase dans les paramètres pour passer en production."
-            >
-              Démo
-            </span>
+            {isDemo && (
+              <span
+                className="shrink-0 rounded-md bg-coral px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white"
+                title="Mode démo : données d'exemple. Configurez Supabase pour passer en production."
+              >
+                Démo
+              </span>
+            )}
           </div>
           <div className="truncate text-[10px] text-white/35">
             Casa Minga Lieux · /{orgSlug}

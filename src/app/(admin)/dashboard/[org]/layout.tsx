@@ -4,6 +4,7 @@ import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
 import { FeedbackWidget } from "@/components/mc/feedback-widget";
 import { HelpWidget } from "@/components/mc/help-widget";
 import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -30,6 +31,7 @@ export default async function DashboardLayout({
           orgSlug={organization.slug}
           orgName={organization.name}
           openRequests={openRequests}
+          isDemo={!isSupabaseConfigured()}
         />
       </div>
       <DashboardTopbar orgSlug={organization.slug} />
