@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createOrgAndMember } from "./actions";
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -51,32 +52,27 @@ export default function SignupPage() {
     }
     const userId = authData.user.id;
 
-    // 2. Créer l'organisation
-    const { data: org, error: orgErr } = await supabase
-      .from("organizations")
-      .insert({ slug, name: lieuName, structure: lieuStructure, email: lieuEmail || email, plan: "pilot" })
-      .select("id, slug")
-      .single();
-    if (orgErr || !org) {
-      setError("Le lieu n'a pas pu être créé. Le nom est peut-être déjà utilisé.");
+    // 2. Créer l'organisation + lier le membre via server action (service_role)
+    const { orgSlug, error: orgError } = await createOrgAndMember({
+      userId,
+      slug,
+      name: lieuName,
+      structure: lieuStructure,
+      email: lieuEmail || email,
+    });
+
+    if (orgError || !orgSlug) {
+      setError(orgError ?? "Le lieu n'a pas pu être créé.");
       setLoading(false);
       return;
     }
-
-    // 3. Lier user → org (admin)
-    await supabase.from("organization_members").insert({
-      user_id: userId,
-      organization_id: org.id,
-      role: "admin",
-      status: "actif",
-    });
 
     setLoading(false);
     setDone(true);
 
     // Si session directe (email non vérifié requis = false), on redirige
     if (authData.session) {
-      setTimeout(() => router.push(`/dashboard/${org.slug}`), 1500);
+      setTimeout(() => router.push(`/dashboard/${orgSlug}`), 1500);
     }
   }
 
