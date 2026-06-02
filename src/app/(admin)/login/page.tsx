@@ -23,12 +23,28 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
+    // Trouver l'org du user et rediriger vers son dashboard
+    const userId = data.user?.id;
+    if (userId) {
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("organizations(slug)")
+        .eq("user_id", userId)
+        .eq("status", "actif")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+      const org = membership?.organizations as unknown as { slug: string } | null;
+      const slug = org?.slug;
+      if (slug) { router.push(`/dashboard/${slug}`); return; }
+    }
+    setLoading(false);
     router.push(`/dashboard/${DEMO_SLUG}`);
   }
 
@@ -90,11 +106,19 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+          {configured && (
+            <p>
+              Pas encore de compte ?{" "}
+              <Link href="/signup" className="font-semibold text-coral-dark hover:underline">
+                Créer mon espace
+              </Link>
+            </p>
+          )}
           <Link href="/" className="hover:text-coral-dark">
             ← Retour à l’accueil
           </Link>
-        </p>
+        </div>
       </Card>
     </main>
   );
