@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
 import { createRequest, getOrganizationBySlug, getPublicSiteBySlug } from "@/lib/data";
+import { sendMail, adminEmail } from "@/lib/mail";
+import { tplDemandeRecue, tplDemandeAlerteEquipe } from "@/lib/mail-templates";
 
-/**
- * Réception d'une demande depuis un site public.
- * POST /api/orgs/[slug]/requests
- *
- * Résout l'organisation depuis le slug, vérifie que le site est publié,
- * puis insère une ligne dans `requests` (liée à organization_id).
- * Aucune clé service_role : Supabase est appelé côté serveur via le client
- * anon, l'insertion publique est autorisée par la policy RLS
- * `requests_insert_from_public_site` (site publié). Fallback démo sinon.
- */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
@@ -65,6 +57,35 @@ export async function POST(
       { status: 500 }
     );
   }
+
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com"}/dashboard/${slug}/demandes`;
+
+  // Emails en parallèle — on n'attend pas qu'ils soient envoyés pour répondre
+  void Promise.all([
+    // Email au demandeur
+    sendMail({
+      to: email,
+      subject: `✓ Votre demande a bien été reçue — ${org.name}`,
+      html: tplDemandeRecue({ orgName: org.name, personName: name, type, message }),
+    }),
+    // Alerte équipe
+    adminEmail()
+      ? sendMail({
+          to: adminEmail(),
+          subject: `🔔 Nouvelle demande de ${name} — ${org.name}`,
+          html: tplDemandeAlerteEquipe({
+            orgName: org.name,
+            orgSlug: slug,
+            personName: name,
+            personEmail: email,
+            type,
+            message,
+            dashboardUrl,
+          }),
+          replyTo: email,
+        })
+      : Promise.resolve(false),
+  ]);
 
   return NextResponse.json({ ok: true, id: created.id }, { status: 201 });
 }

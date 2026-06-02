@@ -6,19 +6,9 @@ import {
   getTiersForCampaign,
 } from "@/lib/data";
 import { computeMembershipEnd } from "@/lib/adhesions-meta";
+import { sendMail } from "@/lib/mail";
+import { tplAdhesionCandidat } from "@/lib/mail-templates";
 
-/**
- * Souscription d'adhésion depuis un tunnel public.
- * POST /api/orgs/[slug]/adhesions/[campaignSlug]
- *
- * Résout l'organisation et la campagne publiée depuis les slugs, valide la
- * formule choisie, calcule les dates de validité d'après la période de la
- * campagne, puis insère une ligne dans `membership_applications`
- * (status 'en_attente', à confirmer côté admin).
- * Aucune clé service_role : Supabase est appelé côté serveur via le client
- * anon, l'insertion publique est autorisée par la policy RLS
- * `ma_public_insert` (campagne « publie »). Fallback démo sinon.
- */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ slug: string; campaignSlug: string }> }
@@ -94,6 +84,20 @@ export async function POST(
       { status: 500 }
     );
   }
+
+  // Confirmation au candidat
+  void sendMail({
+    to: email,
+    subject: `✓ Votre candidature d'adhésion — ${org.name}`,
+    html: tplAdhesionCandidat({
+      orgName: org.name,
+      firstName: first_name,
+      lastName: last_name,
+      tierLabel: tier.name ?? "Adhésion",
+      amount: Number(tier.amount) || 0,
+      membershipEnd: membership_end ?? "",
+    }),
+  });
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

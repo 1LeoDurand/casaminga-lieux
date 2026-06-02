@@ -2,6 +2,8 @@
 
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "@/lib/supabase/env";
+import { sendMail } from "@/lib/mail";
+import { tplCompteBienvenue } from "@/lib/mail-templates";
 
 /**
  * Server action pour créer une organisation et lier l'utilisateur.
@@ -59,6 +61,19 @@ export async function createOrgAndMember(params: {
     await admin.from("organizations").delete().eq("id", org.id);
     return { orgSlug: null, error: "Erreur lors de la liaison du compte à l'organisation." };
   }
+
+  // Email de bienvenue
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
+  void sendMail({
+    to: params.email,
+    subject: `Bienvenue sur Casa Minga Lieux — ${params.name}`,
+    html: tplCompteBienvenue({
+      orgName: params.name,
+      orgSlug: org.slug,
+      firstName: params.email.split("@")[0],
+      dashboardUrl: `${appUrl}/dashboard/${org.slug}`,
+    }),
+  });
 
   return { orgSlug: org.slug, error: null };
 }

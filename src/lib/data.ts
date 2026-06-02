@@ -250,6 +250,33 @@ export async function updateRequestStatus(
   return !error;
 }
 
+/** Récupère une demande par son id (pour les emails de statut). */
+export async function getRequestById(id: string): Promise<{ name: string; email: string | null } | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("requests")
+    .select("name, email")
+    .eq("id", id)
+    .single();
+  return data ?? null;
+}
+
+/** Récupère une candidature d'adhésion par id (pour les emails). */
+export async function getMembershipApplicationById(id: string): Promise<{
+  first_name: string; last_name: string; email: string;
+  amount_paid: number; membership_start: string; membership_end: string;
+} | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("membership_applications")
+    .select("first_name, last_name, email, amount_paid, membership_start, membership_end")
+    .eq("id", id)
+    .single();
+  return data ?? null;
+}
+
 // ════════════════════════════════════════════════════════════
 // PERSONNES (CRM) — démo ⇆ Supabase (isolation par RLS)
 // ════════════════════════════════════════════════════════════
