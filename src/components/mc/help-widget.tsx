@@ -11,7 +11,7 @@ export function HelpWidget() {
   const [open, setOpen] = useState(false);
 
   const links = [
-    { icon: <BookOpen className="size-4" />, label: "Centre d'aide", desc: "Guides et tutoriels", href: "https://casaminga.com/aide" },
+    { icon: <BookOpen className="size-4" />, label: "Centre d'aide", desc: "Guides et tutoriels", href: "/aide" },
     { icon: <Calendar className="size-4" />, label: "Réserver une démo", desc: "30 min avec un expert", href: "https://casaminga.com/demo" },
     { icon: <Mail className="size-4" />, label: "Nous contacter", desc: "support@casaminga.com", href: "mailto:support@casaminga.com" },
   ];

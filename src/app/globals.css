@@ -857,3 +857,21 @@ select.mc-input { cursor: pointer; }
 .mc-tunnel-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warmgray); margin-bottom: 10px; }
 .mc-tunnel-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
 .mc-tunnel-total { font-family: var(--font-poppins), sans-serif; font-size: 28px; font-weight: 800; color: var(--foreground); }
+
+/* ── Centre d'aide : mise en forme des articles ────────────────────────── */
+.help-prose { color: var(--foreground); font-size: 15.5px; line-height: 1.75; }
+.help-prose h2 { font-family: var(--font-syne), sans-serif; font-size: 20px; font-weight: 800; margin: 32px 0 12px; letter-spacing: -0.01em; }
+.help-prose h3 { font-family: var(--font-syne), sans-serif; font-size: 16px; font-weight: 700; margin: 24px 0 8px; }
+.help-prose h2:first-child, .help-prose h3:first-child { margin-top: 0; }
+.help-prose p { margin: 0 0 16px; }
+.help-prose ul, .help-prose ol { margin: 0 0 16px; padding-left: 22px; }
+.help-prose ul { list-style: disc; }
+.help-prose ol { list-style: decimal; }
+.help-prose li { margin: 4px 0; padding-left: 4px; }
+.help-prose li::marker { color: var(--coral); }
+.help-prose strong { font-weight: 700; color: var(--foreground); }
+.help-prose a { color: var(--coral-dark); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.help-prose a:hover { color: var(--coral); }
+.help-prose code { background: var(--peach-pale); color: var(--coral-dark); font-family: var(--font-geist-mono), monospace; font-size: 0.88em; padding: 2px 6px; border-radius: 6px; }
+.help-prose blockquote { margin: 20px 0; padding: 14px 18px; background: var(--peach-pale); border-left: 3px solid var(--coral); border-radius: 0 12px 12px 0; color: #5a534e; font-size: 14.5px; }
+.help-prose blockquote p { margin: 0; }
