@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -26,9 +27,11 @@ import {
   Zap,
   UsersRound,
   Settings,
+  Lock,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
-import { MODULE_SECTIONS, type ModuleDef } from "@/lib/modules";
+import { MODULE_SECTIONS, type ModuleDef, type ModuleSection } from "@/lib/modules";
 
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -43,6 +46,7 @@ const ICONS: Record<string, LucideIcon> = {
   evenements: CalendarDays,
   finances: Wallet,
   subventions: Landmark,
+  caisse: Lock,
   documents: FileText,
   gouvernance: Scale,
   impact: BarChart3,
@@ -57,6 +61,20 @@ const ICONS: Record<string, LucideIcon> = {
 
 function hrefFor(orgSlug: string, m: ModuleDef) {
   return m.segment ? `/dashboard/${orgSlug}/${m.segment}` : `/dashboard/${orgSlug}`;
+}
+
+/** Segment actif déduit du chemin : /dashboard/{org}/{segment?} */
+function activeSegmentFromPath(pathname: string): string | null {
+  const parts = pathname.split("/").filter(Boolean); // ['dashboard', org, segment?]
+  return parts.length >= 3 ? parts[2] : null;
+}
+
+/** Titre de la section contenant le segment actif (défaut : 1re section). */
+function sectionTitleForSegment(segment: string | null): string {
+  for (const s of MODULE_SECTIONS) {
+    if (s.modules.some((m) => m.segment === segment)) return s.title;
+  }
+  return MODULE_SECTIONS[0].title; // racine /dashboard → Pilotage
 }
 
 function NavItem({
@@ -106,6 +124,62 @@ function NavItem({
   );
 }
 
+/** Groupe repliable (accordéon) : clic sur l'en-tête → déplie/replie. */
+function SectionGroup({
+  section,
+  orgSlug,
+  open,
+  onToggle,
+  openRequests,
+}: {
+  section: ModuleSection;
+  orgSlug: string;
+  open: boolean;
+  onToggle: () => void;
+  openRequests: number;
+}) {
+  // Badge agrégé remonté sur l'en-tête quand le groupe est replié
+  const groupBadge =
+    !open && openRequests > 0 && section.modules.some((m) => m.key === "demandes")
+      ? openRequests
+      : 0;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 transition-colors hover:text-white/55"
+      >
+        <span className="flex-1 text-left">{section.title}</span>
+        {groupBadge > 0 && <span className="mc-nav-badge danger !static">{groupBadge}</span>}
+        <ChevronDown
+          className={`size-3.5 shrink-0 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
+          strokeWidth={2.2}
+        />
+      </button>
+
+      {/* Conteneur animé (grid-rows 0fr → 1fr) */}
+      <div
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          {section.modules.map((m) => (
+            <NavItem
+              key={m.key}
+              orgSlug={orgSlug}
+              m={m}
+              badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardSidebar({
   orgSlug,
   orgName,
@@ -125,6 +199,17 @@ export function DashboardSidebar({
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  // ── Accordéon : la section de la page active s'ouvre automatiquement ──
+  const pathname = usePathname();
+  const activeSection = useMemo(
+    () => sectionTitleForSegment(activeSegmentFromPath(pathname)),
+    [pathname],
+  );
+  const [openSection, setOpenSection] = useState<string | null>(activeSection);
+  useEffect(() => {
+    setOpenSection(activeSection);
+  }, [activeSection]);
 
   return (
     <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground">
@@ -151,22 +236,19 @@ export function DashboardSidebar({
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — groupes repliables (accordéon) */}
       <nav className="flex-1 py-1">
         {MODULE_SECTIONS.map((section) => (
-          <div key={section.title}>
-            <div className="px-3 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/25">
-              {section.title}
-            </div>
-            {section.modules.map((m) => (
-              <NavItem
-                key={m.key}
-                orgSlug={orgSlug}
-                m={m}
-                badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
-              />
-            ))}
-          </div>
+          <SectionGroup
+            key={section.title}
+            section={section}
+            orgSlug={orgSlug}
+            open={openSection === section.title}
+            onToggle={() =>
+              setOpenSection((cur) => (cur === section.title ? null : section.title))
+            }
+            openRequests={openRequests}
+          />
         ))}
       </nav>
 
