@@ -18,8 +18,8 @@ jobs:
           username: ${{ secrets.INFOMANIAK_SSH_USER }}
           password: ${{ secrets.INFOMANIAK_SSH_PASS }}
           port: 22
-          fingerprint: c6:f5:69:a8:45:2d:30:3b:a8:87:7b:2c:7f:57:dd:79
           debug: true
+          use_insecure_cipher: true
           script: |
             cd /srv/customer/sites/admin.casaminga.com
             git pull origin main
