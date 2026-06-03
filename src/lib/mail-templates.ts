@@ -457,6 +457,27 @@ export function tplCompteBienvenue(opts: {
   );
 }
 
+// ── 17. Newsletter / bulletin (aux membres) ───────────────────────────────
+
+export function tplNewsletter(opts: {
+  orgName: string;
+  title: string;
+  /** Corps en texte simple : les sauts de ligne deviennent des paragraphes. */
+  body: string;
+}) {
+  const paragraphs = opts.body
+    .split(/\n{2,}/)
+    .map((para) => p(para.replace(/\n/g, "<br/>")))
+    .join("");
+  return base(
+    `
+    ${h1(opts.title)}
+    ${paragraphs}
+  `,
+    opts.orgName
+  );
+}
+
 // ── 16. Facture / rappel de paiement (au client) ──────────────────────────
 
 export function tplFactureRappel(opts: {
