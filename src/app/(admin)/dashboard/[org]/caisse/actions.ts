@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import {
   addCashEntry, voidCashEntry, closeCashRegister, verifyCashChain,
+  getCashEntries, getOrganizationBySlug,
   type CashEntryInput,
 } from "@/lib/data";
 import type { CashEntry, CashClosureType } from "@/lib/types";
@@ -11,9 +12,48 @@ function refresh(orgSlug: string) {
   revalidatePath(`/dashboard/${orgSlug}`);
 }
 
-export async function addCashEntryAction(orgSlug: string, input: CashEntryInput) {
+export async function addCashEntryAction(
+  orgSlug: string,
+  input: CashEntryInput,
+  receipt?: { email: string; name?: string }
+) {
   const res = await addCashEntry(input);
-  if (res.ok) refresh(orgSlug);
+  if (res.ok) {
+    refresh(orgSlug);
+    // Reçu par email (optionnel, non bloquant) — ne touche pas le registre immuable.
+    if (receipt?.email) {
+      void (async () => {
+        try {
+          const entries = await getCashEntries(input.organization_id, 5);
+          // L'écriture qu'on vient de créer = seq max
+          const latest = entries.reduce<CashEntry | null>(
+            (max, e) => (!max || e.seq > max.seq ? e : max), null
+          );
+          if (!latest) return;
+          const [org, { sendMail }, { tplCaisseRecu }] = await Promise.all([
+            getOrganizationBySlug(orgSlug),
+            import("@/lib/mail"),
+            import("@/lib/mail-templates"),
+          ]);
+          await sendMail({
+            to: receipt.email,
+            subject: `Reçu ${latest.ticket_ref} · ${org?.name ?? "Casa Minga Lieux"}`,
+            html: tplCaisseRecu({
+              orgName: org?.name ?? "Casa Minga Lieux",
+              contactName: receipt.name,
+              ticketRef: latest.ticket_ref,
+              label: latest.label,
+              amountTtc: latest.amount_ttc,
+              paymentMethod: latest.payment_method,
+              occurredAt: latest.occurred_at,
+            }),
+          });
+        } catch (e) {
+          console.error("[reçu caisse] échec envoi:", e);
+        }
+      })();
+    }
+  }
   return res;
 }
 

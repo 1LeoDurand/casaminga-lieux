@@ -124,9 +124,15 @@ export function PersonsView({
       };
       const res = editing
         ? await updatePersonAction(orgSlug, editing.id, payload)
-        : await createPersonAction(orgSlug, { ...payload, organization_id: orgId });
+        : await createPersonAction(orgSlug, { ...payload, organization_id: orgId }, values.sendWelcome);
       if (res.ok) {
-        toast.success(editing ? "Personne mise à jour" : "Personne ajoutée");
+        toast.success(
+          editing
+            ? "Personne mise à jour"
+            : values.sendWelcome && payload.email
+              ? "Personne ajoutée · email de bienvenue envoyé"
+              : "Personne ajoutée"
+        );
         setFormOpen(false);
         setEditing(null);
       } else {

@@ -32,11 +32,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 interface EntryForm {
   label: string; amount_ttc: string; vat_rate: string;
   payment_method: CashPaymentMethod; source: CashSource;
-  operator: string; source_ref: string;
+  operator: string; source_ref: string; receipt_email: string;
 }
 const EMPTY: EntryForm = {
   label: "", amount_ttc: "", vat_rate: "0",
-  payment_method: "especes", source: "adhesion", operator: "", source_ref: "",
+  payment_method: "especes", source: "adhesion", operator: "", source_ref: "", receipt_email: "",
 };
 
 function EntryDrawer({ open, onClose, orgSlug, orgId }: {
@@ -67,8 +67,11 @@ function EntryDrawer({ open, onClose, orgSlug, orgId }: {
         source: form.source,
         operator: form.operator.trim(),
         source_ref: form.source_ref.trim() || null,
-      });
-      if (res.ok) { toast.success("Encaissement enregistré (écriture scellée)"); setForm(EMPTY); onClose(); }
+      }, form.receipt_email.trim() ? { email: form.receipt_email.trim() } : undefined);
+      if (res.ok) {
+        toast.success(form.receipt_email.trim() ? "Encaissement scellé · reçu envoyé" : "Encaissement enregistré (écriture scellée)");
+        setForm(EMPTY); onClose();
+      }
       else toast.error(res.error ?? "Erreur");
     });
   }
@@ -126,6 +129,9 @@ function EntryDrawer({ open, onClose, orgSlug, orgId }: {
             </Field>
             <Field label="Opérateur / caissier *">
               <input required value={form.operator} onChange={set("operator")} placeholder="Nom de la personne encaissant" className={inputCls} />
+            </Field>
+            <Field label="Email du reçu (facultatif)">
+              <input type="email" value={form.receipt_email} onChange={set("receipt_email")} placeholder="Envoyer le reçu par email à…" className={inputCls} />
             </Field>
 
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">

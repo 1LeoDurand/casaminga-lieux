@@ -13,6 +13,7 @@ export interface PersonFormValues {
   status: Person["status"];
   tags: string[];
   notes: string;
+  sendWelcome: boolean;
 }
 
 function fromPerson(p: Person | null): PersonFormValues {
@@ -24,6 +25,7 @@ function fromPerson(p: Person | null): PersonFormValues {
     status: p?.status ?? "actif",
     tags: p?.tags ? [...p.tags] : [],
     notes: p?.notes ?? "",
+    sendWelcome: false,
   };
 }
 
@@ -186,6 +188,20 @@ export function PersonForm({
               placeholder="Informations utiles…"
             />
           </div>
+
+          {!person && values.email.trim() ? (
+            <label className="mc-form-group flex cursor-pointer flex-row items-center gap-2.5 rounded-xl border border-border bg-peach-pale/40 px-3.5 py-2.5">
+              <input
+                type="checkbox"
+                checked={values.sendWelcome}
+                onChange={(e) => set("sendWelcome", e.target.checked)}
+                className="size-4 accent-coral"
+              />
+              <span className="text-[13px] text-foreground">
+                Envoyer un email de bienvenue à <strong>{values.email.trim()}</strong>
+              </span>
+            </label>
+          ) : null}
 
           {error ? <p className="text-sm font-medium text-coral-dark">{error}</p> : null}
         </div>

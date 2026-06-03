@@ -5,6 +5,7 @@ import {
   createPerson,
   deletePerson,
   updatePerson,
+  getOrganizationBySlug,
   type PersonInput,
 } from "@/lib/data";
 
@@ -15,10 +16,36 @@ function refresh(orgSlug: string) {
 
 export async function createPersonAction(
   orgSlug: string,
-  input: PersonInput
+  input: PersonInput,
+  sendWelcome = false
 ): Promise<{ ok: boolean }> {
   const ok = await createPerson(input);
-  if (ok) refresh(orgSlug);
+  if (ok) {
+    refresh(orgSlug);
+    // Email de bienvenue (opt-in, non bloquant)
+    if (sendWelcome && input.email) {
+      void (async () => {
+        try {
+          const [org, { sendMail }, { tplPersonneBienvenue }] = await Promise.all([
+            getOrganizationBySlug(orgSlug),
+            import("@/lib/mail"),
+            import("@/lib/mail-templates"),
+          ]);
+          await sendMail({
+            to: input.email!,
+            subject: `Bienvenue · ${org?.name ?? "Casa Minga Lieux"}`,
+            html: tplPersonneBienvenue({
+              orgName: org?.name ?? "Casa Minga Lieux",
+              firstName: input.name.split(" ")[0],
+              role: input.role,
+            }),
+          });
+        } catch (e) {
+          console.error("[bienvenue CRM] échec envoi:", e);
+        }
+      })();
+    }
+  }
   return { ok };
 }
 
