@@ -20,7 +20,7 @@ jobs:
           port: 22
           debug: true
           use_insecure_cipher: true
-          script: ls /srv/customer/sites/
+          script: cd /srv/customer/sites/admin.casaminga.com && git pull origin main 2>&1 || echo "ERREUR git pull"
 
       # Étape 2 : restart via API Infomaniak → déclenche le build configuré dans le panel
       - name: Restart Node.js app via Infomaniak API
