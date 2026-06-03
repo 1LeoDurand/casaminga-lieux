@@ -18,7 +18,7 @@ jobs:
           username: ${{ secrets.INFOMANIAK_SSH_USER }}
           password: ${{ secrets.INFOMANIAK_SSH_PASS }}
           port: 22
-          fingerprint: SHA256:fKVOZJvOwD5z4tE3NEVtc49054P0BuHVGmtgAyyz/UU
+          fingerprint: fKVOZJvOwD5z4tE3NEVtc49054P0BuHVGmtgAyyz/UU
           debug: true
           script: |
             cd /srv/customer/sites/admin.casaminga.com
