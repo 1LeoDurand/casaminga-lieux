@@ -15,9 +15,7 @@ export default function AideLayout({ children }: { children: React.ReactNode }) 
       <header className="sticky top-0 z-30 border-b border-[#F0E8E0] bg-cream/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/aide" className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-coral font-heading text-[13px] font-extrabold text-white">
-              CM
-            </span>
+            <img src="/logo.png" alt="Casa Minga Lieux" className="size-9 object-contain" />
             <span className="font-heading text-[17px] font-extrabold tracking-tight">
               Casa Minga{" "}
               <span className="font-medium text-warmgray">· Centre d'aide</span>

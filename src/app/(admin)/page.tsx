@@ -27,7 +27,7 @@ export default function LandingPage() {
       <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,251,240,0.92)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,180,162,0.28)" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", gap: 32 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 11, fontWeight: 800, fontSize: 17, color: "#2C2C2C", textDecoration: "none" }}>
-            <span style={{ width: 36, height: 36, borderRadius: 11, background: "linear-gradient(135deg, #FF8A65, #FF6D4D)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, boxShadow: "0 4px 12px rgba(255,138,101,0.32)" }}>CM</span>
+            <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 36, height: 36, objectFit: "contain" }} />
             Casa Minga Lieux
           </Link>
           <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
@@ -360,7 +360,7 @@ export default function LandingPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr", gap: "clamp(20px,4vw,50px)" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14, fontWeight: 800, fontSize: 17, color: "#fff" }}>
-                <span style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg, #FF8A65, #FF6D4D)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff" }}>CM</span>
+                <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 34, height: 34, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
                 Casa Minga Lieux
               </div>
               <p style={{ lineHeight: 1.6, marginBottom: 10, maxWidth: "34ch", color: "rgba(255,255,255,0.65)" }}>Le système de pilotage des tiers-lieux, résidences et lieux collectifs. Pensé depuis le terrain.</p>

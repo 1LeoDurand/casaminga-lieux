@@ -52,9 +52,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <Card className="w-full max-w-md gap-6 p-8">
         <div className="text-center">
-          <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl bg-coral font-heading text-base font-extrabold text-white">
-            CM
-          </span>
+          <img src="/logo.png" alt="Casa Minga Lieux" className="mx-auto mb-3 size-14 object-contain" />
           <h1 className="font-heading text-2xl font-bold">Espace équipe</h1>
           <p className="mt-1 text-sm text-muted-foreground">Casa Minga Lieux</p>
         </div>

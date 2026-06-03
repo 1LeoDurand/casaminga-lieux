@@ -80,7 +80,7 @@ export default function SignupPage() {
     return (
       <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFBF0", fontFamily: "'Poppins', sans-serif", padding: "24px" }}>
         <div style={{ maxWidth: 420, width: "100%", background: "#fff", borderRadius: 20, padding: "36px 32px", boxShadow: "0 8px 32px rgba(28,28,28,0.08)", border: "1px solid #E5DDD6", textAlign: "center" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 13, background: "linear-gradient(135deg,#FF8A65,#FF6D4D)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, margin: "0 auto 16px" }}>CM</div>
+          <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 52, height: 52, objectFit: "contain", margin: "0 auto 12px" }} />
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Supabase non configuré</h2>
           <p style={{ fontSize: 14, color: "#6B6460", marginBottom: 20, lineHeight: 1.6 }}>L'inscription nécessite que les variables d'environnement Supabase soient configurées sur le serveur.</p>
           <Link href="/login" style={{ display: "block", padding: "12px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>← Retour à la connexion</Link>
@@ -111,7 +111,7 @@ export default function SignupPage() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#2C2C2C", fontWeight: 800, fontSize: 18 }}>
-            <span style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#FF8A65,#FF6D4D)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15 }}>CM</span>
+            <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 40, height: 40, objectFit: "contain" }} />
             Casa Minga Lieux
           </Link>
         </div>

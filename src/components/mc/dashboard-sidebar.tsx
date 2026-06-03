@@ -215,9 +215,7 @@ export function DashboardSidebar({
     <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground">
       {/* Logo + organisation */}
       <div className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5 pb-4 pt-5">
-        <span className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-coral font-heading text-[12px] font-extrabold text-white">
-          CM
-        </span>
+        <img src="/logo.png" alt="Casa Minga Lieux" className="size-[34px] shrink-0 rounded-lg object-contain bg-white p-0.5" />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="truncate font-heading text-[15px] font-extrabold text-white">
