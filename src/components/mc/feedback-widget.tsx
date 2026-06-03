@@ -155,6 +155,29 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
               📍 {typeof window !== "undefined" ? window.location.pathname : pathname}
             </p>
 
+            {/* Règles de triage */}
+            <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Comment ça marche</p>
+              <div className="flex items-start gap-1.5">
+                <span className="mt-0.5 shrink-0 text-emerald-500">✓</span>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  <span className="font-medium text-slate-700">Traité automatiquement</span> — bug graphique, faute d'orthographe, erreur technique claire
+                </p>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <span className="mt-0.5 shrink-0 text-amber-500">◎</span>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  <span className="font-medium text-slate-700">Accord demandé</span> — changement de contenu, formulation, fonctionnalité ou design
+                </p>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <span className="mt-0.5 shrink-0 text-slate-400">✕</span>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  <span className="font-medium text-slate-700">Ignoré</span> — feedback vague, doublon ou hors périmètre
+                </p>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading || !description.trim()}
