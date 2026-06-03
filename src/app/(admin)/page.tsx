@@ -30,7 +30,7 @@ export default function LandingPage() {
             <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 36, height: 36, objectFit: "contain" }} />
             Casa Minga Lieux
           </Link>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
+          <div className="lp-nav-cta">
             <Link href="/login" style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#2C2C2C", textDecoration: "none", borderRadius: 100, border: "1.5px solid #E5DDD6", background: "#fff" }}>Connexion</Link>
             <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>Voir le dashboard démo →</Link>
           </div>
@@ -40,7 +40,7 @@ export default function LandingPage() {
       {/* ══ 1. HERO ══ */}
       <header style={{ padding: "clamp(40px,7vw,80px) 0 clamp(60px,8vw,96px)", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1fr", gap: "clamp(28px,5vw,64px)", alignItems: "center" }}>
+          <div className="lp-hero-grid">
             <div>
               <Eyebrow>★ Le système de pilotage des tiers-lieux &amp; lieux collectifs</Eyebrow>
               <h1 style={{ fontSize: "clamp(36px,5.4vw,60px)", fontWeight: 800, lineHeight: 1.05, letterSpacing: -1, marginBottom: 20 }}>
@@ -62,7 +62,7 @@ export default function LandingPage() {
               </div>
             </div>
             {/* Photo slot hero */}
-            <div style={{ background: "linear-gradient(135deg, #FFF0EB, #FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 28, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px", color: "#E8714D", textAlign: "center", aspectRatio: "4/5", minHeight: 420 }}>
+            <div className="lp-photo-hero">
               <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 14, boxShadow: "0 4px 14px rgba(255,138,101,0.1)" }}>📸</div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C", marginBottom: 4 }}>Photo Hero — vie du lieu</div>
               <div style={{ fontSize: 11.5, color: "#6B6460" }}>4:5 portrait · espace vivant · architecture</div>
@@ -79,7 +79,7 @@ export default function LandingPage() {
             <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, lineHeight: 1.15 }}>Un tiers-lieu ne se gère pas comme une entreprise classique.</h2>
             <p style={{ color: "#6B6460", lineHeight: 1.7, marginTop: 14, fontSize: "clamp(15px,1.6vw,18px)" }}>Pas de ressources humaines dédiées, beaucoup de bénévoles, peu de continuité, de la mémoire collective qui se perd, et trop d'outils éparpillés qui ne se parlent pas.</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+          <div className="lp-prob-grid">
             {[
               { ic: "📁", t: "Trop de fichiers, partout", d: "Drive, mails, ordinateurs personnels : impossible de retrouver la dernière version d'un document." },
               { ic: "✉", t: "Trop de mails à trier", d: "Demandes de résidences, devis, partenariats, presse — tout arrive dans la même boîte." },
@@ -103,7 +103,7 @@ export default function LandingPage() {
       {/* ══ 3. HISTOIRE ══ */}
       <section style={{ background: "linear-gradient(180deg, #FFFBF0, #FFF0EB)", padding: "clamp(64px,9vw,108px) 0" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "clamp(28px,5vw,64px)", alignItems: "center" }}>
+          <div className="lp-story-grid">
             <div>
               <Eyebrow variant="mint">Depuis le terrain</Eyebrow>
               <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, marginBottom: 18 }}>Un outil né depuis un lieu réel.</h2>
@@ -142,7 +142,7 @@ export default function LandingPage() {
             <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700 }}>Tout relier, sans tout complexifier.</h2>
             <p style={{ color: "#6B6460", marginTop: 14, lineHeight: 1.7 }}>Quatre piliers qui couvrent la vie réelle d'un tiers-lieu. Pas plus, pas moins.</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 18 }}>
+          <div className="lp-pillars-grid">
             {[
               { ic: "🤝", h: "Accueillir", p: "Demandes entrantes, personnes, résidences, événements : tous les flux d'arrivée passent par un même point d'entrée.", ex: "Une demande arrive depuis le site → fiche créée → assignée → réponse en 36h chrono.", color: "#FF8A65" },
               { ic: "⚙", h: "Organiser", p: "Espaces, réservations, documents, tâches : le quotidien opérationnel sans réinventer Excel à chaque fois.", ex: "L'atelier sérigraphie réservé pour vendredi → le contrat se génère seul → PDF envoyé en 1 clic.", color: "#6E7A93" },
@@ -163,7 +163,7 @@ export default function LandingPage() {
       {/* ══ 5. PRODUIT (mockup) ══ */}
       <section style={{ background: "#fff", padding: "clamp(64px,9vw,108px) 0" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "0.95fr 1.2fr", gap: "clamp(28px,5vw,56px)", alignItems: "center" }}>
+          <div className="lp-product-grid">
             <div>
               <Eyebrow>Le produit</Eyebrow>
               <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, marginBottom: 14 }}>Une plateforme pensée pour les lieux collectifs.</h2>
@@ -236,7 +236,7 @@ export default function LandingPage() {
             <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700 }}>Pour les lieux qui veulent se structurer sans perdre leur âme.</h2>
             <p style={{ color: "#6B6460", marginTop: 14, lineHeight: 1.7 }}>Pensé pour les structures hybrides, à gouvernance collective, ancrées dans leur territoire.</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          <div className="lp-pourqui-grid">
             {[
               { ic: "🏛", t: "Tiers-lieux associatifs", d: "Maisons de quartier, friches reconverties, fabriques de territoire." },
               { ic: "🎨", t: "Lieux culturels", d: "Centres d'art, fabriques, scènes indépendantes, ateliers d'artistes." },
@@ -272,7 +272,7 @@ export default function LandingPage() {
               { ic: "🪑", name: "Cobot · Nexudus", sub: "Logiciels de coworking", vs: "Un logiciel de coworking gère des bureaux. Casa Minga Lieux gère un écosystème : résidences artistiques, gouvernance, partenariats, impact." },
               { ic: "🌐", name: "Site vitrine simple", sub: "Webflow · WordPress", vs: "Un site vitrine montre le lieu. Casa Minga Lieux connecte le site à la gestion : les demandes du site entrent directement dans le pilotage." },
             ].map((r, i) => (
-              <div key={r.name} style={{ display: "grid", gridTemplateColumns: "1.1fr 1.8fr", alignItems: "center", padding: "18px 22px", borderBottom: i < 3 ? "1px solid #E5DDD6" : "none", gap: 18 }}>
+              <div key={r.name} className="lp-diff-row" style={{ padding: "18px 22px", borderBottom: i < 3 ? "1px solid #E5DDD6" : "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FFFBF0", border: "1px solid #E5DDD6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{r.ic}</div>
                   <div>
@@ -283,7 +283,7 @@ export default function LandingPage() {
                 <div style={{ fontSize: 14, color: "#3A3A3A", lineHeight: 1.55 }}>{r.vs}</div>
               </div>
             ))}
-            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.8fr", alignItems: "center", padding: "18px 22px", gap: 18, background: "linear-gradient(135deg, #FFF0EB, #FFFBF0)" }}>
+            <div className="lp-diff-row" style={{ padding: "18px 22px", background: "linear-gradient(135deg, #FFF0EB, #FFFBF0)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #FF8A65, #FF6D4D)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#fff", flexShrink: 0, boxShadow: "0 4px 10px rgba(255,138,101,0.32)" }}>★</div>
                 <div>
@@ -300,7 +300,7 @@ export default function LandingPage() {
       {/* ══ 8. CTA FINAL ══ */}
       <section style={{ background: "linear-gradient(135deg, #2C2C2C, #1a1a1a)", color: "#fff", padding: "clamp(64px,9vw,108px) 0", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px", position: "relative", zIndex: 1 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.1fr", gap: "clamp(28px,5vw,64px)", alignItems: "flex-start" }}>
+          <div className="lp-cta-grid">
             <div>
               <Eyebrow variant="white">Parlons-en</Eyebrow>
               <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, color: "#fff", marginBottom: 14 }}>Vous portez un lieu collectif ? Parlons-en.</h2>
@@ -357,7 +357,7 @@ export default function LandingPage() {
       {/* ══ FOOTER ══ */}
       <footer style={{ background: "#1A1A1A", color: "rgba(255,255,255,0.7)", padding: "60px 0 28px", fontSize: 13 }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr", gap: "clamp(20px,4vw,50px)" }}>
+          <div className="lp-footer-grid">
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14, fontWeight: 800, fontSize: 17, color: "#fff" }}>
                 <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 34, height: 34, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
