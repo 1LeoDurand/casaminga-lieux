@@ -29,7 +29,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-poppins);
-  --font-heading: var(--font-syne);
+  --font-heading: var(--font-poppins);
   --font-dmsans: var(--font-dmsans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
