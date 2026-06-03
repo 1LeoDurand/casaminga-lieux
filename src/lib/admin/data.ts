@@ -129,6 +129,28 @@ export async function getAllHelpCategories(): Promise<HelpCategoryAdmin[]> {
   return (data as HelpCategoryAdmin[]) ?? [];
 }
 
+export interface EmailLogRow {
+  id: string;
+  organization_id: string | null;
+  recipient: string;
+  subject: string;
+  category: string | null;
+  status: string;
+  error: string | null;
+  created_at: string;
+}
+
+export async function getRecentEmails(limit = 200): Promise<EmailLogRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("email_log")
+    .select("id, organization_id, recipient, subject, category, status, error, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data as EmailLogRow[]) ?? [];
+}
+
 /** Tous les tickets feedback, plus récents en premier. */
 export async function getAllFeedback(): Promise<FeedbackRow[]> {
   const admin = createAdminClient();

@@ -35,12 +35,38 @@ export interface MailPayload {
   html: string;
   replyTo?: string;
   attachments?: MailAttachment[];
+  /** Catégorie pour la traçabilité (facture, rappel, bienvenue, recu…). */
+  category?: string;
+  /** Organisation émettrice (pour le journal email_log). */
+  organizationId?: string | null;
+}
+
+/** Journalise l'envoi dans email_log (service_role, best-effort, jamais bloquant). */
+async function logEmail(payload: MailPayload, status: "sent" | "failed", error?: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return;
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const admin = createClient(url, key, { auth: { persistSession: false } });
+    await admin.from("email_log").insert({
+      organization_id: payload.organizationId ?? null,
+      recipient: Array.isArray(payload.to) ? payload.to.join(", ") : payload.to,
+      subject: payload.subject,
+      category: payload.category ?? "autre",
+      status,
+      error: error ?? null,
+    });
+  } catch {
+    /* le journal ne doit jamais casser l'envoi */
+  }
 }
 
 /** Envoie un email. Silencieux si le SMTP n'est pas configuré (env manquant). */
 export async function sendMail(payload: MailPayload): Promise<boolean> {
   if (!process.env.MAIL_SMTP_USER || !process.env.MAIL_SMTP_PASS) {
     console.warn("[mail] SMTP non configuré — email ignoré:", payload.subject);
+    void logEmail(payload, "failed", "SMTP non configuré");
     return false;
   }
   try {
@@ -55,9 +81,11 @@ export async function sendMail(payload: MailPayload): Promise<boolean> {
       replyTo: payload.replyTo,
       attachments: payload.attachments,
     });
+    void logEmail(payload, "sent");
     return true;
   } catch (err) {
     console.error("[mail] Erreur envoi:", err);
+    void logEmail(payload, "failed", err instanceof Error ? err.message : String(err));
     return false;
   }
 }

@@ -39,6 +39,8 @@ export async function createPersonAction(
               firstName: input.name.split(" ")[0],
               role: input.role,
             }),
+            category: "bienvenue",
+            organizationId: input.organization_id,
           });
         } catch (e) {
           console.error("[bienvenue CRM] échec envoi:", e);

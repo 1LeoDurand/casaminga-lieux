@@ -198,6 +198,8 @@ export async function sendInvoiceEmail(
     }),
     replyTo: fallbackSettings.email ?? undefined,
     attachments: [{ filename: `${inv.number}.pdf`, content: pdf, contentType: "application/pdf" }],
+    category: isReminder ? "rappel" : "facture",
+    organizationId: orgId,
   });
 
   if (!ok) return { ok: false, error: "Échec de l'envoi (vérifiez la configuration SMTP)." };

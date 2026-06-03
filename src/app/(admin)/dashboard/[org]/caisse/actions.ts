@@ -47,6 +47,8 @@ export async function addCashEntryAction(
               paymentMethod: latest.payment_method,
               occurredAt: latest.occurred_at,
             }),
+            category: "recu",
+            organizationId: input.organization_id,
           });
         } catch (e) {
           console.error("[reçu caisse] échec envoi:", e);
