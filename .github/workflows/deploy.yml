@@ -18,9 +18,11 @@ jobs:
           username: ${{ secrets.INFOMANIAK_SSH_USER }}
           password: ${{ secrets.INFOMANIAK_SSH_PASS }}
           port: 22
-          debug: true
-          use_insecure_cipher: true
-          script: cd /srv/customer/sites/admin.casaminga.com && GIT_TERMINAL_PROMPT=0 git pull origin main 2>&1 || echo "ERREUR git pull"
+          request_pty: true
+          script: |
+            cd /srv/customer/sites/admin.casaminga.com
+            git pull origin main
+            echo "✅ git pull OK"
 
       # Étape 2 : restart via API Infomaniak → déclenche le build configuré dans le panel
       - name: Restart Node.js app via Infomaniak API
