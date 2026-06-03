@@ -129,6 +129,18 @@ export async function getAllHelpCategories(): Promise<HelpCategoryAdmin[]> {
   return (data as HelpCategoryAdmin[]) ?? [];
 }
 
+import type { GrantOpportunity } from "@/lib/grants/types";
+
+export async function getAllOpportunities(): Promise<GrantOpportunity[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("grant_opportunities")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return (data as GrantOpportunity[]) ?? [];
+}
+
 export interface EmailLogRow {
   id: string;
   organization_id: string | null;

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
   { href: "/admin/organisations", label: "Organisations", icon: Building2, exact: false },
   { href: "/admin/feedback", label: "Feedback & bugs", icon: MessageSquareWarning, exact: false },
   { href: "/admin/emails", label: "Emails envoyés", icon: Mail, exact: false },
+  { href: "/admin/subventions-veille", label: "Veille subventions", icon: Landmark, exact: false },
   { href: "/admin/aide", label: "Centre d'aide", icon: BookOpen, exact: false },
 ];
 
