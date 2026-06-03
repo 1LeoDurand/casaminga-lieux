@@ -20,7 +20,10 @@ jobs:
           port: 22
           debug: true
           use_insecure_cipher: true
-          script: whoami
+          script: |
+            cd /srv/customer/sites/admin.casaminga.com
+            git pull origin main
+            echo "✅ git pull OK"
 
       # Étape 2 : restart via API Infomaniak → déclenche le build configuré dans le panel
       - name: Restart Node.js app via Infomaniak API
