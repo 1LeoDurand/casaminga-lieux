@@ -10,11 +10,7 @@ import {
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
-import {
-  HELP_CATEGORIES,
-  HELP_ARTICLES,
-  articlesByCategory,
-} from "@/lib/help-content";
+import { getHelpCategories, getHelpArticles } from "@/lib/help-data";
 import { HelpSearch, type HelpSearchItem } from "@/components/help/help-search";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -27,13 +23,15 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
 };
 
-export default function AideHomePage() {
-  const searchItems: HelpSearchItem[] = HELP_ARTICLES.map((a) => ({
+export default async function AideHomePage() {
+  const [categories, articles] = await Promise.all([getHelpCategories(), getHelpArticles()]);
+  const countByCat = (slug: string) => articles.filter((a) => a.categorySlug === slug).length;
+
+  const searchItems: HelpSearchItem[] = articles.map((a) => ({
     slug: a.slug,
     title: a.title,
     excerpt: a.excerpt,
-    categoryLabel:
-      HELP_CATEGORIES.find((c) => c.slug === a.categorySlug)?.label ?? "",
+    categoryLabel: categories.find((c) => c.slug === a.categorySlug)?.label ?? "",
     keywords: a.keywords,
   }));
 
@@ -59,9 +57,9 @@ export default function AideHomePage() {
       <section className="mx-auto max-w-5xl px-6 py-14">
         <h2 className="mb-6 font-heading text-xl font-bold">Parcourir par thème</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {HELP_CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const Icon = CATEGORY_ICONS[cat.icon] ?? Rocket;
-            const count = articlesByCategory(cat.slug).length;
+            const count = countByCat(cat.slug);
             return (
               <Link
                 key={cat.slug}
@@ -91,7 +89,7 @@ export default function AideHomePage() {
       <section className="mx-auto max-w-5xl px-6 pb-20">
         <h2 className="mb-6 font-heading text-xl font-bold">Articles les plus consultés</h2>
         <div className="overflow-hidden rounded-2xl border border-[#E5DDD6] bg-white">
-          {HELP_ARTICLES.slice(0, 6).map((a, i) => (
+          {articles.slice(0, 6).map((a, i) => (
             <Link
               key={a.slug}
               href={`/aide/${a.slug}`}

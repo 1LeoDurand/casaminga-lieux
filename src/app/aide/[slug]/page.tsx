@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ChevronRight, ArrowLeft, Mail } from "lucide-react";
+import { ChevronRight, ArrowLeft } from "lucide-react";
 import {
-  getArticle,
-  getCategory,
-  articlesByCategory,
-  HELP_ARTICLES,
-} from "@/lib/help-content";
+  getHelpArticle,
+  getHelpCategory,
+  getHelpArticlesByCategory,
+  incrementHelpView,
+} from "@/lib/help-data";
+import { HELP_ARTICLES } from "@/lib/help-content";
 import { renderMarkdown } from "@/lib/help-md";
+import { HelpFeedback } from "@/components/help/help-feedback";
 
+// Slugs connus pré-rendus ; les nouveaux articles ajoutés en base
+// sont rendus à la demande (dynamicParams par défaut).
 export function generateStaticParams() {
   return HELP_ARTICLES.map((a) => ({ slug: a.slug }));
 }
@@ -20,7 +24,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const article = await getHelpArticle(slug);
   if (!article) return { title: "Article introuvable — Centre d'aide" };
   return {
     title: `${article.title} — Centre d'aide Casa Minga`,
@@ -34,11 +38,13 @@ export default async function HelpArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const article = await getHelpArticle(slug);
   if (!article) notFound();
 
-  const category = getCategory(article.categorySlug);
-  const related = articlesByCategory(article.categorySlug).filter(
+  void incrementHelpView(slug);
+
+  const category = await getHelpCategory(article.categorySlug);
+  const related = (await getHelpArticlesByCategory(article.categorySlug)).filter(
     (a) => a.slug !== article.slug
   );
   const html = renderMarkdown(article.body);
@@ -104,19 +110,8 @@ export default async function HelpArticlePage({
         </div>
       )}
 
-      {/* Aide supplémentaire */}
-      <div className="mt-10 flex flex-col items-center gap-3 rounded-2xl bg-peach-pale px-6 py-7 text-center">
-        <p className="text-sm font-semibold text-foreground">
-          Cet article a-t-il répondu à votre question ?
-        </p>
-        <a
-          href="mailto:support@casaminga.com"
-          className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-2 text-sm font-semibold text-white transition hover:bg-coral-dark"
-        >
-          <Mail className="size-4" />
-          Contacter le support
-        </a>
-      </div>
+      {/* Cet article a-t-il aidé ? + contact */}
+      <HelpFeedback slug={article.slug} />
 
       {/* Retour */}
       <div className="mt-8">

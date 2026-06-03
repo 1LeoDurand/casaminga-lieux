@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import {
-  getCategory,
-  articlesByCategory,
-  HELP_CATEGORIES,
-} from "@/lib/help-content";
+  getHelpCategory,
+  getHelpArticlesByCategory,
+} from "@/lib/help-data";
+import { HELP_CATEGORIES } from "@/lib/help-content";
 
+// Slugs connus pré-rendus ; les nouvelles catégories ajoutées en base
+// sont rendues à la demande (dynamicParams par défaut).
 export function generateStaticParams() {
   return HELP_CATEGORIES.map((c) => ({ slug: c.slug }));
 }
@@ -18,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const category = await getHelpCategory(slug);
   if (!category) return { title: "Catégorie introuvable — Centre d'aide" };
   return {
     title: `${category.label} — Centre d'aide Casa Minga`,
@@ -32,10 +34,10 @@ export default async function HelpCategoryPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const category = await getHelpCategory(slug);
   if (!category) notFound();
 
-  const articles = articlesByCategory(slug);
+  const articles = await getHelpArticlesByCategory(slug);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">

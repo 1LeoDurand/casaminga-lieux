@@ -89,6 +89,46 @@ export async function getAllOrganizations(): Promise<OrgRow[]> {
   return orgs.map((o) => ({ ...o, memberCount: counts.get(o.id) ?? 0 }));
 }
 
+export interface HelpArticleAdmin {
+  slug: string;
+  category_slug: string | null;
+  title: string;
+  excerpt: string | null;
+  keywords: string[];
+  body: string;
+  published: boolean;
+  view_count: number;
+  helpful_yes: number;
+  helpful_no: number;
+}
+
+export interface HelpCategoryAdmin {
+  slug: string;
+  label: string;
+  icon: string;
+  description: string | null;
+}
+
+export async function getAllHelpArticles(): Promise<HelpArticleAdmin[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("help_articles")
+    .select("slug, category_slug, title, excerpt, keywords, body, published, view_count, helpful_yes, helpful_no, sort_order")
+    .order("sort_order", { ascending: true });
+  return (data as HelpArticleAdmin[]) ?? [];
+}
+
+export async function getAllHelpCategories(): Promise<HelpCategoryAdmin[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("help_categories")
+    .select("slug, label, icon, description, sort_order")
+    .order("sort_order", { ascending: true });
+  return (data as HelpCategoryAdmin[]) ?? [];
+}
+
 /** Tous les tickets feedback, plus récents en premier. */
 export async function getAllFeedback(): Promise<FeedbackRow[]> {
   const admin = createAdminClient();
