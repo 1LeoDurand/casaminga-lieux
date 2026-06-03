@@ -45,6 +45,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     modules: [
       { key: "adhesions", label: "Adhésions", segment: "adhesions", ready: true },
       { key: "finances", label: "Finances", segment: "finances", ready: true },
+      { key: "factures", label: "Facturation", segment: "factures", ready: true },
       { key: "subventions", label: "Subventions", segment: "subventions", ready: true },
       { key: "caisse", label: "Caisse certifiée", segment: "caisse", ready: true },
       { key: "documents", label: "Documents", segment: "documents", ready: true },
