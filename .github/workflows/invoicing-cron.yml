@@ -24,3 +24,11 @@ jobs:
             -H "Content-Type: application/json" \
             "https://admin.casaminga.com/api/cron/payment-reminders" \
             -w "\nHTTP %{http_code}\n"
+
+      - name: Rappels J-1 réservations + J-30 adhésions
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://admin.casaminga.com/api/cron/reminders" \
+            -w "\nHTTP %{http_code}\n"
