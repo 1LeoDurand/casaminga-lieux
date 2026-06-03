@@ -18,6 +18,7 @@ jobs:
           username: ${{ secrets.INFOMANIAK_SSH_USER }}
           password: ${{ secrets.INFOMANIAK_SSH_PASS }}
           port: 22
+          debug: true
           script: |
             cd /srv/customer/sites/admin.casaminga.com
             git pull origin main
