@@ -456,3 +456,36 @@ export function tplCompteBienvenue(opts: {
     opts.orgName
   );
 }
+
+// ── 16. Facture / rappel de paiement (au client) ──────────────────────────
+
+export function tplFactureRappel(opts: {
+  orgName: string;
+  clientName: string;
+  invoiceNumber: string;
+  amountTtc: string;
+  dueDate: string;
+  iban?: string | null;
+  isReminder?: boolean;
+}) {
+  return base(
+    `
+    ${badge(opts.isReminder ? "RAPPEL DE PAIEMENT" : "FACTURE", opts.isReminder ? "#E8714D" : "#FF8A65")}
+    ${h1(opts.isReminder ? "Rappel : facture en attente" : `Votre facture ${opts.invoiceNumber}`)}
+    ${p(`Bonjour <strong>${opts.clientName}</strong>,`)}
+    ${p(
+      opts.isReminder
+        ? `Sauf erreur de notre part, la facture ci-dessous reste en attente de règlement. Vous la trouverez en pièce jointe.`
+        : `Veuillez trouver ci-joint votre facture émise par <strong>${opts.orgName}</strong>.`
+    )}
+    ${card([
+      { label: "N° de facture", value: opts.invoiceNumber },
+      { label: "Montant TTC", value: opts.amountTtc },
+      { label: "Échéance", value: opts.dueDate },
+      ...(opts.iban ? [{ label: "IBAN", value: opts.iban }] : []),
+    ])}
+    ${p("Le PDF de la facture est joint à cet email. Merci de votre confiance.")}
+  `,
+    opts.orgName
+  );
+}

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Users, Download } from "lucide-react";
 import { PageHeader } from "@/components/mc/page-header";
 import { InvoicesView } from "@/components/mc/invoices-view";
 import { getOrganizationBySlug } from "@/lib/data";
@@ -26,6 +26,12 @@ export default async function FacturesPage({ params }: { params: Promise<{ org: 
         sub="Émettez, archivez et suivez vos factures. Numérotation séquentielle continue et conforme."
         actions={
           <>
+            <Link href={`/dashboard/${org}/factures/coworking`} className="mc-dq-btn">
+              <Users className="mc-dq-ic size-4" /> Coworking
+            </Link>
+            <a href={`/dashboard/${org}/factures/export`} className="mc-dq-btn">
+              <Download className="mc-dq-ic size-4" /> Export CSV
+            </a>
             <Link href={`/dashboard/${org}/factures/parametres`} className="mc-dq-btn">
               <Settings2 className="mc-dq-ic size-4" /> Paramètres
             </Link>

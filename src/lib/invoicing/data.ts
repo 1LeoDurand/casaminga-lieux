@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import type { Invoice, InvoiceSettings } from "./types";
+import type { Invoice, InvoiceSettings, CoworkingSubscription } from "./types";
 
 const DEFAULT_SETTINGS = (orgId: string): InvoiceSettings => ({
   organization_id: orgId,
@@ -54,4 +54,16 @@ export async function getInvoiceById(orgId: string, id: string): Promise<Invoice
     .eq("id", id)
     .maybeSingle();
   return (data as Invoice) ?? null;
+}
+
+export async function getCoworkingSubscriptions(orgId: string): Promise<CoworkingSubscription[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("coworking_subscriptions")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("active", { ascending: false })
+    .order("client_name", { ascending: true });
+  return (data as CoworkingSubscription[]) ?? [];
 }

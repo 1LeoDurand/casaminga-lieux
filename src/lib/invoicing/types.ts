@@ -36,6 +36,30 @@ export interface Invoice {
   total_ttc: number;
   notes: string | null;
   source: InvoiceSource;
+  kind: "facture" | "avoir";
+  parent_invoice_id: string | null;
+  subscription_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoworkingSubscription {
+  id: string;
+  organization_id: string;
+  person_id: string | null;
+  client_name: string;
+  client_email: string | null;
+  client_address: string | null;
+  space_id: string | null;
+  designation: string | null;
+  monthly_amount_ht: number;
+  vat_rate: number;
+  vat_applicable: boolean;
+  day_of_month: number;
+  active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  last_invoiced_month: string | null;
   created_at: string;
   updated_at: string;
 }

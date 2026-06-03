@@ -143,6 +143,128 @@ export async function emitInvoice(
   return { ok: true, id };
 }
 
+// ── Envoi de la facture par email (PDF en pièce jointe) ──
+export async function sendInvoiceEmail(
+  orgId: string,
+  orgSlug: string,
+  invoiceId: string,
+  isReminder = false
+): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const supabase = await createClient();
+
+  const { data: inv } = await supabase
+    .from("invoices").select("*").eq("id", invoiceId).maybeSingle();
+  if (!inv) return { ok: false, error: "Facture introuvable." };
+  if (!inv.number) return { ok: false, error: "Émettez la facture avant de l'envoyer." };
+  if (!inv.client_email) return { ok: false, error: "Aucun email client renseigné." };
+
+  const { data: settings } = await supabase
+    .from("invoice_settings").select("*").eq("organization_id", orgId).maybeSingle();
+
+  // Imports dynamiques (modules serveur lourds : PDF + mail)
+  const [{ renderInvoicePdf }, { sendMail }, { tplFactureRappel }, { formatEuros }] = await Promise.all([
+    import("@/lib/invoicing/pdf"),
+    import("@/lib/mail"),
+    import("@/lib/mail-templates"),
+    import("@/lib/invoicing/types"),
+  ]);
+
+  const fallbackSettings = settings ?? {
+    organization_id: orgId, issuer_name: null, issuer_address: null, siret: null,
+    vat_number: null, email: null, phone: null, iban: null, bic: null,
+    payment_terms_days: 30, late_penalty: null, accent_color: "#FF8A65",
+    footer_mentions: null, number_prefix: "FAC-", logo_url: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const pdf = await renderInvoicePdf(inv, fallbackSettings);
+  const orgName = fallbackSettings.issuer_name ?? "Casa Minga Lieux";
+  const dueDate = inv.due_date
+    ? new Date(inv.due_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
+    : "—";
+
+  const ok = await sendMail({
+    to: inv.client_email,
+    subject: `${isReminder ? "Rappel — " : ""}Facture ${inv.number} · ${orgName}`,
+    html: tplFactureRappel({
+      orgName,
+      clientName: inv.client_name,
+      invoiceNumber: inv.number,
+      amountTtc: formatEuros(inv.total_ttc),
+      dueDate,
+      iban: fallbackSettings.iban,
+      isReminder,
+    }),
+    replyTo: fallbackSettings.email ?? undefined,
+    attachments: [{ filename: `${inv.number}.pdf`, content: pdf, contentType: "application/pdf" }],
+  });
+
+  if (!ok) return { ok: false, error: "Échec de l'envoi (vérifiez la configuration SMTP)." };
+
+  // Passe en "envoyée" si ce n'était pas un rappel sur facture déjà avancée
+  if (inv.status === "emise") {
+    await supabase.from("invoices").update({ status: "envoyee", updated_at: new Date().toISOString() }).eq("id", invoiceId);
+  }
+  revalidatePath(`/dashboard/${orgSlug}/factures`);
+  return { ok: true, id: invoiceId };
+}
+
+// ── Avoir (note de crédit) : annule une facture émise par une facture négative ──
+export async function createCreditNote(
+  orgId: string,
+  orgSlug: string,
+  invoiceId: string
+): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const supabase = await createClient();
+
+  const { data: inv } = await supabase.from("invoices").select("*").eq("id", invoiceId).maybeSingle();
+  if (!inv) return { ok: false, error: "Facture introuvable." };
+  if (!inv.number) return { ok: false, error: "Seule une facture émise peut faire l'objet d'un avoir." };
+  if (inv.kind === "avoir") return { ok: false, error: "Un avoir ne peut pas être annulé par un avoir." };
+
+  // Lignes inversées (montants négatifs)
+  const negLines = (inv.lines as { designation: string; qty: number; unit_ht: number; vat_rate: number }[])
+    .map((l) => ({ ...l, unit_ht: -Math.abs(l.unit_ht) }));
+
+  const { data: avoir, error: insErr } = await supabase
+    .from("invoices")
+    .insert({
+      organization_id: orgId,
+      kind: "avoir",
+      parent_invoice_id: inv.id,
+      client_id: inv.client_id,
+      client_name: inv.client_name,
+      client_email: inv.client_email,
+      client_address: inv.client_address,
+      issue_date: new Date().toISOString().slice(0, 10),
+      due_date: new Date().toISOString().slice(0, 10),
+      lines: negLines,
+      vat_applicable: inv.vat_applicable,
+      total_ht: -Math.abs(inv.total_ht),
+      total_vat: -Math.abs(inv.total_vat),
+      total_ttc: -Math.abs(inv.total_ttc),
+      notes: `Avoir sur facture ${inv.number}`,
+      status: "brouillon",
+      source: inv.source,
+    })
+    .select("id")
+    .single();
+  if (insErr || !avoir) return { ok: false, error: insErr?.message ?? "Création de l'avoir impossible." };
+
+  // Numéro séquentiel pour l'avoir
+  const { data: number, error: rpcErr } = await supabase.rpc("assign_invoice_number", { p_org: orgId });
+  if (rpcErr || !number) return { ok: false, error: "Numérotation de l'avoir impossible." };
+  await supabase.from("invoices").update({ number, status: "emise" }).eq("id", avoir.id);
+
+  // La facture d'origine passe en annulée
+  await supabase.from("invoices").update({ status: "annulee", updated_at: new Date().toISOString() }).eq("id", inv.id);
+
+  revalidatePath(`/dashboard/${orgSlug}/factures`);
+  return { ok: true, id: avoir.id };
+}
+
 // ── Changement de statut (payée / annulée…) ──
 export async function setInvoiceStatus(
   orgSlug: string,

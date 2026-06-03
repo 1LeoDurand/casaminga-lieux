@@ -4,14 +4,14 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Printer, Send, Pencil } from "lucide-react";
+import { ArrowLeft, Printer, Send, Pencil, Download, Mail, FileMinus } from "lucide-react";
 import {
   type Invoice,
   type InvoiceSettings,
   STATUS_META,
   formatEuros,
 } from "@/lib/invoicing/types";
-import { emitInvoice } from "@/app/(admin)/dashboard/[org]/factures/actions";
+import { emitInvoice, sendInvoiceEmail, createCreditNote } from "@/app/(admin)/dashboard/[org]/factures/actions";
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
@@ -43,6 +43,26 @@ export function InvoiceDetail({
     });
   }
 
+  function sendEmail() {
+    if (!invoice.client_email) { toast.error("Aucun email client renseigné."); return; }
+    startTransition(async () => {
+      const res = await sendInvoiceEmail(orgId, orgSlug, invoice.id);
+      if (res.ok) { toast.success(`Facture envoyée à ${invoice.client_email} ✓`); router.refresh(); }
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  function makeCreditNote() {
+    if (!confirm("Créer un avoir ? La facture d'origine sera annulée et un avoir (montant négatif) sera émis.")) return;
+    startTransition(async () => {
+      const res = await createCreditNote(orgId, orgSlug, invoice.id);
+      if (res.ok && res.id) { toast.success("Avoir émis ✓"); router.push(`/dashboard/${orgSlug}/factures/${res.id}`); }
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  const canCreditNote = invoice.kind === "facture" && Boolean(invoice.number) && invoice.status !== "annulee";
+
   return (
     <div className="flex flex-col gap-5">
       {/* Barre d'actions (masquée à l'impression) */}
@@ -62,9 +82,22 @@ export function InvoiceDetail({
               <Send className="size-3.5" /> {pending ? "Émission…" : "Émettre la facture"}
             </button>
           ) : (
-            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-coral px-5 py-2 text-[13px] font-bold text-white hover:bg-coral-dark">
-              <Printer className="size-3.5" /> Imprimer / PDF
-            </button>
+            <>
+              <a href={`/dashboard/${orgSlug}/factures/${invoice.id}/pdf`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40">
+                <Download className="size-3.5" /> PDF
+              </a>
+              <button onClick={sendEmail} disabled={pending || !invoice.client_email} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40 disabled:opacity-50" title={invoice.client_email ? "" : "Aucun email client"}>
+                <Mail className="size-3.5" /> {pending ? "Envoi…" : "Envoyer"}
+              </button>
+              {canCreditNote && (
+                <button onClick={makeCreditNote} disabled={pending} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-warmgray hover:border-red-300 hover:text-red-600 disabled:opacity-50">
+                  <FileMinus className="size-3.5" /> Avoir
+                </button>
+              )}
+              <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-coral px-5 py-2 text-[13px] font-bold text-white hover:bg-coral-dark">
+                <Printer className="size-3.5" /> Imprimer
+              </button>
+            </>
           )}
         </div>
       </div>

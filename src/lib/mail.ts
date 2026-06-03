@@ -23,11 +23,18 @@ function createTransport() {
   });
 }
 
+export interface MailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface MailPayload {
   to: string | string[];
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: MailAttachment[];
 }
 
 /** Envoie un email. Silencieux si le SMTP n'est pas configuré (env manquant). */
@@ -46,6 +53,7 @@ export async function sendMail(payload: MailPayload): Promise<boolean> {
       subject: payload.subject,
       html: payload.html,
       replyTo: payload.replyTo,
+      attachments: payload.attachments,
     });
     return true;
   } catch (err) {
