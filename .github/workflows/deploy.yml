@@ -1,0 +1,33 @@
+name: Deploy → admin.casaminga.com
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Pull + restart
+    runs-on: ubuntu-latest
+
+    steps:
+      # Étape 1 : git pull via SSH (léger, autorisé sur shared hosting)
+      - name: git pull via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.INFOMANIAK_SSH_HOST }}
+          username: ${{ secrets.INFOMANIAK_SSH_USER }}
+          password: ${{ secrets.INFOMANIAK_SSH_PASS }}
+          port: 22
+          script: |
+            cd /srv/customer/sites/admin.casaminga.com
+            git pull origin main
+            echo "✅ git pull OK"
+
+      # Étape 2 : restart via API Infomaniak → déclenche le build configuré dans le panel
+      - name: Restart Node.js app via Infomaniak API
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.INFOMANIAK_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "https://api.infomaniak.com/1/hosting/522382/nodejs/56239/restart"
+          echo "✅ Restart déclenché"
