@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -10,13 +11,18 @@ import { createClient } from "@/lib/supabase/client";
 
 const DEMO_SLUG = "bernard-kohn";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const configured = isSupabaseConfigured();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Récupère l'url de redirection après connexion (ex: /dashboard/mon-lieu)
+  const redirectTo = searchParams.get("redirect") ?? null;
+  const authError = searchParams.get("error");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +35,14 @@ export default function LoginPage() {
       setError(error.message);
       return;
     }
-    // Trouver l'org du user et rediriger vers son dashboard
+
+    // Si une URL de redirection est fournie, on l'utilise directement
+    if (redirectTo) {
+      router.push(redirectTo);
+      return;
+    }
+
+    // Sinon, trouver l'org du user et rediriger vers son dashboard
     const userId = data.user?.id;
     if (userId) {
       const { data: membership } = await supabase
@@ -56,6 +69,12 @@ export default function LoginPage() {
           <h1 className="font-heading text-2xl font-bold">Espace équipe</h1>
           <p className="mt-1 text-sm text-muted-foreground">Casa Minga Lieux</p>
         </div>
+
+        {authError === "unauthorized" && (
+          <div className="rounded-xl border border-coral/30 bg-coral/10 p-4 text-sm text-coral-dark">
+            Vous n'êtes pas membre de cet espace. Contactez votre administrateur.
+          </div>
+        )}
 
         {configured ? (
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -91,7 +110,7 @@ export default function LoginPage() {
         ) : (
           <div className="flex flex-col gap-4">
             <div className="rounded-xl border border-golden/40 bg-golden/10 p-4 text-sm text-[#92400e]">
-              <strong>Mode démo.</strong> L’authentification s’active une fois Supabase
+              <strong>Mode démo.</strong> L'authentification s'active une fois Supabase
               configuré (variables <code>.env.local</code>). En attendant, entrez
               directement dans la démo.
             </div>
@@ -99,7 +118,7 @@ export default function LoginPage() {
               asChild
               className="bg-coral text-white hover:bg-coral-dark"
             >
-              <Link href={`/dashboard/${DEMO_SLUG}`}>Entrer dans la démo</Link>
+              <Link href={redirectTo ?? `/dashboard/${DEMO_SLUG}`}>Entrer dans la démo</Link>
             </Button>
           </div>
         )}
@@ -114,10 +133,19 @@ export default function LoginPage() {
             </p>
           )}
           <Link href="/" className="hover:text-coral-dark">
-            ← Retour à l’accueil
+            ← Retour à l'accueil
           </Link>
         </div>
       </Card>
     </main>
+  );
+}
+
+// Suspense requis pour useSearchParams dans un "use client"
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

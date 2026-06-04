@@ -1,6 +1,30 @@
 import Link from "next/link";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
 
 const DEMO_SLUG = "bernard-kohn";
+
+/** Récupère le slug du premier org de l'utilisateur connecté, ou null. */
+async function getUserDashboardSlug(): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("organization_members")
+      .select("organizations(slug)")
+      .eq("user_id", user.id)
+      .eq("status", "actif")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const org = data?.organizations as unknown as { slug: string } | null;
+    return org?.slug ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // ── Helpers ──────────────────────────────────────────────────
 function Eyebrow({ children, variant = "coral" }: { children: React.ReactNode; variant?: "coral" | "mint" | "blue" | "gold" | "white" }) {
@@ -18,7 +42,10 @@ function Eyebrow({ children, variant = "coral" }: { children: React.ReactNode; v
   );
 }
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Vérifie si l'utilisateur est déjà connecté pour adapter la nav
+  const userOrgSlug = await getUserDashboardSlug();
+
   return (
     <main style={{ fontFamily: "'Poppins', sans-serif", background: "#FFFBF0", color: "#2C2C2C" }}>
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -31,8 +58,18 @@ export default function LandingPage() {
             Casa Minga Lieux
           </Link>
           <div className="lp-nav-cta">
-            <Link href="/login" style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#2C2C2C", textDecoration: "none", borderRadius: 100, border: "1.5px solid #E5DDD6", background: "#fff" }}>Connexion</Link>
-            <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>Voir le dashboard démo →</Link>
+            {userOrgSlug ? (
+              /* Utilisateur connecté → bouton retour dashboard */
+              <Link href={`/dashboard/${userOrgSlug}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>
+                Mon dashboard →
+              </Link>
+            ) : (
+              /* Non connecté → liens classiques */
+              <>
+                <Link href="/login" style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#2C2C2C", textDecoration: "none", borderRadius: 100, border: "1.5px solid #E5DDD6", background: "#fff" }}>Connexion</Link>
+                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>Voir le dashboard démo →</Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
