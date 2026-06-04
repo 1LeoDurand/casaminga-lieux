@@ -7,6 +7,7 @@ import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdminEmail } from "@/lib/admin/guard";
+import { getEnabledModules } from "@/lib/modules-data";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -51,7 +52,10 @@ export default async function DashboardLayout({
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const requests = await getRequestsForOrg(organization.id);
+  const [requests, enabledModules] = await Promise.all([
+    getRequestsForOrg(organization.id),
+    getEnabledModules(organization.id),
+  ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   ).length;
@@ -64,6 +68,7 @@ export default async function DashboardLayout({
           orgName={organization.name}
           openRequests={openRequests}
           isDemo={!isSupabaseConfigured()}
+          enabledModules={enabledModules}
         />
       </div>
       <DashboardTopbar orgSlug={organization.slug} />

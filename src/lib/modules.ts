@@ -1,17 +1,22 @@
 /**
- * Cartographie des modules du dashboard, fidèle au prototype Claude Design
- * (Plateforme.html). Groupement de la nav latérale :
- *   Pilotage · Gestion du lieu · Structure · Publication · Système.
+ * Cartographie des modules du dashboard — modules progressifs (F4 UX audit).
+ *
+ * `layer` :
+ *   0 = Socle (toujours actif, non désactivable)
+ *   1 = Activités (activées à la création via profil du lieu)
+ *   2 = Avancé (révélé progressivement par les données)
  *
  * `segment` correspond au sous-chemin /dashboard/[org]/<segment>.
- * `ready`   = module réellement construit (sinon : à venir).
+ * `tableKey` sert à la migration automatique (≥1 ligne → enabled).
  */
 
 export interface ModuleDef {
   key: string;
   label: string;
-  segment: string | null; // null = vue d'ensemble (racine du dashboard)
-  ready: boolean;
+  segment: string | null;
+  layer: 0 | 1 | 2;
+  description?: string;
+  tableKey?: string;       // nom de la table Supabase pour détection auto
 }
 
 export interface ModuleSection {
@@ -23,54 +28,59 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Pilotage",
     modules: [
-      { key: "dashboard", label: "Tableau de bord", segment: null, ready: true },
-      { key: "demandes", label: "Demandes", segment: "demandes", ready: true },
-      { key: "personnes", label: "Personnes", segment: "personnes", ready: true },
-      { key: "taches", label: "Tâches & alertes", segment: "taches", ready: true },
+      { key: "dashboard",  label: "Tableau de bord", segment: null,         layer: 0 },
+      { key: "demandes",   label: "Demandes",         segment: "demandes",   layer: 0, description: "Le pont entre votre site public et votre équipe." },
+      { key: "personnes",  label: "Personnes",        segment: "personnes",  layer: 0, description: "Votre CRM : membres, bénévoles, partenaires." },
+      { key: "taches",     label: "Tâches & alertes", segment: "taches",     layer: 1, tableKey: "tasks",       description: "Suivi des actions et alertes prioritaires." },
     ],
   },
   {
     title: "Gestion du lieu",
     modules: [
-      { key: "communaute", label: "Communauté", segment: "communaute", ready: true },
-      { key: "espaces", label: "Espaces", segment: "espaces", ready: true },
-      { key: "reservations", label: "Réservations", segment: "reservations", ready: true },
-      { key: "residences", label: "Résidences", segment: "residences", ready: true },
-      { key: "artistes", label: "Artistes", segment: "artistes", ready: true },
-      { key: "evenements", label: "Événements", segment: "evenements", ready: true },
+      { key: "communaute",   label: "Communauté",    segment: "communaute",   layer: 1, tableKey: "announcements", description: "Annonces et vie collective." },
+      { key: "espaces",      label: "Espaces",       segment: "espaces",      layer: 1, tableKey: "spaces",         description: "Catalogue des salles et ateliers réservables." },
+      { key: "reservations", label: "Réservations",  segment: "reservations", layer: 1, tableKey: "reservations",   description: "Planification et suivi des créneaux." },
+      { key: "residences",   label: "Résidences",    segment: "residences",   layer: 1, tableKey: "residences",     description: "Accueil d'artistes et de projets." },
+      { key: "artistes",     label: "Artistes",      segment: "artistes",     layer: 1, tableKey: "artists",        description: "Profils et portfolios des artistes accueillis." },
+      { key: "evenements",   label: "Événements",    segment: "evenements",   layer: 1, tableKey: "events",         description: "Ateliers, concerts, AG — visibles sur votre site." },
     ],
   },
   {
     title: "Structure",
     modules: [
-      { key: "adhesions", label: "Adhésions", segment: "adhesions", ready: true },
-      { key: "finances", label: "Finances", segment: "finances", ready: true },
-      { key: "factures", label: "Facturation", segment: "factures", ready: true },
-      { key: "subventions", label: "Subventions", segment: "subventions", ready: true },
-      { key: "caisse", label: "Caisse certifiée", segment: "caisse", ready: true },
-      { key: "documents", label: "Documents", segment: "documents", ready: true },
-      { key: "gouvernance", label: "Gouvernance", segment: "gouvernance", ready: true },
-      { key: "impact", label: "Impact", segment: "impact", ready: true },
-      { key: "partenaires", label: "Partenaires", segment: "partenaires", ready: true },
+      { key: "adhesions",   label: "Adhésions",       segment: "adhesions",   layer: 1, tableKey: "membership_campaigns", description: "Campagnes et tunnel d'adhésion en ligne." },
+      { key: "finances",    label: "Finances",         segment: "finances",    layer: 1, tableKey: "transactions",          description: "Transactions, solde, export comptable." },
+      { key: "factures",    label: "Facturation",      segment: "factures",    layer: 1, tableKey: "invoices",               description: "Factures, avoirs, coworking." },
+      { key: "subventions", label: "Subventions",      segment: "subventions", layer: 2, tableKey: "grants",                 description: "Suivi des demandes et conventions." },
+      { key: "caisse",      label: "Caisse certifiée", segment: "caisse",      layer: 2, tableKey: "cash_entries",           description: "Encaissements conformes NF525." },
+      { key: "documents",   label: "Documents",        segment: "documents",   layer: 1, tableKey: "documents",              description: "Stockage et signatures en ligne." },
+      { key: "gouvernance", label: "Gouvernance",      segment: "gouvernance", layer: 2, tableKey: "governance_meetings",    description: "CA, AG, mandats, votes." },
+      { key: "impact",      label: "Impact",           segment: "impact",      layer: 2, tableKey: "impact_indicators",      description: "Indicateurs et tableaux de bord." },
+      { key: "partenaires", label: "Partenaires",      segment: "partenaires", layer: 2, tableKey: "partners",               description: "Réseau et conventions partenaires." },
     ],
   },
   {
     title: "Publication",
     modules: [
-      { key: "site-public", label: "Site public", segment: "site-public", ready: true },
-      { key: "communication", label: "Communication", segment: "communication", ready: true },
-      { key: "mediatheque", label: "Médiathèque", segment: "mediatheque", ready: true },
+      { key: "site-public",   label: "Site public",   segment: "site-public",   layer: 0, description: "Votre vitrine publique." },
+      { key: "communication", label: "Communication", segment: "communication", layer: 1, tableKey: "newsletters",  description: "Newsletter et bulletins de l'équipe." },
+      { key: "mediatheque",   label: "Médiathèque",   segment: "mediatheque",   layer: 1, tableKey: "media_files", description: "Photos, vidéos, ressources." },
     ],
   },
   {
     title: "Système",
     modules: [
-      { key: "automatisations", label: "Automatisations", segment: "automatisations", ready: true },
-      { key: "equipe", label: "Équipe", segment: "equipe", ready: true },
-      { key: "parametres", label: "Paramètres", segment: "parametres", ready: true },
+      { key: "automatisations", label: "Automatisations", segment: "automatisations", layer: 2, description: "Règles et déclencheurs automatiques." },
+      { key: "equipe",          label: "Équipe",           segment: "equipe",          layer: 0, description: "Membres de l'équipe et accès." },
+      { key: "parametres",      label: "Paramètres",       segment: "parametres",      layer: 0, description: "Configuration de votre lieu." },
     ],
   },
 ];
+
+/** Clés des modules socle (couche 0) — toujours visibles. */
+export const SOCLE_KEYS = new Set<string>(
+  MODULE_SECTIONS.flatMap((s) => s.modules.filter((m) => m.layer === 0).map((m) => m.key))
+);
 
 /** Libellé de page d'après le segment d'URL (pour le titre de la topbar). */
 export function moduleLabelForSegment(segment: string | null): string {
@@ -79,5 +89,6 @@ export function moduleLabelForSegment(segment: string | null): string {
     const found = section.modules.find((m) => m.segment === segment);
     if (found) return found.label;
   }
+  if (segment === "modules") return "Modules";
   return "Tableau de bord";
 }

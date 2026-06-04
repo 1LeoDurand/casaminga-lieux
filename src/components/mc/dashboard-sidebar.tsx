@@ -29,7 +29,9 @@ import {
   UsersRound,
   Settings,
   Lock,
+  LayoutGrid,
   ChevronDown,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import { MODULE_SECTIONS, type ModuleDef, type ModuleSection } from "@/lib/modules";
@@ -59,6 +61,7 @@ const ICONS: Record<string, LucideIcon> = {
   automatisations: Zap,
   equipe: UsersRound,
   parametres: Settings,
+  modules: LayoutGrid,
 };
 
 function hrefFor(orgSlug: string, m: ModuleDef) {
@@ -93,35 +96,13 @@ function NavItem({
   const active = pathname === href;
   const Icon = ICONS[m.key] ?? LayoutDashboard;
 
-  const inner = (
-    <>
+  return (
+    <Link href={href} className={`mc-nav-item ${active ? "active" : ""}`}>
       <span className="mc-nav-icon">
         <Icon className="size-[17px]" strokeWidth={1.7} />
       </span>
       <span className="truncate">{m.label}</span>
       {badge ? <span className="mc-nav-badge danger">{badge}</span> : null}
-    </>
-  );
-
-  if (!m.ready) {
-    return (
-      <button
-        type="button"
-        className="mc-nav-item w-[calc(100%-16px)]"
-        onClick={() =>
-          toast.info(`Module « ${m.label} » — bientôt disponible`, {
-            description: "Il sera branché à Supabase dans une prochaine version.",
-          })
-        }
-      >
-        {inner}
-      </button>
-    );
-  }
-
-  return (
-    <Link href={href} className={`mc-nav-item ${active ? "active" : ""}`}>
-      {inner}
     </Link>
   );
 }
@@ -133,16 +114,26 @@ function SectionGroup({
   open,
   onToggle,
   openRequests,
+  enabledModules,
 }: {
   section: ModuleSection;
   orgSlug: string;
   open: boolean;
   onToggle: () => void;
   openRequests: number;
+  enabledModules: Set<string>;
 }) {
+  // Filtrer les modules selon ce qui est activé pour cet org
+  const visibleModules = section.modules.filter(
+    (m) => m.layer === 0 || enabledModules.has(m.key)
+  );
+
+  // Section vide après filtrage → on ne l'affiche pas
+  if (visibleModules.length === 0) return null;
+
   // Badge agrégé remonté sur l'en-tête quand le groupe est replié
   const groupBadge =
-    !open && openRequests > 0 && section.modules.some((m) => m.key === "demandes")
+    !open && openRequests > 0 && visibleModules.some((m) => m.key === "demandes")
       ? openRequests
       : 0;
 
@@ -167,7 +158,7 @@ function SectionGroup({
         className="overflow-hidden transition-[max-height] duration-200 ease-out"
         style={{ maxHeight: open ? "500px" : "0px" }}
       >
-        {section.modules.map((m) => (
+        {visibleModules.map((m) => (
           <NavItem
             key={m.key}
             orgSlug={orgSlug}
@@ -187,6 +178,7 @@ export function DashboardSidebar({
   userName = "Léo",
   userRole = "Coordination",
   isDemo = false,
+  enabledModules = new Set<string>(),
 }: {
   orgSlug: string;
   orgName: string;
@@ -194,6 +186,7 @@ export function DashboardSidebar({
   userName?: string;
   userRole?: string;
   isDemo?: boolean;
+  enabledModules?: Set<string>;
 }) {
   const initials = userName
     .split(" ")
@@ -250,8 +243,22 @@ export function DashboardSidebar({
               setOpenSection((cur) => (cur === section.title ? null : section.title))
             }
             openRequests={openRequests}
+            enabledModules={enabledModules}
           />
         ))}
+
+        {/* ＋ Modules — accès à la gestion des modules actifs */}
+        <div className="mt-2 border-t border-white/[0.07] px-3 pt-3">
+          <Link
+            href={`/dashboard/${orgSlug}/modules`}
+            className="mc-nav-item text-white/40 hover:text-white/70"
+          >
+            <span className="mc-nav-icon">
+              <Plus className="size-[15px]" strokeWidth={2} />
+            </span>
+            <span className="truncate text-[12px]">Modules</span>
+          </Link>
+        </div>
       </nav>
 
       {/* Pied : utilisateur */}
