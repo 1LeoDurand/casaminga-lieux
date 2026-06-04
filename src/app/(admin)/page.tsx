@@ -640,7 +640,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ══ 8. CTA FINAL ══ */}
-      <section style={{ background: "linear-gradient(135deg, #2C2C2C, #1a1a1a)", color: "#fff", padding: "clamp(64px,9vw,108px) 0", position: "relative", overflow: "hidden" }}>
+      <section id="contact" style={{ background: "linear-gradient(135deg, #2C2C2C, #1a1a1a)", color: "#fff", padding: "clamp(64px,9vw,108px) 0", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px", position: "relative", zIndex: 1 }}>
           <div className="lp-cta-grid">
             <div>
@@ -709,8 +709,8 @@ export default async function LandingPage() {
               <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>Inspiré de l'ESS. Made with ❤ pour les communs.</p>
             </div>
             {[
-              { title: "Produit", links: [["Modules", "#"], ["Dashboard démo", `/dashboard/${DEMO_SLUG}`], ["Site public généré", `/site/${DEMO_SLUG}`]] },
-              { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Notre approche", "/approche"], ["Pour qui", "#pour-qui"]] },
+              { title: "Produit", links: [["Notre approche", "/approche"], ["Dashboard démo", `/dashboard/${DEMO_SLUG}`], ["Site public généré", `/site/${DEMO_SLUG}`]] },
+              { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Notre approche", "/approche"], ["S'inscrire", "/signup"]] },
               { title: "Contact", links: [["Demander une démo", "#contact"], ["Se connecter", "/login"], ["contact@casaminga.com", "mailto:contact@casaminga.com"]] },
             ].map((col) => (
               <div key={col.title}>
