@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { humanError } from "@/lib/errors";
 import { generateMonthlyInvoices } from "@/lib/invoicing/generate";
 
 type Result = { ok: boolean; error?: string; summary?: string };
@@ -55,7 +56,7 @@ export async function saveSubscription(
     ? await supabase.from("coworking_subscriptions").update(payload).eq("id", id)
     : await supabase.from("coworking_subscriptions").insert(payload);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures/coworking`);
   return { ok: true };
 }
@@ -64,7 +65,7 @@ export async function deleteSubscription(orgSlug: string, id: string): Promise<R
   if (!isSupabaseConfigured()) return NOT_CONFIGURED;
   const supabase = await createClient();
   const { error } = await supabase.from("coworking_subscriptions").delete().eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures/coworking`);
   return { ok: true };
 }

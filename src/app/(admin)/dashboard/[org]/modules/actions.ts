@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCLE_KEYS } from "@/lib/modules";
+import { humanError } from "@/lib/errors";
 
 export async function toggleModuleAction(
   orgId: string,
@@ -32,7 +33,7 @@ export async function toggleModuleAction(
       { onConflict: "organization_id,module_key" }
     );
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/modules`);
   revalidatePath(`/dashboard/${orgSlug}`);
   return { ok: true };

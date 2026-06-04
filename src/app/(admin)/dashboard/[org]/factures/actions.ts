@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { computeTotals, type InvoiceLine, type InvoiceSettings } from "@/lib/invoicing/types";
+import { humanError } from "@/lib/errors";
 
 type ActionResult = { ok: boolean; error?: string; id?: string };
 
@@ -43,7 +44,7 @@ export async function saveInvoiceSettings(
     { onConflict: "organization_id" }
   );
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures/parametres`);
   return { ok: true };
 }
@@ -94,7 +95,7 @@ export async function saveInvoice(
       return { ok: false, error: "Une facture émise ne peut plus être modifiée." };
     }
     const { error } = await supabase.from("invoices").update(payload).eq("id", id);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: humanError(error) };
     revalidatePath(`/dashboard/${orgSlug}/factures`);
     return { ok: true, id };
   }
@@ -104,7 +105,7 @@ export async function saveInvoice(
     .insert({ ...payload, status: "brouillon", source: "manuelle" })
     .select("id")
     .single();
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id: data.id };
 }
@@ -137,7 +138,7 @@ export async function emitInvoice(
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
 
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id };
@@ -279,7 +280,7 @@ export async function setInvoiceStatus(
     .from("invoices")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id };
 }

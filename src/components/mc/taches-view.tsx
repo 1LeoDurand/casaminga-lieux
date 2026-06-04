@@ -16,6 +16,29 @@ function toggle<T>(set: Set<T>, v: T): Set<T> {
 }
 function PrioBadge({ p }: { p: string }) { return <span className={`mc-badge ${priorityBadge(p)}`}>{priorityLabel(p)}</span>; }
 
+function TaskCard({ t, personName, onSelect }: {
+  t: Task;
+  personName: (id: string | null) => string | null;
+  onSelect: (id: string) => void;
+}) {
+  const overdue = isOverdue(t.due_date, t.status);
+  return (
+    <button type="button" className={`mc-resa-card ${t.status === "fait" ? "is-annulee" : ""}`} onClick={() => onSelect(t.id)}>
+      <div className="flex items-start justify-between gap-2">
+        <span className="mc-resa-title">{t.title}</span>
+        <PrioBadge p={t.priority} />
+      </div>
+      <div className="mc-resa-line">
+        <Calendar className="size-3.5" />
+        <span className={overdue ? "font-semibold text-coral-dark" : ""}>{formatDue(t.due_date)}</span>
+        {overdue ? <AlertTriangle className="size-3 text-coral-dark" /> : null}
+      </div>
+      {personName(t.assignee_id) ? <div className="mc-resa-line"><User className="size-3.5" /> {personName(t.assignee_id)}</div> : null}
+      {t.related_label ? <span className="mc-tag">{t.related_label}</span> : null}
+    </button>
+  );
+}
+
 export function TachesView({ tasks, persons, orgSlug, orgId }: {
   tasks: Task[]; persons: Person[]; orgSlug: string; orgId: string;
 }) {
@@ -78,25 +101,6 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
     });
   }
 
-  function Card({ t }: { t: Task }) {
-    const overdue = isOverdue(t.due_date, t.status);
-    return (
-      <button type="button" className={`mc-resa-card ${t.status === "fait" ? "is-annulee" : ""}`} onClick={() => setSelectedId(t.id)}>
-        <div className="flex items-start justify-between gap-2">
-          <span className="mc-resa-title">{t.title}</span>
-          <PrioBadge p={t.priority} />
-        </div>
-        <div className="mc-resa-line">
-          <Calendar className="size-3.5" />
-          <span className={overdue ? "font-semibold text-coral-dark" : ""}>{formatDue(t.due_date)}</span>
-          {overdue ? <AlertTriangle className="size-3 text-coral-dark" /> : null}
-        </div>
-        {personName(t.assignee_id) ? <div className="mc-resa-line"><User className="size-3.5" /> {personName(t.assignee_id)}</div> : null}
-        {t.related_label ? <span className="mc-tag">{t.related_label}</span> : null}
-      </button>
-    );
-  }
-
   if (tasks.length === 0) return (
     <>
       <div className="mc-card"><div className="mc-empty">
@@ -138,7 +142,7 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
               <span className="mc-kanban-title"><span className="mc-kanban-dot" style={{ background: taskStatusDot(status) }} />{taskStatusLabel(status)}</span>
               <span className="mc-kanban-count">{byStatus[status].length}</span>
             </div>
-            {byStatus[status].length === 0 ? <div className="mc-kanban-empty">—</div> : byStatus[status].map((t) => <Card key={t.id} t={t} />)}
+            {byStatus[status].length === 0 ? <div className="mc-kanban-empty">—</div> : byStatus[status].map((t) => <TaskCard key={t.id} t={t} personName={personName} onSelect={setSelectedId} />)}
           </div>
         ))}
       </div>

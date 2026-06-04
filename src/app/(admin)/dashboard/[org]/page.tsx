@@ -232,7 +232,7 @@ export default async function DashboardOverview({
             </div>
             <span className="mc-dash-pill">
               <span className="mc-dash-pulse" />
-              Mis à jour à l&apos;instant
+              {new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
           <DashboardToday orgSlug={organization.slug} items={todayItems} />

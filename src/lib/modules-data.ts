@@ -1,7 +1,8 @@
-import "server-only";
+﻿import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCLE_KEYS, MODULE_SECTIONS } from "@/lib/modules";
+import { humanError } from "@/lib/errors";
 
 /**
  * Retourne l'ensemble des module_key activés pour une organisation.
@@ -63,6 +64,6 @@ export async function setModuleEnabled(
       { onConflict: "organization_id,module_key" }
     );
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   return { ok: true };
 }

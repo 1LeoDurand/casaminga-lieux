@@ -46,6 +46,43 @@ import type { Person, Reservation, ReservationStatus, Space } from "@/lib/types"
 
 type View = "kanban" | "agenda" | "table";
 
+// ── ResaCard hors du composant parent (évite le re-montage à chaque render) ──
+function ResaCard({
+  r, withStatus, personName, spaceName, onSelect,
+}: {
+  r: Reservation;
+  withStatus?: boolean;
+  personName: (id: string | null) => string | null;
+  spaceName: (id: string) => string;
+  onSelect: (id: string) => void;
+}) {
+  const pName = personName(r.person_id);
+  return (
+    <button
+      type="button"
+      className={`mc-resa-card ${r.status === "annulee" ? "is-annulee" : ""}`}
+      onClick={() => onSelect(r.id)}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="mc-resa-title">{r.title || spaceName(r.space_id)}</span>
+        {withStatus ? <StatusBadge status={r.status} /> : null}
+      </div>
+      <div className="mc-resa-line">
+        <Clock className="size-3.5" /> {formatRange(r.start_at, r.end_at)}
+      </div>
+      <div className="mc-resa-line">
+        <MapPin className="size-3.5" /> {spaceName(r.space_id)}
+        {pName ? (
+          <>
+            <span className="mc-resa-dot" />
+            <User className="size-3.5" /> {pName}
+          </>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
 const COLUMN_DOT: Record<ReservationStatus, string> = {
   demandee: "#d98a1f",
   confirmee: "#2f8a4c",
@@ -242,35 +279,6 @@ export function ReservationsView({
     });
   }
 
-  // Carte de créneau réutilisable (kanban + agenda)
-  function ResaCard({ r, withStatus }: { r: Reservation; withStatus?: boolean }) {
-    const pName = personName(r.person_id);
-    return (
-      <button
-        type="button"
-        className={`mc-resa-card ${r.status === "annulee" ? "is-annulee" : ""}`}
-        onClick={() => setSelectedId(r.id)}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <span className="mc-resa-title">{r.title || spaceName(r.space_id)}</span>
-          {withStatus ? <StatusBadge status={r.status} /> : null}
-        </div>
-        <div className="mc-resa-line">
-          <Clock className="size-3.5" /> {formatRange(r.start_at, r.end_at)}
-        </div>
-        <div className="mc-resa-line">
-          <MapPin className="size-3.5" /> {spaceName(r.space_id)}
-          {pName ? (
-            <>
-              <span className="mc-resa-dot" />
-              <User className="size-3.5" /> {pName}
-            </>
-          ) : null}
-        </div>
-      </button>
-    );
-  }
-
   // État vide global
   if (reservations.length === 0) {
     return (
@@ -451,7 +459,7 @@ export function ReservationsView({
               {byStatus[status].length === 0 ? (
                 <div className="mc-kanban-empty">—</div>
               ) : (
-                byStatus[status].map((r) => <ResaCard key={r.id} r={r} />)
+                byStatus[status].map((r) => <ResaCard key={r.id} r={r} personName={personName} spaceName={spaceName} onSelect={setSelectedId} />)
               )}
             </div>
           ))}
@@ -473,7 +481,7 @@ export function ReservationsView({
                 </div>
                 <div className="mc-agenda-items">
                   {items.map((r) => (
-                    <ResaCard key={r.id} r={r} withStatus />
+                    <ResaCard key={r.id} r={r} withStatus personName={personName} spaceName={spaceName} onSelect={setSelectedId} />
                   ))}
                 </div>
               </div>

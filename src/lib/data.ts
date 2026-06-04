@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { humanError } from "@/lib/errors";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
   addDemoApplication,
@@ -1313,7 +1314,7 @@ export async function addCashEntry(input: CashEntryInput): Promise<{ ok: boolean
     p_operator: input.operator,
     p_source_ref: input.source_ref ?? null,
   });
-  if (error) { console.error("addCashEntry:", error); return { ok: false, error: error.message }; }
+  if (error) { console.error("addCashEntry:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };
 }
 
@@ -1333,7 +1334,7 @@ export async function voidCashEntry(orgId: string, target: CashEntry, operator: 
     p_is_void: true,
     p_voids_seq: target.seq,
   });
-  if (error) { console.error("voidCashEntry:", error); return { ok: false, error: error.message }; }
+  if (error) { console.error("voidCashEntry:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };
 }
 
@@ -1341,7 +1342,7 @@ export async function closeCashRegister(orgId: string, type: CashClosureType, op
   if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré" };
   const supabase = await createClient();
   const { error } = await supabase.rpc("cash_close", { p_org: orgId, p_type: type, p_operator: operator });
-  if (error) { console.error("closeCashRegister:", error); return { ok: false, error: error.message }; }
+  if (error) { console.error("closeCashRegister:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };
 }
 

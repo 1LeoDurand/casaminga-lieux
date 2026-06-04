@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { humanError } from "@/lib/errors";
 
 type Result = { ok: boolean; error?: string };
 
@@ -23,7 +24,7 @@ export async function saveGrantProfile(
     { organization_id: orgId, ...input, updated_at: new Date().toISOString() },
     { onConflict: "organization_id" }
   );
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/subventions/veille`);
   return { ok: true };
 }
