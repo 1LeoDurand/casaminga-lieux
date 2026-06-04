@@ -372,6 +372,90 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ══ 5c. SITE PUBLIC ══ */}
+      <section style={{ background: "linear-gradient(180deg, #FFFBF0, #FFF5EC)", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          {/* En-tête centré */}
+          <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 720, marginLeft: "auto", marginRight: "auto" }}>
+            <Eyebrow>Spécificité Casa Minga Lieux</Eyebrow>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,44px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 16 }}>
+              Votre site public devient<br />une vraie porte d'entrée.
+            </h2>
+            <p style={{ fontSize: "clamp(14px,1.5vw,17px)", color: "#6B6460", lineHeight: 1.75 }}>
+              Pas un simple site vitrine isolé : un site relié à la plateforme. Ce qui se passe à l'intérieur du lieu se voit immédiatement à l'extérieur. Et ce qui arrive de l'extérieur entre directement dans le pilotage.
+            </p>
+          </div>
+
+          {/* Mockup deux colonnes reliées */}
+          <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 32 }} className="lp-sitepub-grid">
+            {/* Colonne gauche — Site public */}
+            <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                <span style={{ background: "#FFF0EB", border: "1.5px solid #FFB4A2", color: "#E8714D", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 100 }}>Site public</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C" }}>casaminga.com/bernard-kohn</span>
+              </div>
+              {[
+                { ic: "📅", bold: "Atelier sérigraphie · 12 juin", sub: "Événement publié · inscriptions ouvertes" },
+                { ic: "📋", bold: "Formulaire de location de salle", sub: "Reçu par le site public" },
+                { ic: "🎨", bold: "Résidence Léa Bertin", sub: "Mise en valeur dans la page Résidences" },
+                { ic: "🤝", bold: "Partenaires affichés", sub: "Mairie 20e · Fondation Habitat" },
+              ].map((row, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 12px", borderRadius: 12, border: "1px solid #F0EBE3", marginBottom: i < 3 ? 8 : 0, background: "#FAFAF7" }}>
+                  <span style={{ fontSize: 17, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{row.ic}</span>
+                  <span style={{ fontSize: 13, color: "#2C2C2C" }}>
+                    <strong style={{ fontWeight: 700 }}>{row.bold}</strong>
+                    <span style={{ color: "#6B6460", fontWeight: 400 }}>{row.sub}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Bouton ↔ centré entre les deux colonnes */}
+            <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 2, width: 40, height: 40, borderRadius: "50%", background: "#FF8A65", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18, boxShadow: "0 4px 16px rgba(255,138,101,0.35)" }} className="lp-sitepub-arrow">
+              ↔
+            </div>
+
+            {/* Colonne droite — Plateforme */}
+            <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                <span style={{ background: "#E8F3E9", border: "1.5px solid #bfe0c5", color: "#2f8a4c", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 100 }}>Plateforme</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C" }}>Pilotage interne</span>
+              </div>
+              {[
+                { ic: "📣", bold: "Événement créé + publié", sub: "Apparaît instantanément côté site" },
+                { ic: "📥", bold: "Demande de salle reçue", sub: "Fiche auto · à traiter sous 36h" },
+                { ic: "📊", bold: "Bilan résidence à compléter", sub: "Tâche auto-générée" },
+                { ic: "🖼", bold: "Médias partagés", sub: "Réutilisés pour site + presse + bilan" },
+              ].map((row, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 12px", borderRadius: 12, border: "1px solid #F0EBE3", marginBottom: i < 3 ? 8 : 0, background: "#FAFAF7" }}>
+                  <span style={{ fontSize: 17, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{row.ic}</span>
+                  <span style={{ fontSize: 13, color: "#2C2C2C" }}>
+                    <strong style={{ fontWeight: 700 }}>{row.bold}</strong>
+                    <span style={{ color: "#6B6460", fontWeight: 400 }}>{row.sub}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chips flux en bas */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+            {[
+              { from: "SITE", to: "PLATEFORME", fromColor: "#E8714D", toColor: "#2f8a4c", text: "Une demande devient une fiche" },
+              { from: "PLATEFORME", to: "SITE", fromColor: "#2f8a4c", toColor: "#E8714D", text: "Un événement devient public" },
+              { from: "PLATEFORME", to: "SITE", fromColor: "#2f8a4c", toColor: "#E8714D", text: "Les médias circulent sans double saisie", both: true },
+            ].map((chip, i) => (
+              <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 100, padding: "9px 16px", fontSize: 12.5 }}>
+                <span style={{ background: chip.from === "SITE" ? "#FFF0EB" : "#E8F3E9", color: chip.fromColor, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 100, border: `1px solid ${chip.fromColor}44` }}>{chip.from}</span>
+                <span style={{ color: "#6B6460" }}>{chip.both ? "↔" : "→"}</span>
+                <span style={{ background: chip.to === "SITE" ? "#FFF0EB" : "#E8F3E9", color: chip.toColor, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 100, border: `1px solid ${chip.toColor}44` }}>{chip.to}</span>
+                <span style={{ color: "#2C2C2C", fontWeight: 500 }}>{chip.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ══ 6. POUR QUI ══ */}
       <section style={{ padding: "clamp(64px,9vw,108px) 0" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
