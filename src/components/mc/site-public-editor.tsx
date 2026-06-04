@@ -5,7 +5,9 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Save, Eye, Plus, X, Globe, FileText } from "lucide-react";
 import { ImageUploader } from "@/components/mc/image-uploader";
+import { CopyUrlBar } from "@/components/mc/copy-url-bar";
 import { saveSiteConfig } from "@/app/(admin)/dashboard/[org]/site-public/actions";
+import { publicSiteUrl, publicSiteUrlDisplay } from "@/lib/site-public/url";
 import type { SitePublicConfig, SiteContent } from "@/lib/site-public/types";
 
 const inputCls =
@@ -93,6 +95,14 @@ export function SitePublicEditor({
           )}
         </div>
       </div>
+
+      {/* URL publique à partager */}
+      {status === "publie" ? (
+        <div>
+          <label className="mb-1.5 block text-[12px] font-semibold text-ink">Adresse publique de votre site</label>
+          <CopyUrlBar url={publicSiteUrl(orgSlug)} display={publicSiteUrlDisplay(orgSlug)} />
+        </div>
+      ) : null}
 
       {/* Hero */}
       <Card title="En-tête (hero)" icon={<FileText className="size-4 text-coral" />}>
