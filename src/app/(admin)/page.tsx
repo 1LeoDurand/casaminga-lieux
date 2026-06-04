@@ -710,7 +710,7 @@ export default async function LandingPage() {
             </div>
             {[
               { title: "Produit", links: [["Modules", "#"], ["Dashboard démo", `/dashboard/${DEMO_SLUG}`], ["Site public généré", `/site/${DEMO_SLUG}`]] },
-              { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Pour qui", "#pour-qui"], ["Approche", "#difference"]] },
+              { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Notre approche", "/approche"], ["Pour qui", "#pour-qui"]] },
               { title: "Contact", links: [["Demander une démo", "#contact"], ["Se connecter", "/login"], ["contact@casaminga.com", "mailto:contact@casaminga.com"]] },
             ].map((col) => (
               <div key={col.title}>
