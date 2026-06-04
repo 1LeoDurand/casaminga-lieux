@@ -172,17 +172,28 @@ export default async function LandingPage() {
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               </div>
-              {/* Placeholders 2 restants */}
-              {[
-                { tag: "Détail", ic: "📐", l: "Détail architectural" },
-                { tag: "Ambiance", ic: "🌿", l: "Jardin / lumière" },
-              ].map((p, i) => (
-                <div key={i} style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 18, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, textAlign: "center", position: "relative" }}>
-                  <span style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>{p.tag}</span>
-                  <div style={{ fontSize: 22, marginBottom: 8 }}>{p.ic}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#2C2C2C" }}>{p.l}</div>
-                </div>
-              ))}
+              {/* Détail architectural */}
+              <div style={{ borderRadius: 18, overflow: "hidden", position: "relative" }}>
+                <span style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>Détail</span>
+                <Image
+                  src="/images/detail-architectural.webp"
+                  alt="Détail architectural — Bernard Kohn"
+                  width={800}
+                  height={1067}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              {/* Jardin / lumière */}
+              <div style={{ borderRadius: 18, overflow: "hidden", position: "relative" }}>
+                <span style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>Ambiance</span>
+                <Image
+                  src="/images/jardin.webp"
+                  alt="Jardin et lumière — Bernard Kohn"
+                  width={800}
+                  height={600}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
             </div>
           </div>
         </div>
