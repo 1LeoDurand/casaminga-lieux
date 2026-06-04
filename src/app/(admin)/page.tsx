@@ -164,7 +164,6 @@ export default async function LandingPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 10, height: "clamp(340px,50vw,460px)" }}>
               {/* Façade — image réelle, span 2 lignes */}
               <div style={{ borderRadius: 18, overflow: "hidden", gridRow: "1 / span 2", position: "relative" }}>
-                <span style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>Bernard Kohn</span>
                 <Image
                   src="/images/facade.webp"
                   alt="Façade extérieure — Bernard Kohn"
@@ -175,7 +174,6 @@ export default async function LandingPage() {
               </div>
               {/* Détail architectural */}
               <div style={{ borderRadius: 18, overflow: "hidden", position: "relative" }}>
-                <span style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>Détail</span>
                 <Image
                   src="/images/detail-architectural.webp"
                   alt="Détail architectural — Bernard Kohn"
@@ -186,7 +184,6 @@ export default async function LandingPage() {
               </div>
               {/* Jardin / lumière */}
               <div style={{ borderRadius: 18, overflow: "hidden", position: "relative" }}>
-                <span style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>Ambiance</span>
                 <Image
                   src="/images/jardin.webp"
                   alt="Jardin et lumière — Bernard Kohn"
@@ -208,18 +205,24 @@ export default async function LandingPage() {
             {/* Colonne gauche — photos */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {/* Portrait principal */}
-              <div style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 20, padding: "28px 20px", textAlign: "center", position: "relative" }}>
-                <span style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.95)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 8px", borderRadius: 100 }}>Portrait</span>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F0EBE3", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 22 }}>👤</div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#2C2C2C", marginBottom: 4 }}>Photo Léo · portrait</div>
-                <div style={{ fontSize: 11.5, color: "#6B6460", lineHeight: 1.6 }}>4:5 · 800×1000<br />regard caméra, ambiance lieu</div>
+              <div style={{ borderRadius: 20, overflow: "hidden" }}>
+                <Image
+                  src="/images/leo-portrait.webp"
+                  alt="Léo — coordinateur du tiers-lieu Bernard Kohn"
+                  width={800}
+                  height={1422}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
               </div>
-              {/* Photo contexte (facultatif) */}
-              <div style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 20, padding: "22px 20px", textAlign: "center", position: "relative", opacity: 0.75 }}>
-                <span style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.95)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 8px", borderRadius: 100 }}>En contexte</span>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#F0EBE3", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px", fontSize: 18 }}>📍</div>
-                <div style={{ fontWeight: 700, fontSize: 12.5, color: "#2C2C2C", marginBottom: 3 }}>Photo Léo dans le tiers-lieu<br /><span style={{ fontStyle: "italic", fontWeight: 400 }}>(facultatif)</span></div>
-                <div style={{ fontSize: 11, color: "#6B6460" }}>4:3 · ≈ 1000×750</div>
+              {/* Photo Léo dans le tiers-lieu */}
+              <div style={{ borderRadius: 20, overflow: "hidden" }}>
+                <Image
+                  src="/images/leo-tiers-lieu.webp"
+                  alt="Léo dans le tiers-lieu Bernard Kohn"
+                  width={900}
+                  height={676}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
               </div>
             </div>
 
@@ -269,18 +272,24 @@ export default async function LandingPage() {
                 num: "01",
                 h: "Accueillir",
                 p: "Demandes entrantes, personnes, résidences, événements : tous les flux d'arrivée passent par un même point d'entrée.",
-                ex: "Une demande arrive depuis le site — fiche créée — assignée à Mathilde — réponse en 36h chrono.",
+                ex: "Une demande arrive depuis le site → fiche créée → assignée à Mathilde → réponse en 36h chrono.",
                 color: "#E8714D",
                 iconBg: "#FFF0EB",
+                numColor: "#F4B49E",
+                exBg: "#FFF5F2",
+                exBorder: "#F4C4B4",
               },
               {
                 Icon: LayoutGrid,
                 num: "02",
                 h: "Organiser",
                 p: "Espaces, réservations, documents, tâches : le quotidien opérationnel sans réinventer Excel à chaque fois.",
-                ex: "L'atelier sérigraphie réservé pour vendredi — le contrat se génère seul — le client reçoit le PDF en 1 clic.",
+                ex: "L'atelier sérigraphie réservé pour vendredi → le contrat se génère seul → le client reçoit le PDF en 1 clic.",
                 color: "#6B7280",
                 iconBg: "#F4F4F5",
+                numColor: "#C5C5CA",
+                exBg: "#F4F4F6",
+                exBorder: "#DDDDE2",
               },
               {
                 Icon: BarChart2,
@@ -288,35 +297,41 @@ export default async function LandingPage() {
                 h: "Piloter",
                 p: "Finances, impact, partenaires, gouvernance : la vue stratégique du lieu, pour l'équipe et les financeurs.",
                 ex: "À la fin du trimestre, le rapport d'impact se construit tout seul à partir des données déjà saisies.",
-                color: "#0e7a6e",
-                iconBg: "#E8F3F1",
+                color: "#2a7d6e",
+                iconBg: "#E6F4F1",
+                numColor: "#9ACFC6",
+                exBg: "#EDF7F5",
+                exBorder: "#B8DDD8",
               },
               {
                 Icon: Send,
                 num: "04",
                 h: "Publier",
                 p: "Site public, formulaires, communication, médiathèque : ce que le lieu produit sort à l'extérieur sans double saisie.",
-                ex: "Un événement créé en interne — automatiquement visible sur le site et l'agenda public.",
+                ex: "Un événement créé en interne → automatiquement visible sur le site et l'agenda public.",
                 color: "#E8714D",
                 iconBg: "#FFF0EB",
+                numColor: "#F4B49E",
+                exBg: "#FFF5F2",
+                exBorder: "#F4C4B4",
               },
             ] as const).map((p) => (
-              <div key={p.h} style={{ background: "#fff", border: "1.5px solid #ECDDD6", borderRadius: 20, padding: "26px 26px 22px", display: "flex", flexDirection: "column", boxShadow: "0 2px 16px rgba(44,44,44,0.06)" }}>
+              <div key={p.h} style={{ background: "#fff", border: "1.5px solid #EDE8E3", borderRadius: 20, padding: "26px 26px 22px", display: "flex", flexDirection: "column", boxShadow: "0 2px 14px rgba(44,44,44,0.05)" }}>
                 {/* Ligne haut : icône + numéro */}
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: p.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <p.Icon size={20} color={p.color} strokeWidth={1.8} />
                   </div>
-                  <span style={{ fontSize: 34, fontWeight: 800, color: "#E8E3DD", lineHeight: 1, letterSpacing: -1 }}>{p.num}</span>
+                  <span style={{ fontSize: 34, fontWeight: 800, color: p.numColor, lineHeight: 1, letterSpacing: -1 }}>{p.num}</span>
                 </div>
                 {/* Titre */}
                 <h3 style={{ fontSize: 20, fontWeight: 700, color: "#2C2C2C", marginBottom: 8 }}>{p.h}</h3>
-                {/* Description colorée */}
+                {/* Description */}
                 <p style={{ fontSize: 13.5, color: p.color, lineHeight: 1.65, marginBottom: 16, flexGrow: 1 }}>{p.p}</p>
-                {/* Bloc exemple */}
-                <div style={{ background: "#F7F5F2", border: "1px solid #EBE6E0", borderRadius: 12, padding: "10px 14px" }}>
-                  <span style={{ display: "inline-block", background: "#fff", border: "1px solid #DDD8D2", color: "#6B6460", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", padding: "2px 8px", borderRadius: 100, marginBottom: 7 }}>Exemple</span>
-                  <p style={{ fontSize: 13, color: "#6B6460", lineHeight: 1.6, margin: 0 }}>{p.ex}</p>
+                {/* Bloc exemple — badge inline à gauche */}
+                <div style={{ background: p.exBg, border: `1px solid ${p.exBorder}`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ flexShrink: 0, background: "#fff", border: `1px solid ${p.exBorder}`, color: p.color, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", padding: "3px 8px", borderRadius: 100, marginTop: 1 }}>Exemple</span>
+                  <p style={{ fontSize: 13, color: p.color, lineHeight: 1.55, margin: 0 }}>{p.ex}</p>
                 </div>
               </div>
             ))}
@@ -695,7 +710,7 @@ export default async function LandingPage() {
             </div>
             {[
               { title: "Produit", links: [["Modules", "#"], ["Dashboard démo", `/dashboard/${DEMO_SLUG}`], ["Site public généré", `/site/${DEMO_SLUG}`]] },
-              { title: "Le projet", links: [["Histoire", "#histoire"], ["Pour qui", "#pour-qui"], ["Approche", "#difference"]] },
+              { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Pour qui", "#pour-qui"], ["Approche", "#difference"]] },
               { title: "Contact", links: [["Demander une démo", "#contact"], ["Se connecter", "/login"], ["contact@casaminga.com", "mailto:contact@casaminga.com"]] },
             ].map((col) => (
               <div key={col.title}>

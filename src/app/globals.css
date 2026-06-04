@@ -887,6 +887,19 @@ select.mc-input { cursor: pointer; }
 .lp-impact-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px,5vw,64px); align-items: center; }
 .lp-sitepub-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .lp-founder-grid  { display: grid; grid-template-columns: 0.7fr 1.3fr; gap: clamp(32px,5vw,72px); align-items: start; }
+
+/* ── Page Histoire ── */
+.hist-two-col       { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(32px,5vw,72px); align-items: center; }
+.hist-two-col-rev   { grid-template-columns: 0.85fr 1.15fr; align-items: start; }
+.hist-tools-grid    { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.hist-values-grid   { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+
+@media (max-width: 860px) {
+  .hist-two-col     { grid-template-columns: 1fr; }
+  .hist-two-col-rev { grid-template-columns: 1fr; }
+  .hist-tools-grid  { grid-template-columns: 1fr; }
+  .hist-values-grid { grid-template-columns: 1fr; }
+}
 .lp-pillars-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .lp-product-grid { display: grid; grid-template-columns: 0.95fr 1.2fr; gap: clamp(28px,5vw,56px); align-items: center; }
 .lp-pourqui-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
