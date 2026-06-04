@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -98,11 +99,16 @@ export default async function LandingPage() {
                 ))}
               </div>
             </div>
-            {/* Photo slot hero */}
+            {/* Photo hero */}
             <div className="lp-photo-hero">
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 14, boxShadow: "0 4px 14px rgba(255,138,101,0.1)" }}>📸</div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C", marginBottom: 4 }}>Photo Hero — vie du lieu</div>
-              <div style={{ fontSize: 11.5, color: "#6B6460" }}>4:5 portrait · espace vivant · architecture</div>
+              <Image
+                src="/images/hero-lieu.webp"
+                alt="Vie du lieu — espace collectif Casa Minga"
+                width={900}
+                height={1350}
+                priority
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
             </div>
           </div>
         </div>
@@ -155,12 +161,23 @@ export default async function LandingPage() {
             </div>
             {/* Photo grid 2×2 */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 10, height: "clamp(340px,50vw,460px)" }}>
+              {/* Façade — image réelle, span 2 lignes */}
+              <div style={{ borderRadius: 18, overflow: "hidden", gridRow: "1 / span 2", position: "relative" }}>
+                <span style={{ position: "absolute", top: 10, right: 10, zIndex: 2, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>Bernard Kohn</span>
+                <Image
+                  src="/images/facade.webp"
+                  alt="Façade extérieure — Bernard Kohn"
+                  width={800}
+                  height={1067}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              {/* Placeholders 2 restants */}
               {[
-                { tag: "Bernard Kohn", ic: "🏛", l: "Façade / extérieur", row: "1 / span 2" },
-                { tag: "Détail", ic: "📐", l: "Détail architectural", row: undefined },
-                { tag: "Ambiance", ic: "🌿", l: "Jardin / lumière", row: undefined },
+                { tag: "Détail", ic: "📐", l: "Détail architectural" },
+                { tag: "Ambiance", ic: "🌿", l: "Jardin / lumière" },
               ].map((p, i) => (
-                <div key={i} style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 18, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, textAlign: "center", gridRow: p.row, position: "relative" }}>
+                <div key={i} style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 18, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, textAlign: "center", position: "relative" }}>
                   <span style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.92)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "3px 8px", borderRadius: 100 }}>{p.tag}</span>
                   <div style={{ fontSize: 22, marginBottom: 8 }}>{p.ic}</div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#2C2C2C" }}>{p.l}</div>

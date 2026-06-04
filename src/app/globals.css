@@ -894,16 +894,19 @@ select.mc-input { cursor: pointer; }
 /* Nav CTA : masqué sous 960px */
 .lp-nav-cta { display: flex; gap: 10px; align-items: center; }
 
-/* Photo hero : aspect-ratio adaptatif */
+/* Photo hero : conteneur image réelle */
 .lp-photo-hero {
-  background: linear-gradient(135deg, #FFF0EB, #FFFBF0);
-  border: 2px dashed #FFB4A2;
   border-radius: 28px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 32px 24px;
-  color: #E8714D; text-align: center;
-  aspect-ratio: 4/5; min-height: 420px;
+  overflow: hidden;
+  aspect-ratio: 4/5;
+  min-height: 420px;
+  position: relative;
+}
+.lp-photo-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* ── Tablette 980px ── */
