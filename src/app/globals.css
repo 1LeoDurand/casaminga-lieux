@@ -886,6 +886,7 @@ select.mc-input { cursor: pointer; }
 .lp-story-grid   { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(28px,5vw,64px); align-items: center; }
 .lp-impact-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px,5vw,64px); align-items: center; }
 .lp-sitepub-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.lp-founder-grid  { display: grid; grid-template-columns: 0.7fr 1.3fr; gap: clamp(32px,5vw,72px); align-items: start; }
 .lp-pillars-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .lp-product-grid { display: grid; grid-template-columns: 0.95fr 1.2fr; gap: clamp(28px,5vw,56px); align-items: center; }
 .lp-pourqui-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -928,8 +929,9 @@ select.mc-input { cursor: pointer; }
   .lp-hero-grid    { grid-template-columns: 1fr; gap: 36px; }
   .lp-story-grid   { grid-template-columns: 1fr; }
   .lp-impact-grid  { grid-template-columns: 1fr; }
-  .lp-sitepub-grid { grid-template-columns: 1fr; }
+  .lp-sitepub-grid  { grid-template-columns: 1fr; }
   .lp-sitepub-arrow { display: none; }
+  .lp-founder-grid  { grid-template-columns: 1fr; }
   .lp-cta-grid     { grid-template-columns: 1fr; }
   .lp-footer-grid { grid-template-columns: 1fr 1fr; }
   .lp-photo-hero { aspect-ratio: 4/3; min-height: clamp(200px, 50vw, 300px); }

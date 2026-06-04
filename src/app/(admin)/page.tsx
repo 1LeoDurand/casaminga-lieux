@@ -199,6 +199,57 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ══ 3b. FONDATEUR ══ */}
+      <section style={{ background: "#fff", padding: "clamp(56px,8vw,96px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-founder-grid">
+
+            {/* Colonne gauche — photos */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Portrait principal */}
+              <div style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 20, padding: "28px 20px", textAlign: "center", position: "relative" }}>
+                <span style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.95)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 8px", borderRadius: 100 }}>Portrait</span>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F0EBE3", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: 22 }}>👤</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#2C2C2C", marginBottom: 4 }}>Photo Léo · portrait</div>
+                <div style={{ fontSize: 11.5, color: "#6B6460", lineHeight: 1.6 }}>4:5 · 800×1000<br />regard caméra, ambiance lieu</div>
+              </div>
+              {/* Photo contexte (facultatif) */}
+              <div style={{ background: "linear-gradient(135deg,#FFF0EB,#FFFBF0)", border: "2px dashed #FFB4A2", borderRadius: 20, padding: "22px 20px", textAlign: "center", position: "relative", opacity: 0.75 }}>
+                <span style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.95)", border: "1px solid #FFB4A2", color: "#E8714D", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 8px", borderRadius: 100 }}>En contexte</span>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#F0EBE3", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px", fontSize: 18 }}>📍</div>
+                <div style={{ fontWeight: 700, fontSize: 12.5, color: "#2C2C2C", marginBottom: 3 }}>Photo Léo dans le tiers-lieu<br /><span style={{ fontStyle: "italic", fontWeight: 400 }}>(facultatif)</span></div>
+                <div style={{ fontSize: 11, color: "#6B6460" }}>4:3 · ≈ 1000×750</div>
+              </div>
+            </div>
+
+            {/* Colonne droite — texte */}
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Eyebrow variant="blue">Pensé par un coordinateur de tiers-lieu</Eyebrow>
+              <h2 style={{ fontSize: "clamp(30px,3.8vw,46px)", fontWeight: 800, lineHeight: 1.08, marginBottom: 20 }}>
+                Quelqu'un qui connaît le métier.
+              </h2>
+              <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", color: "#2C2C2C", lineHeight: 1.75, marginBottom: 16 }}>
+                <strong>Léo</strong> coordonne au quotidien le tiers-lieu Bernard Kohn.{" "}
+                <span style={{ color: "#E8714D" }}>Indépendant en communication</span>, il accompagne par ailleurs des lieux et des structures associatives sur la structuration,{" "}
+                <span style={{ color: "#E8714D" }}>la communication</span>,{" "}
+                <span style={{ color: "#E8714D" }}>le numérique</span>, les sites web, les événements, la gouvernance et la documentation.
+              </p>
+              <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", lineHeight: 1.75, marginBottom: 24 }}>
+                <span style={{ color: "#E8714D" }}>Casa Minga Lieux est né d'une posture précise :{" "}</span>
+                <strong>créer des outils sobres, utiles, ancrés dans le terrain.</strong>{" "}
+                Pas une vitrine technologique. Un outil pour les gens qui font tourner les lieux.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {["Coordination de tiers-lieu", "Communication associative", "Sites web", "Gouvernance partagée", "Outils numériques sobres"].map((tag) => (
+                  <span key={tag} style={{ background: "#fff", border: "1.5px solid #E5DDD6", color: "#2C2C2C", fontSize: 12.5, fontWeight: 500, padding: "6px 14px", borderRadius: 100 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* ══ 4. PROMESSE — 4 piliers ══ */}
       <section style={{ padding: "clamp(64px,9vw,108px) 0" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
