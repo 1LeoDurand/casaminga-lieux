@@ -6,7 +6,11 @@ import {
   getOrganizationBySlug,
   getPublicSiteBySlug,
   getTiersForCampaign,
+  getEvenementsForOrg,
 } from "@/lib/data";
+import { getPublishedSiteContent } from "@/lib/site-public/data";
+import { mergeSiteContent } from "@/lib/site-public/types";
+import { eventTypeLabel, eventRange, isFuture } from "@/lib/events-meta";
 import { PublicContactForm } from "@/components/mc/public-contact-form";
 
 export async function generateMetadata({
@@ -33,130 +37,171 @@ export default async function PublicSitePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  // Parallélisation des deux appels DB indépendants
   const [site, org] = await Promise.all([
     getPublicSiteBySlug(slug),
     getOrganizationBySlug(slug),
   ]);
   if (!site || !org) notFound();
 
-  const campaigns = (await getMembershipCampaignsForOrg(org.id)).filter(
-    (c) => c.status === "publie"
-  );
+  const [content, campaignsRaw, eventsRaw] = await Promise.all([
+    getPublishedSiteContent(org.id),
+    getMembershipCampaignsForOrg(org.id),
+    getEvenementsForOrg(org.id),
+  ]);
+  const c = mergeSiteContent(content);
+  const accent = c.accent_color || "#FF8A65";
 
-  // Fetch tiers for each campaign to display price range (UX-004)
+  const campaigns = campaignsRaw.filter((cp) => cp.status === "publie");
+  const events = eventsRaw
+    .filter((e) => e.status === "publie" && isFuture(e.start_at))
+    .sort((a, b) => a.start_at.localeCompare(b.start_at))
+    .slice(0, 6);
+
   const campaignTiers = await Promise.all(
-    campaigns.map(async (c) => ({ id: c.id, tiers: await getTiersForCampaign(c.id) }))
+    campaigns.map(async (cp) => ({ id: cp.id, tiers: await getTiersForCampaign(cp.id) }))
   );
   const tiersMap = Object.fromEntries(campaignTiers.map((ct) => [ct.id, ct.tiers]));
 
+  const showLieu = c.sections.lieu && (c.about_text || c.gallery_urls.length > 0);
+  const showAgenda = c.sections.agenda;
+  const showAdherer = c.sections.adherer && campaigns.length > 0;
+  const showContact = c.sections.contact;
+
   return (
     <main className="min-h-screen bg-cream">
-      {/* Nav — UX-023: min-w-0 truncate sur le nom + shrink-0 sur la nav */}
+      {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border/60 bg-cream/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-4">
           <span className="min-w-0 truncate font-heading text-lg font-extrabold">{org.name}</span>
           <nav className="ml-auto flex shrink-0 items-center gap-4 text-sm text-muted-foreground">
-            <a href="#lieu" className="hover:text-coral-dark">Le lieu</a>
-            <a href="#agenda" className="hover:text-coral-dark">Agenda</a>
-            {campaigns.length > 0 ? <a href="#adherer" className="font-semibold text-coral-dark">Adhérer</a> : null}
-            <a href="#contact" className="hover:text-coral-dark">Contact</a>
+            {showLieu ? <a href="#lieu" className="hover:opacity-70">Le lieu</a> : null}
+            {showAgenda ? <a href="#agenda" className="hover:opacity-70">Agenda</a> : null}
+            {showAdherer ? <a href="#adherer" className="font-semibold" style={{ color: accent }}>Adhérer</a> : null}
+            {showContact ? <a href="#contact" className="hover:opacity-70">Contact</a> : null}
           </nav>
         </div>
       </header>
 
-      {/* Hero — UX-024: text-3xl md:text-4xl */}
+      {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 pb-8 pt-14">
         <div className="grid items-center gap-8 md:grid-cols-2">
           <div>
-            <span className="inline-block rounded-full border border-coral/30 bg-peach-pale px-3 py-1 text-xs font-semibold uppercase tracking-wide text-coral-dark">
+            <span className="inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
+              style={{ background: `${accent}1a`, color: accent }}>
               {org.structure}
             </span>
             <h1 className="mt-4 font-heading text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
               {org.name}
             </h1>
-            <p className="mt-4 text-lg text-muted-foreground">{org.description}</p>
+            {c.hero_tagline ? (
+              <p className="mt-4 text-lg text-muted-foreground">{c.hero_tagline}</p>
+            ) : org.description ? (
+              <p className="mt-4 text-lg text-muted-foreground">{org.description}</p>
+            ) : null}
             {(org.address || org.hours) ? (
               <p className="mt-4 text-sm text-muted-foreground">
                 {[org.address, org.hours].filter(Boolean).join(" · ")}
               </p>
             ) : null}
-            {/* CTA héro mobile — UX-025 */}
-            {campaigns.length > 0 ? (
-              <a
-                href="#adherer"
-                className="mt-6 inline-flex items-center rounded-lg bg-coral px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark md:hidden"
-              >
+            {showAdherer ? (
+              <a href="#adherer"
+                className="mt-6 inline-flex items-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 md:hidden"
+                style={{ background: accent }}>
                 Adhérer au lieu
               </a>
             ) : null}
           </div>
-          {/* UX-002 + UX-025: hero photo sans label dev, aspect-video sur mobile */}
-          <div className="aspect-video rounded-2xl bg-gradient-to-br from-peach-pale to-peach md:aspect-[4/3]" />
+          {/* Photo hero réelle ou dégradé */}
+          {c.hero_image_url ? (
+            <div className="aspect-video overflow-hidden rounded-2xl md:aspect-[4/3]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={c.hero_image_url} alt={org.name} className="size-full object-cover" />
+            </div>
+          ) : (
+            <div className="aspect-video rounded-2xl bg-gradient-to-br from-peach-pale to-peach md:aspect-[4/3]" />
+          )}
         </div>
       </section>
 
-      {/* Le lieu — UX-002 + UX-025: galerie masquée si pas de vraies photos */}
-      <section id="lieu" className="mx-auto max-w-5xl px-6 py-10">
-        <h2 className="font-heading text-xl font-bold md:text-2xl">Découvrir le lieu</h2>
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {/* UX-002: gradient neutre, pas de label dev */}
-          <div className="aspect-video rounded-2xl bg-gradient-to-br from-peach-pale to-peach" />
-          <div className="aspect-video rounded-2xl bg-gradient-to-br from-peach to-peach-pale" />
-          <div className="col-span-2 aspect-video rounded-2xl bg-gradient-to-br from-cream to-peach sm:col-span-1" />
-        </div>
-      </section>
+      {/* Le lieu */}
+      {showLieu ? (
+        <section id="lieu" className="mx-auto max-w-5xl px-6 py-10">
+          <h2 className="font-heading text-xl font-bold md:text-2xl">{c.about_title}</h2>
+          {c.about_text ? (
+            <div className="mt-4 max-w-3xl space-y-3 text-[15px] leading-relaxed text-muted-foreground">
+              {c.about_text.split("\n").filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+            </div>
+          ) : null}
+          {c.gallery_urls.length > 0 ? (
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {c.gallery_urls.map((url, i) => (
+                <div key={i} className="aspect-video overflow-hidden rounded-2xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="size-full object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
-      {/* Agenda — UX-001 + UX-030: message public */}
-      <section id="agenda" className="mx-auto max-w-5xl px-6 py-10">
-        <h2 className="font-heading text-xl font-bold md:text-2xl">Agenda</h2>
-        <p className="mt-2 text-muted-foreground">
-          Les événements à venir du lieu apparaîtront ici.
-        </p>
-        <div className="mt-6 rounded-2xl border border-dashed border-peach bg-peach-pale/40 px-6 py-10 text-center text-sm text-muted-foreground">
-          Pas d&apos;événement prévu pour l&apos;instant — revenez bientôt&nbsp;!
-        </div>
-      </section>
+      {/* Agenda — vrais événements publiés */}
+      {showAgenda ? (
+        <section id="agenda" className="mx-auto max-w-5xl px-6 py-10">
+          <h2 className="font-heading text-xl font-bold md:text-2xl">Agenda</h2>
+          {events.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-peach bg-peach-pale/40 px-6 py-10 text-center text-sm text-muted-foreground">
+              Pas d&apos;événement prévu pour l&apos;instant — revenez bientôt&nbsp;!
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {events.map((e) => (
+                <div key={e.id} className="flex flex-col rounded-2xl border border-border/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+                  <span className="inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+                    style={{ background: `${accent}1a`, color: accent }}>
+                    {eventTypeLabel(e.type)}
+                  </span>
+                  <h3 className="mt-2.5 font-heading text-[15px] font-bold leading-snug">{e.title}</h3>
+                  <p className="mt-1.5 text-[13px] text-muted-foreground">{eventRange(e.start_at, e.end_at)}</p>
+                  {e.description ? <p className="mt-2 line-clamp-2 text-[12.5px] text-muted-foreground">{e.description}</p> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
-      {/* Adhérer — UX-004: fourchette de prix */}
-      {campaigns.length > 0 ? (
+      {/* Adhérer */}
+      {showAdherer ? (
         <section id="adherer" className="mx-auto max-w-5xl px-6 py-10">
           <h2 className="font-heading text-xl font-bold md:text-2xl">Adhérer</h2>
           <p className="mt-2 text-muted-foreground">
             Rejoignez le lieu et soutenez le projet. L&apos;adhésion se fait en ligne, en quelques minutes.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {campaigns.map((c) => {
-              const tiers = tiersMap[c.id] ?? [];
+            {campaigns.map((cp) => {
+              const tiers = tiersMap[cp.id] ?? [];
               const amounts = tiers.map((t) => Number(t.amount));
               const minAmt = amounts.length ? Math.min(...amounts) : null;
               const maxAmt = amounts.length ? Math.max(...amounts) : null;
               const priceRange =
-                amounts.length === 0
-                  ? null
-                  : minAmt === maxAmt
-                  ? fmt(minAmt!)
-                  : `de ${fmt(minAmt!)} à ${fmt(maxAmt!)}`;
+                amounts.length === 0 ? null
+                : minAmt === maxAmt ? fmt(minAmt!)
+                : `de ${fmt(minAmt!)} à ${fmt(maxAmt!)}`;
               return (
-                <div
-                  key={c.id}
-                  className="flex flex-col rounded-2xl border border-border/60 bg-white p-6 shadow-[0_4px_20px_rgba(255,138,101,0.07)]"
-                >
-                  <h3 className="font-heading text-lg font-bold">{c.title}</h3>
-                  {c.description ? (
-                    <p className="mt-2 flex-1 text-sm text-muted-foreground">{c.description}</p>
-                  ) : (
-                    <div className="flex-1" />
-                  )}
+                <div key={cp.id} className="flex flex-col rounded-2xl border border-border/60 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+                  <h3 className="font-heading text-lg font-bold">{cp.title}</h3>
+                  {cp.description ? (
+                    <p className="mt-2 flex-1 text-sm text-muted-foreground">{cp.description}</p>
+                  ) : <div className="flex-1" />}
                   {priceRange ? (
-                    <p className="mt-3 text-[13px] font-semibold text-coral-dark">
+                    <p className="mt-3 text-[13px] font-semibold" style={{ color: accent }}>
                       {tiers.length} formule{tiers.length > 1 ? "s" : ""} · {priceRange}
                     </p>
                   ) : null}
-                  <Link
-                    href={`/site/${org.slug}/adhesion/${c.slug}`}
-                    className="mt-4 inline-flex items-center justify-center rounded-lg bg-coral px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-coral-dark"
-                  >
+                  <Link href={`/site/${org.slug}/adhesion/${cp.slug}`}
+                    className="mt-4 inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ background: accent }}>
                     Adhérer
                   </Link>
                 </div>
@@ -167,24 +212,22 @@ export default async function PublicSitePage({
       ) : null}
 
       {/* Contact */}
-      <section id="contact" className="mx-auto max-w-5xl px-6 py-10">
-        <div className="rounded-3xl bg-white p-8 shadow-[0_4px_20px_rgba(255,138,101,0.07)]">
-          <h2 className="font-heading text-xl font-bold md:text-2xl">Nous écrire</h2>
-          <p className="mt-2 text-muted-foreground">
-            Résidence, réservation, partenariat, bénévolat… Votre message arrive
-            directement à l&apos;équipe.
-          </p>
-          <PublicContactForm slug={slug} />
-        </div>
-      </section>
+      {showContact ? (
+        <section id="contact" className="mx-auto max-w-5xl px-6 py-10">
+          <div className="rounded-3xl bg-white p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+            <h2 className="font-heading text-xl font-bold md:text-2xl">Nous écrire</h2>
+            <p className="mt-2 text-muted-foreground">
+              Résidence, réservation, partenariat, bénévolat… Votre message arrive directement à l&apos;équipe.
+            </p>
+            <PublicContactForm slug={slug} />
+          </div>
+        </section>
+      ) : null}
 
-      {/* Footer — UX-003: lien admin retiré */}
+      {/* Footer */}
       <footer className="border-t border-border/60">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-6 py-8 text-center text-sm text-muted-foreground">
-          <span>
-            Site généré avec{" "}
-            <span className="font-semibold text-foreground">Casa Minga Lieux</span>
-          </span>
+          <span>Site généré avec <span className="font-semibold text-foreground">Casa Minga Lieux</span></span>
         </div>
       </footer>
     </main>
