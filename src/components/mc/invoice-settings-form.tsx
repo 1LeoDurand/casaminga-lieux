@@ -10,6 +10,15 @@ const input =
   "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/15";
 const labelCls = "mb-1 block text-[12px] font-semibold text-ink";
 
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-white p-5">
+      <h3 className="mb-4 font-heading text-base font-bold text-ink">{title}</h3>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
 export function InvoiceSettingsForm({
   settings,
   orgId,
@@ -37,15 +46,6 @@ export function InvoiceSettingsForm({
       if (res.ok) toast.success("Paramètres enregistrés ✓");
       else toast.error(res.error ?? "Erreur");
     });
-  }
-
-  function Section({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-      <div className="rounded-2xl border border-border bg-white p-5">
-        <h3 className="mb-4 font-heading text-base font-bold text-ink">{title}</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
-      </div>
-    );
   }
 
   return (
