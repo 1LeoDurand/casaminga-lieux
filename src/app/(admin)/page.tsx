@@ -13,6 +13,8 @@ async function getUserDashboardSlug(): Promise<string | null> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
+
+    // 1. Cherche via organization_members (cas normal)
     const { data } = await supabase
       .from("organization_members")
       .select("organizations(slug)")
@@ -22,7 +24,21 @@ async function getUserDashboardSlug(): Promise<string | null> {
       .limit(1)
       .maybeSingle();
     const org = data?.organizations as unknown as { slug: string } | null;
-    return org?.slug ?? null;
+    if (org?.slug) return org.slug;
+
+    // 2. Fallback super-admin : pas dans organization_members → première org disponible
+    const { isSuperAdminEmail } = await import("@/lib/admin/guard");
+    if (isSuperAdminEmail(user.email)) {
+      const { data: firstOrg } = await supabase
+        .from("organizations")
+        .select("slug")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return firstOrg?.slug ?? null;
+    }
+
+    return null;
   } catch {
     return null;
   }
