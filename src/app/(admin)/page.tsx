@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Inbox, LayoutGrid, BarChart2, Send } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -255,21 +256,68 @@ export default async function LandingPage() {
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
           <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 780, marginLeft: "auto", marginRight: "auto" }}>
             <Eyebrow>La promesse</Eyebrow>
-            <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700 }}>Tout relier, sans tout complexifier.</h2>
-            <p style={{ color: "#6B6460", marginTop: 14, lineHeight: 1.7 }}>Quatre piliers qui couvrent la vie réelle d'un tiers-lieu. Pas plus, pas moins.</p>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,44px)", fontWeight: 800, marginBottom: 14 }}>Tout relier, sans tout complexifier.</h2>
+            <p style={{ color: "#6B6460", lineHeight: 1.75 }}>
+              Quatre piliers qui couvrent la vie réelle d'un tiers-lieu. Pas plus, pas moins.<br />
+              Chaque module est pensé pour s'effacer derrière l'action concrète.
+            </p>
           </div>
           <div className="lp-pillars-grid">
-            {[
-              { ic: "🤝", h: "Accueillir", p: "Demandes entrantes, personnes, résidences, événements : tous les flux d'arrivée passent par un même point d'entrée.", ex: "Une demande arrive depuis le site → fiche créée → assignée → réponse en 36h chrono.", color: "#FF8A65" },
-              { ic: "⚙", h: "Organiser", p: "Espaces, réservations, documents, tâches : le quotidien opérationnel sans réinventer Excel à chaque fois.", ex: "L'atelier sérigraphie réservé pour vendredi → le contrat se génère seul → PDF envoyé en 1 clic.", color: "#6E7A93" },
-              { ic: "📊", h: "Piloter", p: "Finances, impact, partenaires, gouvernance : la vue stratégique du lieu, pour l'équipe et les financeurs.", ex: "À la fin du trimestre, le rapport d'impact se construit tout seul à partir des données déjà saisies.", color: "#2f8a4c" },
-              { ic: "📣", h: "Publier", p: "Site public, formulaires, communication, médiathèque : ce que le lieu produit sort à l'extérieur sans double saisie.", ex: "Un événement créé en interne → automatiquement visible sur le site et l'agenda public.", color: "#c2410c" },
-            ].map((p) => (
-              <div key={p.h} style={{ background: "#fff", border: "1px solid #E5DDD6", borderTop: `5px solid ${p.color}`, borderRadius: 18, padding: "28px 26px", display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: `${p.color}22`, border: `1px solid ${p.color}55`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{p.ic}</div>
-                <h3 style={{ fontSize: 19, fontWeight: 700 }}>{p.h}</h3>
-                <p style={{ fontSize: 14, color: "#6B6460", lineHeight: 1.6 }}>{p.p}</p>
-                <div style={{ fontSize: 12.5, color: "#E8714D", background: "#FFF0EB", border: "1px dashed #FFB4A2", padding: "9px 12px", borderRadius: 11, lineHeight: 1.55 }}><strong>Exemple : </strong>{p.ex}</div>
+            {([
+              {
+                Icon: Inbox,
+                num: "01",
+                h: "Accueillir",
+                p: "Demandes entrantes, personnes, résidences, événements : tous les flux d'arrivée passent par un même point d'entrée.",
+                ex: "Une demande arrive depuis le site — fiche créée — assignée à Mathilde — réponse en 36h chrono.",
+                color: "#E8714D",
+                iconBg: "#FFF0EB",
+              },
+              {
+                Icon: LayoutGrid,
+                num: "02",
+                h: "Organiser",
+                p: "Espaces, réservations, documents, tâches : le quotidien opérationnel sans réinventer Excel à chaque fois.",
+                ex: "L'atelier sérigraphie réservé pour vendredi — le contrat se génère seul — le client reçoit le PDF en 1 clic.",
+                color: "#6B7280",
+                iconBg: "#F4F4F5",
+              },
+              {
+                Icon: BarChart2,
+                num: "03",
+                h: "Piloter",
+                p: "Finances, impact, partenaires, gouvernance : la vue stratégique du lieu, pour l'équipe et les financeurs.",
+                ex: "À la fin du trimestre, le rapport d'impact se construit tout seul à partir des données déjà saisies.",
+                color: "#0e7a6e",
+                iconBg: "#E8F3F1",
+              },
+              {
+                Icon: Send,
+                num: "04",
+                h: "Publier",
+                p: "Site public, formulaires, communication, médiathèque : ce que le lieu produit sort à l'extérieur sans double saisie.",
+                ex: "Un événement créé en interne — automatiquement visible sur le site et l'agenda public.",
+                color: "#E8714D",
+                iconBg: "#FFF0EB",
+              },
+            ] as const).map((p) => (
+              <div key={p.h} style={{ background: "#fff", border: "1.5px solid #ECDDD6", borderRadius: 20, padding: "26px 26px 22px", display: "flex", flexDirection: "column", boxShadow: "0 2px 16px rgba(44,44,44,0.06)" }}>
+                {/* Ligne haut : icône + numéro */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: p.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <p.Icon size={20} color={p.color} strokeWidth={1.8} />
+                  </div>
+                  <span style={{ fontSize: 34, fontWeight: 800, color: "#E8E3DD", lineHeight: 1, letterSpacing: -1 }}>{p.num}</span>
+                </div>
+                {/* Titre */}
+                <h3 style={{ fontSize: 20, fontWeight: 700, color: "#2C2C2C", marginBottom: 8 }}>{p.h}</h3>
+                {/* Description colorée */}
+                <p style={{ fontSize: 13.5, color: p.color, lineHeight: 1.65, marginBottom: 16, flexGrow: 1 }}>{p.p}</p>
+                {/* Bloc exemple */}
+                <div style={{ background: "#F7F5F2", border: "1px solid #EBE6E0", borderRadius: 12, padding: "10px 14px" }}>
+                  <span style={{ display: "inline-block", background: "#fff", border: "1px solid #DDD8D2", color: "#6B6460", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", padding: "2px 8px", borderRadius: 100, marginBottom: 7 }}>Exemple</span>
+                  <p style={{ fontSize: 13, color: "#6B6460", lineHeight: 1.6, margin: 0 }}>{p.ex}</p>
+                </div>
               </div>
             ))}
           </div>
