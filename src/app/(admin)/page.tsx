@@ -725,6 +725,11 @@ export default async function LandingPage() {
           </div>
           <div style={{ marginTop: 44, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", fontSize: 11.5, color: "rgba(255,255,255,0.5)" }}>
             <span>© {new Date().getFullYear()} Casa Minga Lieux — Pensé depuis le terrain · Sobriété numérique</span>
+            <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+              <Link href="/mentions-legales" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Mentions légales</Link>
+              <Link href="/confidentialite" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Confidentialité</Link>
+              <Link href="/cgu" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>CGU</Link>
+            </div>
           </div>
         </div>
       </footer>
