@@ -43,7 +43,7 @@ export default function MentionsLegalesPage() {
           Micro-entrepreneur / Auto-entrepreneur<br />
           {/* ⚠️ À COMPLÉTER : adresse, SIRET */}
           Adresse : <em>[À compléter]</em><br />
-          SIRET : <em>[À compléter]</em><br />
+          SIRET : 824 430 375 00025<br />
           Email : <a href="mailto:contact@casaminga.com" style={{ color: "#E8714D" }}>contact@casaminga.com</a>
           </p>
         </Section>
