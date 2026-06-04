@@ -1,13 +1,17 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
 import { HelloAssoSettings } from "@/components/mc/helloasso-settings";
+import { RibSettingsCard } from "@/components/mc/rib-settings-card";
 import { getOrganizationBySlug } from "@/lib/data";
+import { getInvoiceSettings } from "@/lib/invoicing/data";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ParametresPage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
+
+  const invoiceSettings = await getInvoiceSettings(organization.id);
 
   // Récupérer les infos HelloAsso (champs sensibles)
   let haOrgSlug: string | null = null;
@@ -72,6 +76,15 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
             <p className="text-sm leading-relaxed text-warmgray">{organization.description}</p>
           </div>
         ) : null}
+
+        {/* RIB / Coordonnées bancaires */}
+        <div className="md:col-span-2">
+          <RibSettingsCard
+            settings={invoiceSettings}
+            orgId={organization.id}
+            orgSlug={organization.slug}
+          />
+        </div>
 
         {/* Intégrations */}
         <div className="md:col-span-2">
