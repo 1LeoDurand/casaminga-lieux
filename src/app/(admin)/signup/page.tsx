@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { ORG_ARCHETYPES } from "@/lib/modules";
 import { createOrgAndMember } from "./actions";
 
 function slugify(s: string) {
@@ -14,32 +15,36 @@ function slugify(s: string) {
 
 const inputCls = "w-full rounded-xl border border-[#E5DDD6] bg-[#FAFAF7] px-4 py-3 text-sm text-[#2C2C2C] placeholder:text-[#9C9590] outline-none transition focus:border-[#FF8A65] focus:ring-2 focus:ring-[#FF8A65]/20";
 
+const STEPS = [
+  { key: "account",   label: "Votre compte" },
+  { key: "lieu",      label: "Votre lieu" },
+  { key: "archetype", label: "Personnaliser" },
+] as const;
+type StepKey = typeof STEPS[number]["key"];
+
 export default function SignupPage() {
   const router = useRouter();
   const configured = isSupabaseConfigured();
 
-  const [step, setStep] = useState<"account" | "lieu">("account");
+  const [step, setStep] = useState<StepKey>("account");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [lieuName, setLieuName] = useState("");
   const [lieuStructure, setLieuStructure] = useState("association");
   const [lieuEmail, setLieuEmail] = useState("");
+  const [orgType, setOrgType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   const slug = slugify(lieuName);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (step === "account") { setStep("lieu"); return; }
-
+  async function submit(selectedOrgType: string) {
     setError(null);
     setLoading(true);
     const supabase = createClient();
 
-    // 1. Créer le compte Supabase Auth
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email,
       password,
@@ -50,39 +55,41 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
-    const userId = authData.user.id;
 
-    // 2. Créer l'organisation + lier le membre via server action (service_role)
     const { orgSlug, error: orgError } = await createOrgAndMember({
-      userId,
+      userId: authData.user.id,
       slug,
       name: lieuName,
       structure: lieuStructure,
       email: lieuEmail || email,
+      orgType: selectedOrgType,
     });
 
+    setLoading(false);
     if (orgError || !orgSlug) {
       setError(orgError ?? "Le lieu n'a pas pu être créé.");
-      setLoading(false);
       return;
     }
-
-    setLoading(false);
     setDone(true);
-
-    // Si session directe (email non vérifié requis = false), on redirige
     if (authData.session) {
       setTimeout(() => router.push(`/dashboard/${orgSlug}`), 1500);
     }
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step === "account") { setStep("lieu"); return; }
+    if (step === "lieu") { setStep("archetype"); return; }
+  }
+
+  // ── États terminaux ───────────────────────────────────────────────────────
   if (!configured) {
     return (
       <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFBF0", fontFamily: "'Poppins', sans-serif", padding: "24px" }}>
         <div style={{ maxWidth: 420, width: "100%", background: "#fff", borderRadius: 20, padding: "36px 32px", boxShadow: "0 8px 32px rgba(28,28,28,0.08)", border: "1px solid #E5DDD6", textAlign: "center" }}>
           <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 52, height: 52, objectFit: "contain", margin: "0 auto 12px" }} />
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Supabase non configuré</h2>
-          <p style={{ fontSize: 14, color: "#6B6460", marginBottom: 20, lineHeight: 1.6 }}>L'inscription nécessite que les variables d'environnement Supabase soient configurées sur le serveur.</p>
+          <p style={{ fontSize: 14, color: "#6B6460", marginBottom: 20, lineHeight: 1.6 }}>L'inscription nécessite que les variables d'environnement Supabase soient configurées.</p>
           <Link href="/login" style={{ display: "block", padding: "12px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>← Retour à la connexion</Link>
         </div>
       </main>
@@ -105,6 +112,87 @@ export default function SignupPage() {
     );
   }
 
+  // ── Étape archétype (hors formulaire classique) ────────────────────────
+  if (step === "archetype") {
+    return (
+      <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFBF0", fontFamily: "'Poppins', sans-serif", padding: "24px" }}>
+        <div style={{ maxWidth: 580, width: "100%" }}>
+          {/* Logo */}
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#2C2C2C", fontWeight: 800, fontSize: 18 }}>
+              <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 40, height: 40, objectFit: "contain" }} />
+              Casa Minga Lieux
+            </Link>
+          </div>
+
+          <div style={{ background: "#fff", borderRadius: 20, padding: "36px 32px", boxShadow: "0 8px 32px rgba(28,28,28,0.08)", border: "1px solid #E5DDD6" }}>
+            {/* Stepper */}
+            <Stepper current="archetype" />
+
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6, marginTop: 24 }}>Quel est votre lieu ?</h2>
+            <p style={{ fontSize: 13, color: "#6B6460", marginBottom: 20, lineHeight: 1.5 }}>
+              On pré-configure les bons outils pour vous. Modifiable à tout moment dans Modules.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+              {ORG_ARCHETYPES.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  onClick={() => setOrgType(a.key)}
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    border: `2px solid ${orgType === a.key ? "#FF8A65" : "#E5DDD6"}`,
+                    background: orgType === a.key ? "#FFF5F2" : "#FAFAF7",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "border-color .15s, background .15s",
+                  }}
+                >
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{a.emoji}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#2C2C2C", marginBottom: 2 }}>{a.label}</div>
+                  <div style={{ fontSize: 11.5, color: "#6B6460", lineHeight: 1.4 }}>{a.description}</div>
+                </button>
+              ))}
+            </div>
+
+            {error && <p style={{ fontSize: 13, color: "#E8714D", background: "#FFF0EB", padding: "10px 14px", borderRadius: 10, marginBottom: 12 }}>{error}</p>}
+
+            <button
+              type="button"
+              disabled={!orgType || loading}
+              onClick={() => submit(orgType!)}
+              style={{ width: "100%", padding: "14px", borderRadius: 100, background: orgType && !loading ? "#FF8A65" : "#FFB4A2", color: "#fff", fontWeight: 700, fontSize: 15, border: "none", cursor: orgType && !loading ? "pointer" : "not-allowed", transition: "background .15s" }}
+            >
+              {loading ? "Création en cours…" : "Créer mon espace →"}
+            </button>
+
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button type="button" onClick={() => setStep("lieu")} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}>
+                ← Retour
+              </button>
+              <button
+                type="button"
+                onClick={() => submit("autre")}
+                disabled={loading}
+                style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}
+              >
+                Passer cette étape
+              </button>
+            </div>
+          </div>
+
+          <p style={{ textAlign: "center", fontSize: 13, color: "#6B6460", marginTop: 20 }}>
+            Déjà un compte ?{" "}
+            <Link href="/login" style={{ color: "#E8714D", fontWeight: 600, textDecoration: "none" }}>Se connecter</Link>
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Étapes compte + lieu ──────────────────────────────────────────────────
   return (
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFBF0", fontFamily: "'Poppins', sans-serif", padding: "24px" }}>
       <div style={{ maxWidth: 460, width: "100%" }}>
@@ -117,22 +205,9 @@ export default function SignupPage() {
         </div>
 
         <div style={{ background: "#fff", borderRadius: 20, padding: "36px 32px", boxShadow: "0 8px 32px rgba(28,28,28,0.08)", border: "1px solid #E5DDD6" }}>
-          {/* Stepper */}
-          <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 28 }}>
-            {[{ n: 1, label: "Votre compte", key: "account" }, { n: 2, label: "Votre lieu", key: "lieu" }].map((s, i) => (
-              <div key={s.key} style={{ display: "flex", alignItems: "center", flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: step === s.key || (s.key === "account" && step === "lieu") ? "#FF8A65" : "#F4EFE9", color: step === s.key || (s.key === "account" && step === "lieu") ? "#fff" : "#9C9590", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                    {s.key === "account" && step === "lieu" ? "✓" : s.n}
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: step === s.key ? 600 : 400, color: step === s.key ? "#2C2C2C" : "#9C9590" }}>{s.label}</span>
-                </div>
-                {i === 0 && <div style={{ flex: 1, height: 1, background: "#E5DDD6", margin: "0 12px" }} />}
-              </div>
-            ))}
-          </div>
+          <Stepper current={step} />
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 24 }}>
             {step === "account" && (
               <>
                 <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Créer votre compte</h2>
@@ -184,8 +259,8 @@ export default function SignupPage() {
               </>
             )}
 
-            <button type="submit" disabled={loading} style={{ padding: "14px", borderRadius: 100, background: loading ? "#FFB4A2" : "#FF8A65", color: "#fff", fontWeight: 700, fontSize: 15, border: "none", cursor: loading ? "not-allowed" : "pointer", marginTop: 4, transition: "background .15s" }}>
-              {loading ? "Création en cours…" : step === "account" ? "Continuer →" : "Créer mon espace"}
+            <button type="submit" style={{ padding: "14px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 700, fontSize: 15, border: "none", cursor: "pointer", marginTop: 4, transition: "background .15s" }}>
+              Continuer →
             </button>
 
             {step === "lieu" && (
@@ -202,5 +277,39 @@ export default function SignupPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+// ── Composant stepper partagé ─────────────────────────────────────────────
+function Stepper({ current }: { current: StepKey }) {
+  const currentIdx = STEPS.findIndex((s) => s.key === current);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+      {STEPS.map((s, i) => {
+        const done = i < currentIdx;
+        const active = i === currentIdx;
+        return (
+          <div key={s.key} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{
+                width: 26, height: 26, borderRadius: "50%",
+                background: done || active ? "#FF8A65" : "#F4EFE9",
+                color: done || active ? "#fff" : "#9C9590",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 700, flexShrink: 0,
+              }}>
+                {done ? "✓" : i + 1}
+              </div>
+              <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#2C2C2C" : "#9C9590", whiteSpace: "nowrap" }}>
+                {s.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div style={{ flex: 1, height: 1, background: "#E5DDD6", margin: "0 8px" }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

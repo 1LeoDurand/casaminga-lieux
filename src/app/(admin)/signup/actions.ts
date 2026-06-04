@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "@/lib/supabase/env";
 import { sendMail } from "@/lib/mail";
 import { tplCompteBienvenue } from "@/lib/mail-templates";
+import { ORG_ARCHETYPES } from "@/lib/modules";
 
 /**
  * Server action pour créer une organisation et lier l'utilisateur.
@@ -17,6 +18,7 @@ export async function createOrgAndMember(params: {
   name: string;
   structure: string;
   email: string;
+  orgType?: string; // clé archétype — détermine les modules pré-activés
 }): Promise<{ orgSlug: string | null; error: string | null }> {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !serviceRoleKey) {
@@ -36,6 +38,7 @@ export async function createOrgAndMember(params: {
       structure: params.structure,
       email: params.email,
       plan: "pilot",
+      org_type: params.orgType ?? "autre",
     })
     .select("id, slug")
     .single();
@@ -48,7 +51,21 @@ export async function createOrgAndMember(params: {
     return { orgSlug: null, error: "Le lieu n'a pas pu être créé." };
   }
 
-  // 2. Lier user → org (admin)
+  // 2. Pré-activer les modules selon l'archétype choisi
+  const archetype = ORG_ARCHETYPES.find((a) => a.key === (params.orgType ?? "autre"))
+    ?? ORG_ARCHETYPES.find((a) => a.key === "autre")!;
+  if (archetype.modules.length > 0) {
+    await admin.from("organization_modules").insert(
+      archetype.modules.map((moduleKey) => ({
+        organization_id: org.id,
+        module_key: moduleKey,
+        enabled: true,
+      }))
+    );
+    // Silencieux si erreur (les modules restent désactivés, pas bloquant)
+  }
+
+  // 3. Lier user → org (admin)
   const { error: memberErr } = await admin.from("organization_members").insert({
     user_id: params.userId,
     organization_id: org.id,
@@ -57,7 +74,7 @@ export async function createOrgAndMember(params: {
   });
 
   if (memberErr) {
-    // Rollback : supprimer l'org créée
+    // Rollback : supprimer l'org créée (modules en cascade)
     await admin.from("organizations").delete().eq("id", org.id);
     return { orgSlug: null, error: "Erreur lors de la liaison du compte à l'organisation." };
   }

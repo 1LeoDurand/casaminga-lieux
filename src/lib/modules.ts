@@ -82,6 +82,60 @@ export const SOCLE_KEYS = new Set<string>(
   MODULE_SECTIONS.flatMap((s) => s.modules.filter((m) => m.layer === 0).map((m) => m.key))
 );
 
+/** Archétypes de lieu — sélection à l'inscription pour pré-activer les bons modules. */
+export interface OrgArchetype {
+  key: string;
+  emoji: string;
+  label: string;
+  description: string;
+  modules: string[]; // couche 1+2 à activer (le socle est toujours là)
+}
+
+export const ORG_ARCHETYPES: OrgArchetype[] = [
+  {
+    key: "tiers-lieu",
+    emoji: "🏠",
+    label: "Tiers-lieu / lieu hybride",
+    description: "Espace de vie collective, polyvalent, ouvert au quartier.",
+    modules: ["espaces", "reservations", "evenements", "adhesions", "communaute", "taches"],
+  },
+  {
+    key: "coworking",
+    emoji: "💻",
+    label: "Espace de coworking",
+    description: "Location de bureaux, postes nomades, salles de réunion.",
+    modules: ["espaces", "reservations", "factures", "finances", "taches"],
+  },
+  {
+    key: "culturel",
+    emoji: "🎭",
+    label: "Lieu culturel / MJC",
+    description: "Programmation artistique, ateliers, animations de quartier.",
+    modules: ["evenements", "adhesions", "communaute", "communication", "taches"],
+  },
+  {
+    key: "residence",
+    emoji: "🎨",
+    label: "Résidence / fabrique artistique",
+    description: "Accueil d'artistes en résidence, studios, espaces de création.",
+    modules: ["residences", "artistes", "espaces", "evenements", "taches"],
+  },
+  {
+    key: "association",
+    emoji: "🤝",
+    label: "Association (sans lieu fixe)",
+    description: "Gestion de membres, adhésions, finances et communication.",
+    modules: ["adhesions", "communaute", "finances", "communication", "taches"],
+  },
+  {
+    key: "autre",
+    emoji: "➕",
+    label: "Autre",
+    description: "Je définirai mes besoins après l'inscription.",
+    modules: ["adhesions", "communaute", "evenements"],
+  },
+];
+
 /** Libellé de page d'après le segment d'URL (pour le titre de la topbar). */
 export function moduleLabelForSegment(segment: string | null): string {
   if (!segment) return "Tableau de bord";
