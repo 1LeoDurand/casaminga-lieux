@@ -297,7 +297,7 @@ export default function HistoirePage() {
             Ce qu'on voudrait entendre, un jour, d'un coordinateur de tiers-lieu croisé par hasard :
           </p>
           <blockquote style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,138,101,0.3)", borderRadius: 20, padding: "28px 32px", marginBottom: 44, fontStyle: "italic", fontSize: "clamp(16px,1.8vw,19px)", lineHeight: 1.75, color: "rgba(255,255,255,0.9)" }}>
-            <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}"</span>
+            <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>"</span>
             Grâce à toi, j'ai un seul outil qui unifie notre organisation, simplifie nos échanges, mesure notre impact et permet aux gens de nous découvrir plus facilement.
             <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>"</span>
           </blockquote>
