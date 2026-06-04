@@ -293,6 +293,85 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ══ 5b. IMPACT ══ */}
+      <section style={{ background: "#fff", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-impact-grid">
+            {/* Colonne gauche */}
+            <div>
+              <Eyebrow variant="mint">L'impact</Eyebrow>
+              <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 16 }}>
+                Rendre visible ce que le lieu produit vraiment.
+              </h2>
+              <p style={{ fontSize: "clamp(15px,1.6vw,18px)", color: "#6B6460", lineHeight: 1.7, marginBottom: 28 }}>
+                Pour les financeurs, pour vos partenaires, pour vos adhérent·e·s, et pour vous. Tous les indicateurs renseignés au fil de l'eau, exportables en un clic.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 18px", marginBottom: 32 }}>
+                {[
+                  "Fréquentation", "Événements organisés",
+                  "Heures d'occupation", "Heures de bénévolat",
+                  "Résidences accueillies", "Partenaires actifs",
+                  "Revenus propres", "Rapports financeurs",
+                  "Mixité du public", "Narratif d'impact",
+                ].map((item) => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 500, color: "#2C2C2C" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2f8a4c", flexShrink: 0 }} />
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <Link href="/dashboard/bernard-kohn/impact" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "16px 28px", borderRadius: 100, border: "2px solid #2C2C2C", background: "#fff", color: "#2C2C2C", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
+                Voir le module Impact dans le dashboard démo →
+              </Link>
+            </div>
+
+            {/* Colonne droite — carte rapport */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 22, padding: "28px 30px", width: "100%", maxWidth: 430, boxShadow: "0 4px 28px rgba(44,44,44,0.07)" }}>
+                {/* En-tête carte */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 17, color: "#2C2C2C" }}>Rapport d'impact · T2 2026</div>
+                    <div style={{ fontSize: 12.5, color: "#6B6460", marginTop: 2 }}>Tiers-lieu Bernard Kohn · auto-généré</div>
+                  </div>
+                  <span style={{ background: "#FFF0EB", border: "1.5px solid #FFB4A2", color: "#E8714D", fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 100 }}>2026</span>
+                </div>
+                <div style={{ borderTop: "1px solid #F0EBE3", margin: "16px 0" }} />
+
+                {/* Lignes métriques */}
+                {[
+                  { label: "Personnes accueillies", value: "1 240", pct: 85 },
+                  { label: "Événements organisés",  value: "38",    pct: 55 },
+                  { label: "Heures de bénévolat",   value: "2 180", pct: 78 },
+                  { label: "Résidences accueillies", value: "9",    pct: 65 },
+                  { label: "Partenaires actifs",     value: "14",   pct: 48 },
+                  { label: "Revenus propres",        value: "28k €", pct: 38 },
+                ].map((row, i, arr) => (
+                  <div key={row.label}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", gap: 12 }}>
+                      <span style={{ fontSize: 13.5, color: "#2C2C2C", flexShrink: 0 }}>{row.label}</span>
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end" }}>
+                        <div style={{ flex: 1, height: 6, background: "#F0EBE3", borderRadius: 99, overflow: "hidden", maxWidth: 120 }}>
+                          <div style={{ height: "100%", width: `${row.pct}%`, background: "#FF8A65", borderRadius: 99 }} />
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: 15, color: "#2C2C2C", minWidth: 44, textAlign: "right" }}>{row.value}</span>
+                      </div>
+                    </div>
+                    {i < arr.length - 1 && <div style={{ borderTop: "1px solid #F0EBE3" }} />}
+                  </div>
+                ))}
+
+                <div style={{ borderTop: "1px solid #F0EBE3", marginTop: 6, paddingTop: 14, display: "flex", gap: 16, fontSize: 12.5, color: "#2f8a4c", fontWeight: 600 }}>
+                  <span>↓ Export PDF</span>
+                  <span>· partage aux financeurs</span>
+                  <span>· narratif commenté</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ══ 6. POUR QUI ══ */}
       <section style={{ padding: "clamp(64px,9vw,108px) 0" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
