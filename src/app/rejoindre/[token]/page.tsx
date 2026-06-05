@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import { acceptInvitation } from "./actions";
 
 const inputCls =
@@ -50,12 +51,27 @@ export default function RejoindreTokenPage({ params }: { params: Promise<{ token
     }
     setError(null);
     setSubmitting(true);
+
+    // 1. Créer le compte + lier à l'org
     const res = await acceptInvitation({ token, password, fullName: fullName.trim() });
+    if (res.error) { setSubmitting(false); setError(res.error); return; }
+
+    // 2. Se connecter immédiatement pour créer une session active
+    const supabase = createClient();
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: invite!.email,
+      password,
+    });
     setSubmitting(false);
-    if (res.error) { setError(res.error); return; }
+    if (signInErr) {
+      setError("Compte créé mais erreur de connexion automatique. Connectez-vous manuellement.");
+      return;
+    }
+
+    // 3. Session active → redirection
     setOrgSlug(res.orgSlug ?? "");
     setDone(true);
-    setTimeout(() => router.push(`/dashboard/${res.orgSlug}`), 2000);
+    setTimeout(() => router.push(`/dashboard/${res.orgSlug}`), 1500);
   }
 
   // ── Chargement ──────────────────────────────────────────────────────────────
