@@ -22,6 +22,10 @@ export interface Organization {
   hours: string | null;
   plan: string;
   primary_color: string;
+  /** true = organisation de démonstration, exclue du portail public et des emails réels. */
+  is_demo?: boolean;
+  /** tiers-lieu | coworking | association | culturel | residence | autre */
+  demo_archetype?: string | null;
   helloasso_client_id?: string | null;
   helloasso_client_secret?: string | null;
   helloasso_org_slug?: string | null;

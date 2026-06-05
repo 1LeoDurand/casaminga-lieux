@@ -24,39 +24,45 @@ import type {
 } from "@/lib/types";
 
 /**
- * Données de démonstration — Tiers-lieu Bernard Kohn.
- * Miroir de supabase/seed.sql. Servent tant que Supabase n'est pas configuré
- * (mode démo). Ne JAMAIS utiliser comme base de données de production.
+ * Données de démonstration — mode seed mémoire (Supabase non configuré).
+ * Utilisé uniquement quand isSupabaseConfigured() = false.
+ * NE PAS utiliser des vrais noms de clients : identités neutres uniquement.
+ *
+ * Les vraies orgs de démo (avec is_demo=true en base) sont gérées
+ * depuis /admin/demos et ne dépendent PAS de ce fichier.
  */
 
+/** ID fictif stable pour le mode seed mémoire (non-Supabase). */
 export const BK_ORG_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 export const DEMO_ORGANIZATIONS: Organization[] = [
   {
     id: BK_ORG_ID,
-    slug: "bernard-kohn",
-    name: "Tiers-lieu Bernard Kohn",
+    slug: "demo-tiers-lieu",
+    name: "La Friche Commune (démo)",
     structure: "Association loi 1901",
-    address: "Saint-Mandé (94)",
-    email: "contact@bernard-kohn.org",
+    address: "Paris (75)",
+    email: "contact@demo-tiers-lieu.exemple",
     phone: "+33 1 00 00 00 00",
-    website: "https://casaminga.com/bernard-kohn",
+    website: "",
     description:
-      "Ancienne maison et atelier de l'architecte Bernard Kohn, devenue tiers-lieu : ateliers, résidences, espaces partagés et programmation culturelle au service du collectif.",
+      "Espace de vie collective polyvalent : ateliers, résidences, espaces partagés et programmation culturelle au service du quartier. (Organisation de démonstration — données fictives)",
     hours: "Du mardi au samedi, 9h–19h",
     plan: "essentiel",
     primary_color: "#FF8A65",
+    is_demo: true,
+    demo_archetype: "tiers-lieu",
   },
 ];
 
 export const DEMO_PUBLIC_SITES: PublicSite[] = [
   {
     organization_id: BK_ORG_ID,
-    slug: "bernard-kohn",
-    title: "Tiers-lieu Bernard Kohn",
+    slug: "demo-tiers-lieu",
+    title: "La Friche Commune",
     status: "publie",
     seo_description:
-      "Tiers-lieu à Saint-Mandé : ateliers, résidences artistiques, espaces partagés et événements ouverts au public.",
+      "Organisation de démonstration Casa Minga Lieux — données fictives.",
   },
 ];
 
@@ -649,7 +655,7 @@ export const DEMO_AUTOMATIONS: Automation[] = [
 export const DEMO_MEMBERSHIP_CAMPAIGNS: MembershipCampaign[] = [
   { id: "aa111111-1111-4111-8111-111111111111", organization_id: BK_ORG_ID,
     title: "Bulletin d'adhésion 2026", slug: "bulletin-adhesion-2026",
-    description: "Rejoignez le tiers-lieu Bernard Kohn ! Votre adhésion soutient la programmation culturelle, les ateliers et les résidences artistiques.",
+    description: "Rejoignez La Friche Commune ! Votre adhésion soutient la programmation culturelle, les ateliers et les résidences artistiques.",
     status: "publie", period_type: "personnalisee",
     period_start: "2026-05-31", period_end: "2027-05-31",
     max_members: null, allow_donation: true, donation_amounts: ["30","50","100"],

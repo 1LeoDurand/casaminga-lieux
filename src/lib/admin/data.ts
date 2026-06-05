@@ -43,14 +43,15 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const [orgsC, membersC, fbOpenC, fbTotalC, signupsC, recent] = await Promise.all([
-    admin.from("organizations").select("id", { count: "exact", head: true }),
+    admin.from("organizations").select("id", { count: "exact", head: true }).eq("is_demo", false),
     admin.from("organization_members").select("user_id", { count: "exact", head: true }),
     admin.from("feedback").select("id", { count: "exact", head: true }).eq("status", "open"),
     admin.from("feedback").select("id", { count: "exact", head: true }),
-    admin.from("organizations").select("id", { count: "exact", head: true }).gte("created_at", since),
+    admin.from("organizations").select("id", { count: "exact", head: true }).eq("is_demo", false).gte("created_at", since),
     admin
       .from("organizations")
       .select("slug, name, created_at, plan")
+      .eq("is_demo", false)
       .order("created_at", { ascending: false })
       .limit(5),
   ]);
@@ -73,6 +74,7 @@ export async function getAllOrganizations(): Promise<OrgRow[]> {
   const { data: orgs } = await admin
     .from("organizations")
     .select("id, slug, name, structure, plan, email, created_at")
+    .eq("is_demo", false)
     .order("created_at", { ascending: false });
 
   if (!orgs) return [];

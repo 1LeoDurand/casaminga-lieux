@@ -62,8 +62,38 @@ async function logEmail(payload: MailPayload, status: "sent" | "failed", error?:
   }
 }
 
-/** Envoie un email. Silencieux si le SMTP n'est pas configuré (env manquant). */
+/**
+ * Court-circuit : vérifie si l'org est une org de démo.
+ * Les orgs démo ne reçoivent jamais d'emails réels.
+ */
+async function isDemoOrg(orgId: string | null | undefined): Promise<boolean> {
+  if (!orgId) return false;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return false;
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const admin = createClient(url, key, { auth: { persistSession: false } });
+    const { data } = await admin
+      .from("organizations")
+      .select("is_demo")
+      .eq("id", orgId)
+      .maybeSingle();
+    return data?.is_demo === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Envoie un email. Silencieux si le SMTP n'est pas configuré ou si l'org est en démo. */
 export async function sendMail(payload: MailPayload): Promise<boolean> {
+  // Court-circuit démo : aucun vrai email pour les orgs de démonstration
+  if (await isDemoOrg(payload.organizationId)) {
+    console.info("[mail] Org démo — email simulé (non envoyé):", payload.subject);
+    void logEmail(payload, "failed", "Org démo — email non envoyé");
+    return true; // on renvoie true pour ne pas perturber les flux UI
+  }
+
   if (!process.env.MAIL_SMTP_USER || !process.env.MAIL_SMTP_PASS) {
     console.warn("[mail] SMTP non configuré — email ignoré:", payload.subject);
     void logEmail(payload, "failed", "SMTP non configuré");
