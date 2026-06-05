@@ -93,7 +93,7 @@ export function DocumentsView({ documents, persons, orgSlug, orgId }: {
         <p className="mc-empty-sub">Contrats, devis, factures, conventions — centralisez les documents du lieu.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouveau document</button>
       </div></div>
-      <DocumentForm key="create-open" open={formOpen} document={null} persons={persons} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
+      <DocumentForm key="create-open" open={formOpen} document={null} persons={persons} orgId={orgId} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
     </>
   );
 
@@ -203,7 +203,7 @@ export function DocumentsView({ documents, persons, orgSlug, orgId }: {
 
       <DocumentForm
         key={formOpen ? `edit-${editing?.id ?? "new"}` : "edit-closed"}
-        open={formOpen} document={editing} persons={persons} busy={pending}
+        open={formOpen} document={editing} persons={persons} orgId={orgId} busy={pending}
         onClose={() => { setFormOpen(false); setEditing(null); }} onSubmit={submitForm} />
 
       <ConfirmDialog open={confirmDelete !== null} title="Supprimer ce document ?"

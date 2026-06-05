@@ -51,6 +51,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
       { key: "adhesions",   label: "Adhésions",       segment: "adhesions",   layer: 1, tableKey: "membership_campaigns", description: "Campagnes et tunnel d'adhésion en ligne." },
       { key: "finances",    label: "Finances",         segment: "finances",    layer: 1, tableKey: "transactions",          description: "Transactions, solde, export comptable." },
       { key: "factures",    label: "Facturation",      segment: "factures",    layer: 1, tableKey: "invoices",               description: "Factures, avoirs, coworking." },
+      { key: "depenses",    label: "Dépenses",         segment: "depenses",    layer: 1, tableKey: "expenses",               description: "Charges et justificatifs par pôle." },
       { key: "subventions", label: "Subventions",      segment: "subventions", layer: 2, tableKey: "grants",                 description: "Suivi des demandes et conventions." },
       { key: "caisse",      label: "Caisse certifiée", segment: "caisse",      layer: 2, tableKey: "cash_entries",           description: "Encaissements conformes NF525." },
       { key: "documents",   label: "Documents",        segment: "documents",   layer: 1, tableKey: "documents",              description: "Stockage et signatures en ligne." },

@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
 import { HelloAssoSettings } from "@/components/mc/helloasso-settings";
 import { RibSettingsCard } from "@/components/mc/rib-settings-card";
+import { PolesManager } from "@/components/mc/poles-manager";
 import { getOrganizationBySlug } from "@/lib/data";
 import { getInvoiceSettings } from "@/lib/invoicing/data";
+import { getAllPolesForOrg } from "@/lib/poles";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ParametresPage({ params }: { params: Promise<{ org: string }> }) {
@@ -11,7 +13,10 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const invoiceSettings = await getInvoiceSettings(organization.id);
+  const [invoiceSettings, poles] = await Promise.all([
+    getInvoiceSettings(organization.id),
+    getAllPolesForOrg(organization.id),
+  ]);
 
   // Récupérer les infos HelloAsso (champs sensibles)
   let haOrgSlug: string | null = null;
@@ -76,6 +81,15 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
             <p className="text-sm leading-relaxed text-warmgray">{organization.description}</p>
           </div>
         ) : null}
+
+        {/* Pôles / activités */}
+        <div className="mc-card p-6 md:col-span-2">
+          <h3 className="mb-1 font-heading text-base font-bold text-foreground">Pôles / Activités</h3>
+          <p className="mb-4 text-[13px] text-warmgray">
+            Classifiez vos factures et dépenses par pôle d&apos;activité (Culture, Coworking, Résidences…).
+          </p>
+          <PolesManager poles={poles} orgId={organization.id} orgSlug={organization.slug} />
+        </div>
 
         {/* RIB / Coordonnées bancaires */}
         <div className="md:col-span-2">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Globe, CornerUpLeft, Bell } from "lucide-react";
+import { Search, Globe, Bell } from "lucide-react";
 import { moduleLabelForSegment } from "@/lib/modules";
 
 export function DashboardTopbar({
@@ -39,15 +39,6 @@ export function DashboardTopbar({
       >
         <Globe className="size-4" />
         <span className="hidden lg:inline">Voir le site public</span>
-      </Link>
-
-      <Link
-        href="/"
-        title="Retour à la landing Casa Minga Lieux"
-        className="flex h-9 items-center gap-1.5 rounded-xl border-[1.5px] border-peach bg-peach-pale px-3 text-[12.5px] font-semibold text-foreground transition-colors hover:border-coral hover:bg-peach"
-      >
-        <CornerUpLeft className="size-4" />
-        <span className="hidden lg:inline">Landing</span>
       </Link>
 
       <button

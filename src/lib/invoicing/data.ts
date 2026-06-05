@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = (orgId: string): InvoiceSettings => ({
   accent_color: "#FF8A65",
   footer_mentions: null,
   number_prefix: "FAC-",
+  number_start: 1,
   logo_url: null,
   updated_at: new Date().toISOString(),
 });

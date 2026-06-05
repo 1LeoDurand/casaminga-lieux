@@ -53,7 +53,7 @@ export default async function PublicSitePage({
 
   const campaigns = campaignsRaw.filter((cp) => cp.status === "publie");
   const events = eventsRaw
-    .filter((e) => e.status === "publie" && isFuture(e.start_at))
+    .filter((e) => e.status === "publie" && isFuture(e.start_at) && e.show_on_public_site)
     .sort((a, b) => a.start_at.localeCompare(b.start_at))
     .slice(0, 6);
 

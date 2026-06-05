@@ -60,7 +60,10 @@ export interface InvoiceInput {
   lines: InvoiceLine[];
   vat_applicable: boolean;
   notes: string | null;
+  object: string | null;
+  reference: string | null;
   pole: string | null;
+  pole_id: string | null;
   payment_method: string | null;
   paid_at: string | null;
 }
@@ -87,7 +90,10 @@ export async function saveInvoice(
     vat_applicable: input.vat_applicable,
     ...totals,
     notes: input.notes,
+    object: input.object ?? null,
+    reference: input.reference ?? null,
     pole: input.pole ?? null,
+    pole_id: input.pole_id ?? null,
     payment_method: input.payment_method ?? null,
     paid_at: input.paid_at ?? null,
     updated_at: new Date().toISOString(),

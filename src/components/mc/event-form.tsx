@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, Globe } from "lucide-react";
 import { EVENT_STATUSES, EVENT_TYPES } from "@/lib/events-meta";
 import type { Evenement, Space } from "@/lib/types";
 
@@ -17,6 +17,7 @@ export interface EventFormValues {
   price: string;
   description: string;
   photosInput: string;
+  showOnPublicSite: boolean;
 }
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
@@ -28,7 +29,7 @@ function fromEvenement(e: Evenement | null, defaultSpaceId: string): EventFormVa
   if (!e) {
     return { title: "", type: "autre", status: "brouillon", spaceId: defaultSpaceId,
       date: localDate(new Date()), startTime: "18:00", endTime: "21:00",
-      capacity: "", price: "", description: "", photosInput: "" };
+      capacity: "", price: "", description: "", photosInput: "", showOnPublicSite: false };
   }
   const s = new Date(e.start_at); const en = new Date(e.end_at);
   return {
@@ -40,6 +41,7 @@ function fromEvenement(e: Evenement | null, defaultSpaceId: string): EventFormVa
     price: e.price != null ? String(e.price) : "",
     description: e.description ?? "",
     photosInput: e.photos.join(", "),
+    showOnPublicSite: e.show_on_public_site ?? false,
   };
 }
 
@@ -172,6 +174,21 @@ export function EventForm({ open, evenement, spaces, busy = false, onSubmit, onC
               onChange={(e) => set("description", e.target.value)}
               placeholder="Programme, accès, informations pratiques…" />
           </div>
+
+          {/* Toggle site public */}
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-peach-pale px-4 py-3 transition-colors hover:border-coral/40">
+            <input
+              type="checkbox"
+              checked={values.showOnPublicSite}
+              onChange={(e) => set("showOnPublicSite", e.target.checked)}
+              className="size-4 accent-coral"
+            />
+            <Globe className="size-4 text-coral-dark" />
+            <span className="text-[13px] font-semibold text-ink">Afficher sur le site public</span>
+            {values.showOnPublicSite && (
+              <span className="ml-auto rounded-full bg-coral px-2 py-0.5 text-[10px] font-bold text-white">Visible</span>
+            )}
+          </label>
 
           {error ? <p className="text-sm font-medium text-coral-dark">{error}</p> : null}
         </div>

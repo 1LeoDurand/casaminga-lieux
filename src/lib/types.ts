@@ -593,8 +593,49 @@ export interface Evenement {
   price: number | null;
   description: string | null;
   photos: string[];
+  show_on_public_site: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface Pole {
+  id: string;
+  organization_id: string;
+  name: string;
+  color: string;
+  description: string | null;
+  active: boolean;
+  position: number;
+  created_at: string;
+}
+
+export type ExpenseCategory =
+  | "loyer"
+  | "fournitures"
+  | "salaires"
+  | "services"
+  | "deplacement"
+  | "communication"
+  | "materiel"
+  | "autre";
+
+export interface Expense {
+  id: string;
+  organization_id: string;
+  label: string;
+  amount_ttc: number;
+  vat_applicable: boolean;
+  vat_amount: number | null;
+  category: ExpenseCategory | null;
+  supplier_name: string | null;
+  supplier_person_id: string | null;
+  pole_id: string | null;
+  payment_method: string | null;
+  paid_at: string | null;
+  receipt_url: string | null;
+  notes: string | null;
+  spent_at: string;
+  created_at: string;
 }
 
 export interface PublicSite {

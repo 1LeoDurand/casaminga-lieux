@@ -30,6 +30,8 @@ export interface Invoice {
   id: string;
   organization_id: string;
   number: string | null;
+  reference: string | null;
+  object: string | null;
   status: InvoiceStatus;
   client_id: string | null;
   client_name: string;
@@ -48,6 +50,7 @@ export interface Invoice {
   parent_invoice_id: string | null;
   subscription_id: string | null;
   pole: string | null;
+  pole_id: string | null;
   payment_method: PaymentMethod | null;
   paid_at: string | null;
   created_at: string;
@@ -90,6 +93,7 @@ export interface InvoiceSettings {
   accent_color: string;
   footer_mentions: string | null;
   number_prefix: string;
+  number_start: number;
   logo_url: string | null;
   updated_at: string;
 }

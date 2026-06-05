@@ -12,6 +12,7 @@ import {
   formatEuros,
 } from "@/lib/invoicing/types";
 import { saveInvoice, type InvoiceInput } from "@/app/(admin)/dashboard/[org]/factures/actions";
+import type { Pole } from "@/lib/types";
 
 interface PersonLite { id: string; name: string; email: string | null }
 
@@ -33,6 +34,7 @@ export function InvoiceEditor({
   orgSlug,
   persons,
   defaultTermsDays,
+  poles = [],
   initial,
   invoiceId,
 }: {
@@ -40,6 +42,7 @@ export function InvoiceEditor({
   orgSlug: string;
   persons: PersonLite[];
   defaultTermsDays: number;
+  poles?: Pole[];
   initial?: Partial<InvoiceInput>;
   invoiceId?: string;
 }) {
@@ -54,7 +57,9 @@ export function InvoiceEditor({
   const [dueDate, setDueDate] = useState(initial?.due_date ?? addDays(todayISO(), defaultTermsDays));
   const [vatApplicable, setVatApplicable] = useState(initial?.vat_applicable ?? false);
   const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [pole, setPole] = useState(initial?.pole ?? "");
+  const [object, setObject] = useState(initial?.object ?? "");
+  const [reference, setReference] = useState(initial?.reference ?? "");
+  const [poleId, setPoleId] = useState<string>(initial?.pole_id ?? "");
   const [paymentMethod, setPaymentMethod] = useState(initial?.payment_method ?? "");
   const [lines, setLines] = useState<InvoiceLine[]>(
     initial?.lines ?? [{ designation: "", qty: 1, unit_ht: 0, vat_rate: 0 }]
@@ -82,6 +87,8 @@ export function InvoiceEditor({
     setLines((cur) => (cur.length > 1 ? cur.filter((_, idx) => idx !== i) : cur));
   }
 
+  const selectedPole = poles.find((p) => p.id === poleId);
+
   function save(redirect: boolean) {
     if (!clientName.trim()) { toast.error("Indiquez le nom du client."); return; }
     const payload: InvoiceInput = {
@@ -94,7 +101,10 @@ export function InvoiceEditor({
       lines: lines.filter((l) => l.designation.trim()),
       vat_applicable: vatApplicable,
       notes: notes.trim() || null,
-      pole: pole.trim() || null,
+      object: object.trim() || null,
+      reference: reference.trim() || null,
+      pole: selectedPole?.name ?? null,
+      pole_id: poleId || null,
       payment_method: paymentMethod || null,
       paid_at: null,
     };
@@ -137,6 +147,46 @@ export function InvoiceEditor({
         </div>
       </div>
 
+      {/* Objet de la facture */}
+      <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Objet de la facture</label>
+            <input
+              className={input}
+              value={object}
+              onChange={(e) => setObject(e.target.value)}
+              placeholder="Ex. : Prestation de service — mars 2026"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Référence interne (optionnel)</label>
+            <input
+              className={input}
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="Ex. : REF-2026-042"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Pôle / Activité</label>
+            {poles.length > 0 ? (
+              <select className={input} value={poleId} onChange={(e) => setPoleId(e.target.value)}>
+                <option value="">— Aucun pôle —</option>
+                {poles.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border bg-[#FAFAF7] px-3.5 py-2.5 text-[12px] text-warmgray">
+                Configurez vos pôles dans{" "}
+                <a href={`/dashboard/${orgSlug}/parametres`} className="text-coral-dark hover:underline">Paramètres</a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Dates + TVA */}
       <div className="rounded-2xl border border-border bg-white p-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -166,6 +216,14 @@ export function InvoiceEditor({
       {/* Lignes */}
       <div className="rounded-2xl border border-border bg-white p-5">
         <h3 className="mb-4 font-heading text-base font-bold text-ink">Lignes</h3>
+        {/* En-têtes colonnes */}
+        <div className="mb-1 grid grid-cols-[1fr_64px_90px_auto_auto] items-center gap-2 px-0.5 text-[11px] font-bold uppercase tracking-wide text-warmgray">
+          <span>Désignation</span>
+          <span className="text-center">Qté</span>
+          <span className="text-right">Prix unit. HT</span>
+          {vatApplicable ? <span className="w-[78px] text-center">TVA</span> : <span className="w-[78px]" />}
+          <span className="w-8" />
+        </div>
         <div className="flex flex-col gap-2">
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-[1fr_64px_90px_auto_auto] items-center gap-2">
@@ -210,18 +268,9 @@ export function InvoiceEditor({
         </div>
       </div>
 
-      {/* Pôle / activité + mode de règlement */}
+      {/* Mode de règlement */}
       <div className="rounded-2xl border border-border bg-white p-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>Pôle / Activité</label>
-            <input
-              className={input}
-              value={pole}
-              onChange={(e) => setPole(e.target.value)}
-              placeholder="Coworking, Événements, Résidences…"
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>Mode de règlement</label>
             <select className={input} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
@@ -237,7 +286,7 @@ export function InvoiceEditor({
       {/* Notes */}
       <div className="rounded-2xl border border-border bg-white p-5">
         <label className={labelCls}>Notes (optionnel)</label>
-        <textarea className={`${input} min-h-[70px] resize-y`} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Conditions particulières, référence…" />
+        <textarea className={`${input} min-h-[70px] resize-y`} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Conditions particulières, mentions légales…" />
       </div>
 
       {/* Actions */}

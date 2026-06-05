@@ -118,6 +118,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
       price: toNum(values.price),
       description: values.description.trim() || null,
       photos: values.photosInput.split(",").map((p) => p.trim()).filter(Boolean),
+      show_on_public_site: values.showOnPublicSite,
     };
     startTransition(async () => {
       const res = editing
@@ -221,7 +222,13 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
           {filtered.map((e) => (
             <button key={e.id} type="button" className={`mc-event-card is-${e.status}`} onClick={() => setSelectedId(e.id)}>
               <Cover ev={e}>
-                <div className="mc-event-badges"><TypeBadge type={e.type} /><StatusBadge status={e.status} /></div>
+                <div className="mc-event-badges">
+                  <TypeBadge type={e.type} />
+                  <StatusBadge status={e.status} />
+                  {e.show_on_public_site && (
+                    <span className="mc-badge bg-sky-100 text-sky-700" title="Visible sur le site public">🌐</span>
+                  )}
+                </div>
               </Cover>
               <div className="mc-event-body">
                 <div className="mc-event-title">{e.title}</div>

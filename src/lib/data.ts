@@ -569,6 +569,7 @@ export interface EvenementInput {
   price: number | null;
   description: string | null;
   photos: string[];
+  show_on_public_site: boolean;
 }
 
 export async function createEvenement(input: EvenementInput): Promise<boolean> {
