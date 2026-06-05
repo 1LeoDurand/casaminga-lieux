@@ -86,6 +86,8 @@ export interface Person {
   status: PersonStatus;
   tags: string[];
   notes: string | null;
+  newsletter_opt_out?: boolean;
+  unsubscribe_token?: string;
   created_at: string;
   updated_at: string;
 }

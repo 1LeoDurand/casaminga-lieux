@@ -300,6 +300,8 @@ export interface PersonInput {
   email: string | null;
   phone: string | null;
   role: string;
+  newsletter_opt_out?: boolean;
+  unsubscribe_token?: string;
   status: Person["status"];
   tags: string[];
   notes: string | null;
@@ -539,6 +541,20 @@ export async function getEvenementsForOrg(orgId: string): Promise<Evenement[]> {
     .eq("organization_id", orgId)
     .order("start_at", { ascending: true });
   return data ?? [];
+}
+
+export async function getEvenementById(id: string): Promise<Evenement | null> {
+  if (!isSupabaseConfigured()) {
+    const all = getDemoEvenements("demo");
+    return all.find((e) => e.id === id) ?? null;
+  }
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("evenements")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return data ?? null;
 }
 
 export interface EvenementInput {

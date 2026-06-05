@@ -32,3 +32,11 @@ jobs:
             -H "Content-Type: application/json" \
             "https://admin.casaminga.com/api/cron/reminders" \
             -w "\nHTTP %{http_code}\n"
+
+      - name: Newsletters automatiques (récurrent + sur_evenement + programmées)
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://admin.casaminga.com/api/cron/newsletters" \
+            -w "\nHTTP %{http_code}\n"

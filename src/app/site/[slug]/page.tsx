@@ -156,7 +156,16 @@ export default async function PublicSitePage({
           ) : (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {events.map((e) => (
-                <div key={e.id} className="flex flex-col rounded-2xl border border-border/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+                <Link key={e.id} href={`/site/${org.slug}/agenda/${e.id}`}
+                  className="group flex flex-col rounded-2xl border border-border/60 bg-white p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition hover:border-[var(--accent)]/40 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+                  style={{ "--accent": accent } as React.CSSProperties}>
+                  {/* Photo miniature si dispo */}
+                  {e.photos?.[0] ? (
+                    <div className="mb-3 aspect-video overflow-hidden rounded-xl">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={e.photos[0]} alt="" className="size-full object-cover transition group-hover:scale-105" />
+                    </div>
+                  ) : null}
                   <span className="inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
                     style={{ background: `${accent}1a`, color: accent }}>
                     {eventTypeLabel(e.type)}
@@ -164,7 +173,10 @@ export default async function PublicSitePage({
                   <h3 className="mt-2.5 font-heading text-[15px] font-bold leading-snug">{e.title}</h3>
                   <p className="mt-1.5 text-[13px] text-muted-foreground">{eventRange(e.start_at, e.end_at)}</p>
                   {e.description ? <p className="mt-2 line-clamp-2 text-[12.5px] text-muted-foreground">{e.description}</p> : null}
-                </div>
+                  <span className="mt-3 text-[12px] font-semibold" style={{ color: accent }}>
+                    {e.price === 0 || e.price === null ? "Entrée libre" : `${e.price} €`} →
+                  </span>
+                </Link>
               ))}
             </div>
           )}
