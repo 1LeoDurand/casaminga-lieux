@@ -244,20 +244,26 @@ export default async function LandingPage() {
 
             {/* Colonne droite — texte */}
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <Eyebrow variant="blue">Pensé par un coordinateur de tiers-lieu</Eyebrow>
+              <Eyebrow variant="blue">Né dans un tiers-lieu</Eyebrow>
               <h2 style={{ fontSize: "clamp(30px,3.8vw,46px)", fontWeight: 800, lineHeight: 1.08, marginBottom: 20 }}>
-                Quelqu'un qui connaît le métier.
+                Né dans un lieu, pensé pour les lieux.
               </h2>
               <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", color: "#2C2C2C", lineHeight: 1.75, marginBottom: 16 }}>
-                <strong>Léo</strong> coordonne au quotidien le tiers-lieu Bernard Kohn.{" "}
-                <span style={{ color: "#E8714D" }}>Indépendant en communication</span>, il accompagne par ailleurs des lieux et des structures associatives sur la structuration,{" "}
+                <strong>Léo</strong> coordonne au quotidien le{" "}
+                <strong>tiers-lieu Bernard Kohn</strong> — la Manufacture des Pays, à Lodève. C'est en
+                faisant tourner ce lieu, dans le sillage de l'architecte{" "}
+                <strong>Bernard Kohn</strong>, qu'est née l'envie d'un outil vraiment adapté au terrain.
+              </p>
+              <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", color: "#2C2C2C", lineHeight: 1.75, marginBottom: 16 }}>
+                Il accompagne aussi d'autres lieux et structures associatives sur{" "}
                 <span style={{ color: "#E8714D" }}>la communication</span>,{" "}
-                <span style={{ color: "#E8714D" }}>le numérique</span>, les sites web, les événements, la gouvernance et la documentation.
+                <span style={{ color: "#E8714D" }}>le numérique</span>, les sites web, les événements,
+                la gouvernance et la documentation.
               </p>
               <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", lineHeight: 1.75, marginBottom: 24 }}>
-                <span style={{ color: "#E8714D" }}>Casa Minga Lieux est né d'une posture précise :{" "}</span>
-                <strong>créer des outils sobres, utiles, ancrés dans le terrain.</strong>{" "}
-                Pas une vitrine technologique. Un outil pour les gens qui font tourner les lieux.
+                <span style={{ color: "#E8714D" }}>Casa Minga Lieux part d'une conviction simple :{" "}</span>
+                <strong>des outils sobres, utiles, ancrés dans le réel.</strong>{" "}
+                Pas une vitrine technologique — un outil pour celles et ceux qui font tourner les lieux.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {["Coordination de tiers-lieu", "Communication associative", "Sites web", "Gouvernance partagée", "Outils numériques sobres"].map((tag) => (

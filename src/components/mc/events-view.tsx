@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { EventForm, type EventFormValues } from "@/components/mc/event-form";
 import { EventRegistrationsPanel } from "@/components/mc/event-registrations";
+import { EventCalendar } from "@/components/mc/event-calendar";
 import {
   EVENT_STATUSES, EVENT_TYPES,
   eventTypeLabel, eventTypeBadge, eventStatusLabel, eventStatusBadge,
@@ -21,7 +22,7 @@ import {
 } from "@/app/(admin)/dashboard/[org]/evenements/actions";
 import type { Evenement, Space } from "@/lib/types";
 
-type View = "cards" | "agenda" | "table";
+type View = "cards" | "calendrier" | "agenda" | "table";
 
 function toggle<T>(set: Set<T>, v: T): Set<T> {
   const n = new Set(set);
@@ -190,7 +191,8 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
           </div>
           <div className="mc-view-toggle">
             <button type="button" className={`mc-view-btn ${view === "cards" ? "active" : ""}`} onClick={() => setView("cards")}><LayoutGrid className="size-3.5" /> Cartes</button>
-            <button type="button" className={`mc-view-btn ${view === "agenda" ? "active" : ""}`} onClick={() => setView("agenda")}><CalendarDays className="size-3.5" /> Agenda</button>
+            <button type="button" className={`mc-view-btn ${view === "calendrier" ? "active" : ""}`} onClick={() => setView("calendrier")}><CalendarDays className="size-3.5" /> Calendrier</button>
+            <button type="button" className={`mc-view-btn ${view === "agenda" ? "active" : ""}`} onClick={() => setView("agenda")}><List className="size-3.5" /> Agenda</button>
             <button type="button" className={`mc-view-btn ${view === "table" ? "active" : ""}`} onClick={() => setView("table")}><List className="size-3.5" /> Tableau</button>
           </div>
           <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={openCreate}><Plus className="size-3.5" /> Nouvel</button>
@@ -244,6 +246,8 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
             </button>
           ))}
         </div>
+      ) : view === "calendrier" ? (
+        <EventCalendar evenements={filtered} onSelect={(e) => setSelectedId(e.id)} />
       ) : view === "agenda" ? (
         <div className="mc-card px-5 py-2">
           <div className="mc-agenda">
