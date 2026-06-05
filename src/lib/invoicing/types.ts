@@ -10,6 +10,14 @@ export type InvoiceStatus =
   | "annulee";
 
 export type InvoiceSource = "manuelle" | "abonnement";
+export type PaymentMethod = "virement" | "cheque" | "cash" | "carte";
+
+export const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
+  { value: "virement", label: "Virement",  emoji: "🏦" },
+  { value: "cheque",   label: "Chèque",    emoji: "📝" },
+  { value: "cash",     label: "Espèces",   emoji: "💶" },
+  { value: "carte",    label: "Carte",     emoji: "💳" },
+];
 
 export interface InvoiceLine {
   designation: string;
@@ -39,6 +47,9 @@ export interface Invoice {
   kind: "facture" | "avoir";
   parent_invoice_id: string | null;
   subscription_id: string | null;
+  pole: string | null;
+  payment_method: PaymentMethod | null;
+  paid_at: string | null;
   created_at: string;
   updated_at: string;
 }

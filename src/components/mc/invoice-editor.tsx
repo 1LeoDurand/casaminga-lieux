@@ -7,6 +7,7 @@ import { Plus, Trash2, Save } from "lucide-react";
 import {
   type InvoiceLine,
   VAT_RATES,
+  PAYMENT_METHODS,
   computeTotals,
   formatEuros,
 } from "@/lib/invoicing/types";
@@ -53,6 +54,8 @@ export function InvoiceEditor({
   const [dueDate, setDueDate] = useState(initial?.due_date ?? addDays(todayISO(), defaultTermsDays));
   const [vatApplicable, setVatApplicable] = useState(initial?.vat_applicable ?? false);
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [pole, setPole] = useState(initial?.pole ?? "");
+  const [paymentMethod, setPaymentMethod] = useState(initial?.payment_method ?? "");
   const [lines, setLines] = useState<InvoiceLine[]>(
     initial?.lines ?? [{ designation: "", qty: 1, unit_ht: 0, vat_rate: 0 }]
   );
@@ -91,6 +94,9 @@ export function InvoiceEditor({
       lines: lines.filter((l) => l.designation.trim()),
       vat_applicable: vatApplicable,
       notes: notes.trim() || null,
+      pole: pole.trim() || null,
+      payment_method: paymentMethod || null,
+      paid_at: null,
     };
     startTransition(async () => {
       const res = await saveInvoice(orgId, orgSlug, payload, invoiceId);
@@ -200,6 +206,30 @@ export function InvoiceEditor({
             <div className="flex justify-between text-warmgray"><span>Total HT</span><span>{formatEuros(totals.total_ht)}</span></div>
             {vatApplicable && <div className="flex justify-between text-warmgray"><span>TVA</span><span>{formatEuros(totals.total_vat)}</span></div>}
             <div className="flex justify-between border-t border-border pt-1.5 font-bold text-ink"><span>Total TTC</span><span>{formatEuros(totals.total_ttc)}</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Pôle / activité + mode de règlement */}
+      <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Pôle / Activité</label>
+            <input
+              className={input}
+              value={pole}
+              onChange={(e) => setPole(e.target.value)}
+              placeholder="Coworking, Événements, Résidences…"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Mode de règlement</label>
+            <select className={input} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+              <option value="">— Non précisé —</option>
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m.value} value={m.value}>{m.emoji} {m.label}</option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

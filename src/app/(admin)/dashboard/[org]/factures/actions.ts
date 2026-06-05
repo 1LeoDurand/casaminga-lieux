@@ -60,6 +60,9 @@ export interface InvoiceInput {
   lines: InvoiceLine[];
   vat_applicable: boolean;
   notes: string | null;
+  pole: string | null;
+  payment_method: string | null;
+  paid_at: string | null;
 }
 
 export async function saveInvoice(
@@ -84,6 +87,9 @@ export async function saveInvoice(
     vat_applicable: input.vat_applicable,
     ...totals,
     notes: input.notes,
+    pole: input.pole ?? null,
+    payment_method: input.payment_method ?? null,
+    paid_at: input.paid_at ?? null,
     updated_at: new Date().toISOString(),
   };
 
@@ -272,14 +278,17 @@ export async function createCreditNote(
 export async function setInvoiceStatus(
   orgSlug: string,
   id: string,
-  status: "payee" | "annulee" | "envoyee"
+  status: "payee" | "annulee" | "envoyee",
+  opts?: { payment_method?: string; paid_at?: string }
 ): Promise<ActionResult> {
   if (!isSupabaseConfigured()) return NOT_CONFIGURED;
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("invoices")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", id);
+  const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+  if (status === "payee") {
+    if (opts?.payment_method) patch.payment_method = opts.payment_method;
+    patch.paid_at = opts?.paid_at ?? new Date().toISOString().slice(0, 10);
+  }
+  const { error } = await supabase.from("invoices").update(patch).eq("id", id);
   if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id };
