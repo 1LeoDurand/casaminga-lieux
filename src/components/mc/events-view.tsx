@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { EventForm, type EventFormValues } from "@/components/mc/event-form";
+import { EventRegistrationsPanel } from "@/components/mc/event-registrations";
 import {
   EVENT_STATUSES, EVENT_TYPES,
   eventTypeLabel, eventTypeBadge, eventStatusLabel, eventStatusBadge,
@@ -337,6 +338,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
               <button type="button" disabled={pending} onClick={() => openEdit(selected)} className="mc-btn mc-btn-lime flex-1"><Pencil className="size-4" /> Modifier</button>
               <button type="button" disabled={pending} onClick={() => setConfirmDelete(selected)} className="mc-btn mc-btn-outline"><Trash2 className="size-4" /> Supprimer</button>
             </div>
+            <EventRegistrationsPanel event={selected} orgSlug={orgSlug} orgId={orgId} />
           </aside>
         </>
       ) : null}
