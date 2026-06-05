@@ -4,17 +4,19 @@ import { useState, useTransition, useMemo } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, CheckCircle2, AlertTriangle, Fingerprint, Calculator,
+  CheckSquare, Square, Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import {
   addCashEntryAction, voidCashEntryAction, closeCashRegisterAction, verifyCashChainAction,
 } from "@/app/(admin)/dashboard/[org]/caisse/actions";
+import { pointEntry, unpointEntry } from "@/lib/cash-pointing";
 import {
   PAYMENT_METHODS, CASH_SOURCES, VAT_RATES, CLOSURE_TYPES,
   paymentLabel, sourceLabel, closureTypeLabel, fmtEuro, fmtDateTime, fmtDate, shortHash, splitVat,
 } from "@/lib/cash-register-meta";
-import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource } from "@/lib/types";
+import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole } from "@/lib/types";
 
 const inputCls = "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400";
 const selectCls = inputCls + " cursor-pointer";
@@ -32,15 +34,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 interface EntryForm {
   label: string; amount_ttc: string; vat_rate: string;
   payment_method: CashPaymentMethod; source: CashSource;
-  operator: string; source_ref: string; receipt_email: string;
+  operator: string; source_ref: string; receipt_email: string; pole_id: string;
 }
 const EMPTY: EntryForm = {
   label: "", amount_ttc: "", vat_rate: "0",
-  payment_method: "especes", source: "adhesion", operator: "", source_ref: "", receipt_email: "",
+  payment_method: "especes", source: "adhesion", operator: "", source_ref: "", receipt_email: "", pole_id: "",
 };
 
-function EntryDrawer({ open, onClose, orgSlug, orgId }: {
-  open: boolean; onClose: () => void; orgSlug: string; orgId: string;
+function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
+  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[];
 }) {
   const [form, setForm] = useState<EntryForm>(EMPTY);
   const [pending, start] = useTransition();
@@ -67,6 +69,7 @@ function EntryDrawer({ open, onClose, orgSlug, orgId }: {
         source: form.source,
         operator: form.operator.trim(),
         source_ref: form.source_ref.trim() || null,
+        pole_id: form.pole_id || null,
       }, form.receipt_email.trim() ? { email: form.receipt_email.trim() } : undefined);
       if (res.ok) {
         toast.success(form.receipt_email.trim() ? "Encaissement scellé · reçu envoyé" : "Encaissement enregistré (écriture scellée)");
@@ -124,6 +127,14 @@ function EntryDrawer({ open, onClose, orgSlug, orgId }: {
                 </select>
               </Field>
             </div>
+            {poles.length > 0 && (
+              <Field label="Pôle / Activité">
+                <select value={form.pole_id} onChange={set("pole_id")} className={selectCls}>
+                  <option value="">— Aucun pôle —</option>
+                  {poles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
+            )}
             <Field label="Référence (facultatif)">
               <input value={form.source_ref} onChange={set("source_ref")} placeholder="ex : n° facture, billet…" className={inputCls} />
             </Field>
@@ -153,10 +164,13 @@ function EntryDrawer({ open, onClose, orgSlug, orgId }: {
 }
 
 // ── Vue principale ───────────────────────────────────────────
-export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
+export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = [], pointedIds = [] }: {
   entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
+  poles?: Pole[]; pointedIds?: string[];
 }) {
-  const [tab, setTab] = useState<"ecritures" | "clotures">("ecritures");
+  const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures">("ecritures");
+  const [pointed, setPointed] = useState<Set<string>>(new Set(pointedIds));
+  const [pointOperator, setPointOperator] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [voidTarget, setVoidTarget] = useState<CashEntry | null>(null);
   const [voidReason, setVoidReason] = useState("");
@@ -178,6 +192,50 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
     () => entries.filter((e) => e.seq > closedUpTo).reduce((s, e) => s + Number(e.amount_ttc), 0),
     [entries, closedUpTo],
   );
+
+  const poleById = useMemo(() => new Map(poles.map((p) => [p.id, p])), [poles]);
+  const poleName = (id: string | null) => (id ? poleById.get(id)?.name ?? "Pôle inconnu" : "Sans pôle");
+
+  // Écritures non clôturées (session de caisse en cours = depuis le dernier Z jour)
+  const openEntries = useMemo(() => entries.filter((e) => e.seq > closedUpTo), [entries, closedUpTo]);
+
+  // Récap Z par pôle (écritures non clôturées) + ventilation par moyen de paiement
+  const recapByPole = useMemo(() => {
+    const map = new Map<string, { total: number; byMethod: Map<string, number>; count: number }>();
+    for (const e of openEntries) {
+      const key = e.pole_id ?? "__none__";
+      if (!map.has(key)) map.set(key, { total: 0, byMethod: new Map(), count: 0 });
+      const slot = map.get(key)!;
+      slot.total += Number(e.amount_ttc);
+      slot.count += 1;
+      slot.byMethod.set(e.payment_method, (slot.byMethod.get(e.payment_method) ?? 0) + Number(e.amount_ttc));
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
+  }, [openEntries, poleById]);
+
+  async function togglePoint(entry: CashEntry) {
+    const isPointed = pointed.has(entry.id);
+    // Optimiste
+    setPointed((prev) => {
+      const n = new Set(prev);
+      if (isPointed) n.delete(entry.id); else n.add(entry.id);
+      return n;
+    });
+    start(async () => {
+      const res = isPointed
+        ? await unpointEntry(orgSlug, orgId, entry.id)
+        : await pointEntry(orgSlug, orgId, entry.id, pointOperator.trim() || "—");
+      if (!res.ok) {
+        // Rollback
+        setPointed((prev) => {
+          const n = new Set(prev);
+          if (isPointed) n.add(entry.id); else n.delete(entry.id);
+          return n;
+        });
+        toast.error(res.error ?? "Erreur de pointage");
+      }
+    });
+  }
 
   async function runVerify() {
     start(async () => {
@@ -246,12 +304,13 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
       {/* Barre d'outils */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
-          {(["ecritures", "clotures"] as const).map((t) => (
+          {(["ecritures", "pointage", "clotures"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 tab === t ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"
               }`}>
-              {t === "ecritures" ? `Écritures (${entries.length})` : `Clôtures (${closures.length})`}
+              {t === "ecritures" ? `Écritures (${entries.length})`
+                : t === "pointage" ? `Pointage` : `Clôtures (${closures.length})`}
             </button>
           ))}
         </div>
@@ -303,6 +362,7 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
                   <th className="px-3 py-2 font-medium">Date</th>
                   <th className="px-3 py-2 font-medium">Libellé</th>
                   <th className="px-3 py-2 font-medium">Nature</th>
+                  {poles.length > 0 && <th className="px-3 py-2 font-medium">Pôle</th>}
                   <th className="px-3 py-2 font-medium">Paiement</th>
                   <th className="px-3 py-2 text-right font-medium">TTC</th>
                   <th className="px-3 py-2 font-medium">Sceau</th>
@@ -321,6 +381,16 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
                         {e.is_void && <span className="ml-1.5 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">Annulation</span>}
                       </td>
                       <td className="px-3 py-2 text-xs text-slate-500">{sourceLabel(e.source)}</td>
+                      {poles.length > 0 && (
+                        <td className="px-3 py-2 text-xs">
+                          {e.pole_id ? (
+                            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                              style={{ background: `${poleById.get(e.pole_id)?.color ?? "#888"}22`, color: poleById.get(e.pole_id)?.color ?? "#555" }}>
+                              {poleName(e.pole_id)}
+                            </span>
+                          ) : <span className="text-slate-300">—</span>}
+                        </td>
+                      )}
                       <td className="px-3 py-2 text-xs text-slate-500">{paymentLabel(e.payment_method)}</td>
                       <td className={`px-3 py-2 text-right font-medium tabular-nums ${e.amount_ttc < 0 ? "text-red-600" : "text-slate-800"}`}>{fmtEuro(e.amount_ttc)}</td>
                       <td className="px-3 py-2">
@@ -343,6 +413,79 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
                 })}
               </tbody>
             </table>
+          </div>
+        )
+      )}
+
+      {/* ── Pointage ── */}
+      {tab === "pointage" && (
+        openEntries.length === 0 ? (
+          <EmptyBox icon={<CheckSquare className="size-8 opacity-30" />} text="Aucune opération à pointer (tout est clôturé)." />
+        ) : (
+          <div className="flex flex-col gap-5">
+            {/* Récap Z par pôle */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <Tag className="size-3.5" /> Récap encaissements par pôle (depuis le dernier Z)
+              </div>
+              <div className="flex flex-col gap-2">
+                {recapByPole.map(([key, slot]) => {
+                  const pole = key === "__none__" ? null : poleById.get(key);
+                  return (
+                    <div key={key} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-slate-50 px-3 py-2">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                        {pole && <span className="size-2.5 rounded-full" style={{ background: pole.color }} />}
+                        {key === "__none__" ? "Sans pôle" : pole?.name ?? "Pôle inconnu"}
+                      </span>
+                      <span className="text-xs text-slate-400">{slot.count} op.</span>
+                      <span className="ml-auto flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-500">
+                        {Array.from(slot.byMethod.entries()).map(([m, v]) => (
+                          <span key={m}>{paymentLabel(m as CashPaymentMethod)} <b className="text-slate-700">{fmtEuro(v)}</b></span>
+                        ))}
+                      </span>
+                      <span className="text-base font-bold text-slate-900">{fmtEuro(slot.total)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Pointage opération par opération */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-slate-700">
+                  Pointage — {openEntries.filter((e) => pointed.has(e.id)).length}/{openEntries.length} opérations pointées
+                </span>
+                <input
+                  value={pointOperator} onChange={(e) => setPointOperator(e.target.value)}
+                  placeholder="Votre nom (pointeur)" className={inputCls + " ml-auto h-8 py-1"}
+                />
+              </div>
+              <ul className="divide-y divide-slate-50">
+                {openEntries.map((e) => {
+                  const isPointed = pointed.has(e.id);
+                  return (
+                    <li key={e.id} className={`flex items-center gap-3 px-4 py-2.5 ${isPointed ? "bg-emerald-50/40" : ""}`}>
+                      <button onClick={() => togglePoint(e)} disabled={pending}
+                        className={isPointed ? "text-emerald-600" : "text-slate-300 hover:text-slate-500"}
+                        title={isPointed ? "Dé-pointer" : "Pointer cette opération"}>
+                        {isPointed ? <CheckSquare className="size-5" /> : <Square className="size-5" />}
+                      </button>
+                      <span className="font-mono text-[11px] text-slate-400">{e.ticket_ref}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm text-slate-800">{e.label}</div>
+                        <div className="text-[11px] text-slate-400">
+                          {fmtDateTime(e.occurred_at)} · {poleName(e.pole_id)} · {paymentLabel(e.payment_method)}
+                        </div>
+                      </div>
+                      <span className={`text-sm font-semibold tabular-nums ${e.amount_ttc < 0 ? "text-red-600" : "text-slate-800"}`}>
+                        {fmtEuro(e.amount_ttc)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           </div>
         )
       )}
@@ -386,7 +529,7 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId }: {
         )
       )}
 
-      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} />
+      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} />
 
       {/* Dialog annulation */}
       {voidTarget && (

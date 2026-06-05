@@ -399,6 +399,7 @@ export interface CashEntry {
   voids_seq: number | null;
   prev_hash: string;
   entry_hash: string;
+  pole_id: string | null;
   created_at: string;
 }
 
@@ -598,6 +599,8 @@ export interface Evenement {
   updated_at: string;
 }
 
+export type PoleType = "operationnel" | "support";
+
 export interface Pole {
   id: string;
   organization_id: string;
@@ -606,6 +609,7 @@ export interface Pole {
   description: string | null;
   active: boolean;
   position: number;
+  type: PoleType;
   created_at: string;
 }
 

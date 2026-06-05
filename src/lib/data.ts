@@ -1315,6 +1315,7 @@ export interface CashEntryInput {
   source: CashSource;
   operator: string;
   source_ref?: string | null;
+  pole_id?: string | null;
 }
 
 /** Ajoute une écriture immuable via la fonction atomique (seq continu + hash chaîné). */
@@ -1330,6 +1331,7 @@ export async function addCashEntry(input: CashEntryInput): Promise<{ ok: boolean
     p_source: input.source,
     p_operator: input.operator,
     p_source_ref: input.source_ref ?? null,
+    p_pole_id: input.pole_id ?? null,
   });
   if (error) { console.error("addCashEntry:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };
@@ -1350,6 +1352,7 @@ export async function voidCashEntry(orgId: string, target: CashEntry, operator: 
     p_source_ref: target.ticket_ref,
     p_is_void: true,
     p_voids_seq: target.seq,
+    p_pole_id: target.pole_id ?? null,
   });
   if (error) { console.error("voidCashEntry:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };
