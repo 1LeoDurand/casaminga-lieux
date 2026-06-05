@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { FileText, Check, Send, Ban, Eye, Tag } from "lucide-react";
+import { FileText, Check, Send, Ban, Eye, Tag, BellRing, ShieldCheck, ShieldX } from "lucide-react";
 import {
   type Invoice,
   type InvoiceStatus,
@@ -12,7 +12,7 @@ import {
   PAYMENT_METHODS,
   formatEuros,
 } from "@/lib/invoicing/types";
-import { setInvoiceStatus } from "@/app/(admin)/dashboard/[org]/factures/actions";
+import { setInvoiceStatus, relanceInvoice, setInvoiceValidation } from "@/app/(admin)/dashboard/[org]/factures/actions";
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "Toutes" },
@@ -20,8 +20,15 @@ const FILTERS: { key: string; label: string }[] = [
   { key: "emise", label: "Émises" },
   { key: "envoyee", label: "Envoyées" },
   { key: "payee", label: "Payées" },
-  { key: "en_retard", label: "En retard" },
+  { key: "arelancer", label: "À relancer" },
+  { key: "avalider", label: "À valider" },
 ];
+
+function isOverdue(inv: Invoice): boolean {
+  if (!inv.number || inv.status === "payee" || inv.status === "annulee") return false;
+  if (!inv.due_date) return false;
+  return new Date(inv.due_date) < new Date(new Date().toISOString().slice(0, 10));
+}
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
@@ -30,7 +37,7 @@ function fmtDate(iso: string | null) {
 
 const PM_LABEL: Record<string, string> = Object.fromEntries(PAYMENT_METHODS.map((m) => [m.value, `${m.emoji} ${m.label}`]));
 
-export function InvoicesView({ invoices, orgSlug }: { invoices: Invoice[]; orgSlug: string }) {
+export function InvoicesView({ invoices, orgSlug, validatorName = "" }: { invoices: Invoice[]; orgSlug: string; validatorName?: string }) {
   const [filter, setFilter] = useState("all");
   const [poleFilter, setPoleFilter] = useState("all");
   const [pending, startTransition] = useTransition();
@@ -65,10 +72,17 @@ export function InvoicesView({ invoices, orgSlug }: { invoices: Invoice[]; orgSl
   }, [invoices]);
 
   const filtered = useMemo(() => {
-    let list = filter === "all" ? invoices : invoices.filter((i) => i.status === filter);
+    let list: Invoice[];
+    if (filter === "arelancer") list = invoices.filter(isOverdue);
+    else if (filter === "avalider") list = invoices.filter((i) => i.validation_status === "a_valider");
+    else if (filter === "all") list = invoices;
+    else list = invoices.filter((i) => i.status === filter);
     if (poleFilter !== "all") list = list.filter((i) => (i.pole ?? "sans-pole") === poleFilter);
     return list;
   }, [invoices, filter, poleFilter]);
+
+  const toRelanceCount = useMemo(() => invoices.filter(isOverdue).length, [invoices]);
+  const toValidateCount = useMemo(() => invoices.filter((i) => i.validation_status === "a_valider").length, [invoices]);
 
   function changeStatus(id: string, status: "payee" | "annulee" | "envoyee", msg: string, opts?: { payment_method?: string }) {
     setBusyId(id);
@@ -76,6 +90,26 @@ export function InvoicesView({ invoices, orgSlug }: { invoices: Invoice[]; orgSl
       const res = await setInvoiceStatus(orgSlug, id, status, opts);
       setBusyId(null);
       if (res.ok) toast.success(msg);
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  function doRelance(id: string) {
+    setBusyId(id);
+    startTransition(async () => {
+      const res = await relanceInvoice(orgSlug, id);
+      setBusyId(null);
+      if (res.ok) toast.success("Relance envoyée par email ✓");
+      else toast.error(res.error ?? "Échec de la relance");
+    });
+  }
+
+  function doValidate(id: string, decision: "valide" | "refuse") {
+    setBusyId(id);
+    startTransition(async () => {
+      const res = await setInvoiceValidation(orgSlug, id, decision, validatorName);
+      setBusyId(null);
+      if (res.ok) toast.success(decision === "valide" ? "Facture validée ✓" : "Facture refusée");
       else toast.error(res.error ?? "Erreur");
     });
   }
@@ -125,13 +159,23 @@ export function InvoicesView({ invoices, orgSlug }: { invoices: Invoice[]; orgSl
 
       {/* Filtres statut */}
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
-              filter === f.key ? "border-coral bg-coral text-white" : "border-border bg-white text-warmgray hover:border-coral/40"
-            }`}
-          >{f.label}</button>
-        ))}
+        {FILTERS.map((f) => {
+          const badge = f.key === "arelancer" ? toRelanceCount : f.key === "avalider" ? toValidateCount : 0;
+          if ((f.key === "arelancer" || f.key === "avalider") && badge === 0 && filter !== f.key) return null;
+          return (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
+                filter === f.key ? "border-coral bg-coral text-white"
+                  : f.key === "arelancer" ? "border-red-200 bg-red-50 text-red-600 hover:border-red-300"
+                  : f.key === "avalider" ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
+                  : "border-border bg-white text-warmgray hover:border-coral/40"
+              }`}
+            >
+              {f.label}
+              {badge > 0 && <span className="rounded-full bg-white/30 px-1.5 text-[11px] font-bold">{badge}</span>}
+            </button>
+          );
+        })}
         {poles.length > 0 && (
           <>
             <span className="mx-1 self-center text-warmgray/40">|</span>
@@ -187,7 +231,13 @@ export function InvoicesView({ invoices, orgSlug }: { invoices: Invoice[]; orgSl
                       {isPaid ? "✅ Payé" : isUnpaid ? "⏳ À payer" : ""}
                     </div>
                   </div>
-                  <span><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span></span>
+                  <span className="flex flex-col items-start gap-1">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span>
+                    {inv.validation_status === "a_valider" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⏳ À valider</span>}
+                    {inv.validation_status === "valide" && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Validée</span>}
+                    {inv.validation_status === "refuse" && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">✗ Refusée</span>}
+                    {isOverdue(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
+                  </span>
                   <span className="text-[12px] text-warmgray">
                     {inv.payment_method ? PM_LABEL[inv.payment_method] ?? inv.payment_method : "—"}
                   </span>
@@ -196,6 +246,27 @@ export function InvoicesView({ invoices, orgSlug }: { invoices: Invoice[]; orgSl
                       className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-ink hover:border-coral/40">
                       <Eye className="size-3.5" /> Voir
                     </Link>
+                    {inv.validation_status === "a_valider" && (
+                      <>
+                        <button disabled={isBusy} onClick={() => doValidate(inv.id, "valide")}
+                          title="Valider (direction)"
+                          className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+                          <ShieldCheck className="size-3.5" />
+                        </button>
+                        <button disabled={isBusy} onClick={() => doValidate(inv.id, "refuse")}
+                          title="Refuser (direction)"
+                          className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
+                          <ShieldX className="size-3.5" />
+                        </button>
+                      </>
+                    )}
+                    {isOverdue(inv) && (
+                      <button disabled={isBusy} onClick={() => doRelance(inv.id)}
+                        title="Relancer par email"
+                        className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
+                        <BellRing className="size-3.5" />
+                      </button>
+                    )}
                     {inv.status === "emise" && (
                       <button disabled={isBusy} onClick={() => changeStatus(inv.id, "envoyee", "Marquée envoyée")}
                         title="Marquer envoyée"

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/mc/page-header";
 import { InvoicesView } from "@/components/mc/invoices-view";
 import { getOrganizationBySlug } from "@/lib/data";
 import { getInvoices, getInvoiceSettings } from "@/lib/invoicing/data";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function FacturesPage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
@@ -15,6 +16,13 @@ export default async function FacturesPage({ params }: { params: Promise<{ org: 
     getInvoices(organization.id),
     getInvoiceSettings(organization.id),
   ]);
+
+  let validatorName = "";
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    validatorName = (user?.user_metadata?.full_name as string) || user?.email || "";
+  } catch { /* demo */ }
 
   const configured = Boolean(settings.issuer_name);
 
@@ -53,7 +61,7 @@ export default async function FacturesPage({ params }: { params: Promise<{ org: 
         </div>
       )}
 
-      <InvoicesView invoices={invoices} orgSlug={org} />
+      <InvoicesView invoices={invoices} orgSlug={org} validatorName={validatorName} />
     </div>
   );
 }

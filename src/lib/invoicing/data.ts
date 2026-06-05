@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = (orgId: string): InvoiceSettings => ({
   number_prefix: "FAC-",
   number_start: 1,
   logo_url: null,
+  require_validation_above: null,
   updated_at: new Date().toISOString(),
 });
 

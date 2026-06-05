@@ -94,6 +94,14 @@ export function InvoiceSettingsForm({
           <label className={labelCls}>Pénalités de retard</label>
           <input className={input} value={s.late_penalty ?? ""} onChange={(e) => field("late_penalty", e.target.value)} placeholder="3× le taux légal" />
         </div>
+        <div>
+          <label className={labelCls}>Validation direction au-dessus de (€)</label>
+          <input type="number" min={0} step="0.01" className={input}
+            value={s.require_validation_above ?? ""}
+            onChange={(e) => field("require_validation_above", e.target.value === "" ? null : Number(e.target.value))}
+            placeholder="Vide = désactivé" />
+          <p className="mt-1 text-[11px] text-warmgray">Au-dessus de ce montant, une facture naît « à valider » par la direction. Laissez vide pour désactiver.</p>
+        </div>
       </Section>
 
       <Section title="Apparence & mentions">

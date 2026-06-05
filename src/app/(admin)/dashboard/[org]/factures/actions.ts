@@ -39,6 +39,7 @@ export async function saveInvoiceSettings(
       footer_mentions: settings.footer_mentions ?? null,
       number_prefix: settings.number_prefix ?? "FAC-",
       logo_url: settings.logo_url ?? null,
+      require_validation_above: settings.require_validation_above ?? null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "organization_id" }
@@ -112,9 +113,19 @@ export async function saveInvoice(
     return { ok: true, id };
   }
 
+  // #5 — Validation direction : si un seuil est configuré et que le TTC l'atteint,
+  // la facture naît "à valider".
+  let validation_status: string | null = null;
+  const { data: settings } = await supabase
+    .from("invoice_settings").select("require_validation_above").eq("organization_id", orgId).maybeSingle();
+  const threshold = settings?.require_validation_above;
+  if (threshold != null && totals.total_ttc >= Number(threshold)) {
+    validation_status = "a_valider";
+  }
+
   const { data, error } = await supabase
     .from("invoices")
-    .insert({ ...payload, status: "brouillon", source: "manuelle" })
+    .insert({ ...payload, status: "brouillon", source: "manuelle", validation_status })
     .select("id")
     .single();
   if (error) return { ok: false, error: humanError(error) };
@@ -295,6 +306,33 @@ export async function setInvoiceStatus(
     patch.paid_at = opts?.paid_at ?? new Date().toISOString().slice(0, 10);
   }
   const { error } = await supabase.from("invoices").update(patch).eq("id", id);
+  if (error) return { ok: false, error: humanError(error) };
+  revalidatePath(`/dashboard/${orgSlug}/factures`);
+  return { ok: true, id };
+}
+
+// ── Relance (#4) : renvoie la facture par email avec mention "Rappel" ──
+export async function relanceInvoice(orgSlug: string, invoiceId: string): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const { getOrganizationBySlug } = await import("@/lib/data");
+  const org = await getOrganizationBySlug(orgSlug);
+  if (!org) return { ok: false, error: "Organisation introuvable." };
+  return sendInvoiceEmail(org.id, orgSlug, invoiceId, true);
+}
+
+// ── Validation direction (#5) : valider / refuser une facture en attente ──
+export async function setInvoiceValidation(
+  orgSlug: string, id: string,
+  decision: "valide" | "refuse", validatedBy: string
+): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const supabase = await createClient();
+  const { error } = await supabase.from("invoices").update({
+    validation_status: decision,
+    validated_by: validatedBy || null,
+    validated_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("id", id);
   if (error) return { ok: false, error: humanError(error) };
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id };

@@ -53,6 +53,9 @@ export interface Invoice {
   pole_id: string | null;
   payment_method: PaymentMethod | null;
   paid_at: string | null;
+  validation_status: "a_valider" | "valide" | "refuse" | null;
+  validated_by: string | null;
+  validated_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +98,7 @@ export interface InvoiceSettings {
   number_prefix: string;
   number_start: number;
   logo_url: string | null;
+  require_validation_above: number | null;
   updated_at: string;
 }
 
