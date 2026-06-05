@@ -107,7 +107,11 @@ function NavItem({
   );
 }
 
-/** Groupe repliable (accordéon) : clic sur l'en-tête → déplie/replie. */
+/**
+ * Groupe de navigation.
+ * - `forceOpen=true` → tout ouvert, header non cliquable (mode compact ≤ 10 items)
+ * - `forceOpen=false` → accordéon repliable (mode dense > 10 items)
+ */
 function SectionGroup({
   section,
   orgSlug,
@@ -115,6 +119,7 @@ function SectionGroup({
   onToggle,
   openRequests,
   enabledModules,
+  forceOpen = false,
 }: {
   section: ModuleSection;
   orgSlug: string;
@@ -122,41 +127,48 @@ function SectionGroup({
   onToggle: () => void;
   openRequests: number;
   enabledModules: Set<string>;
+  forceOpen?: boolean;
 }) {
-  // Filtrer les modules selon ce qui est activé pour cet org
   const visibleModules = section.modules.filter(
     (m) => m.layer === 0 || enabledModules.has(m.key)
   );
 
-  // Section vide après filtrage → on ne l'affiche pas
   if (visibleModules.length === 0) return null;
 
-  // Badge agrégé remonté sur l'en-tête quand le groupe est replié
+  const isOpen = forceOpen || open;
+
   const groupBadge =
-    !open && openRequests > 0 && visibleModules.some((m) => m.key === "demandes")
+    !isOpen && openRequests > 0 && visibleModules.some((m) => m.key === "demandes")
       ? openRequests
       : 0;
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 transition-colors hover:text-white/55"
-      >
-        <span className="flex-1 text-left">{section.title}</span>
-        {groupBadge > 0 && <span className="mc-nav-badge danger !static">{groupBadge}</span>}
-        <ChevronDown
-          className={`size-3.5 shrink-0 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
-          strokeWidth={2.2}
-        />
-      </button>
+      {/* En-tête de section — cliquable seulement en mode accordéon */}
+      {forceOpen ? (
+        <div className="flex items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
+          <span>{section.title}</span>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          className="flex w-full items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 transition-colors hover:text-white/55"
+        >
+          <span className="flex-1 text-left">{section.title}</span>
+          {groupBadge > 0 && <span className="mc-nav-badge danger !static">{groupBadge}</span>}
+          <ChevronDown
+            className={`size-3.5 shrink-0 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
+            strokeWidth={2.2}
+          />
+        </button>
+      )}
 
-      {/* Conteneur animé (max-height) */}
+      {/* Conteneur : toujours visible en mode flat, animé en mode accordéon */}
       <div
-        className="overflow-hidden transition-[max-height] duration-200 ease-out"
-        style={{ maxHeight: open ? "500px" : "0px" }}
+        className={forceOpen ? undefined : "overflow-hidden transition-[max-height] duration-200 ease-out"}
+        style={forceOpen ? undefined : { maxHeight: isOpen ? "500px" : "0px" }}
       >
         {visibleModules.map((m) => (
           <NavItem
@@ -195,6 +207,21 @@ export function DashboardSidebar({
     .join("")
     .toUpperCase();
 
+  // ── Comptage des items visibles (toutes sections) ──────────────────────────
+  // ≤ 10 items → mode flat (tout ouvert, pas d'accordéon)
+  // > 10 items → mode accordéon avec scroll
+  const totalVisible = useMemo(
+    () =>
+      MODULE_SECTIONS.reduce(
+        (sum, section) =>
+          sum +
+          section.modules.filter((m) => m.layer === 0 || enabledModules.has(m.key)).length,
+        0
+      ),
+    [enabledModules]
+  );
+  const flatMode = totalVisible <= 10;
+
   // ── Accordéon : la section de la page active s'ouvre automatiquement ──
   const pathname = usePathname();
   const activeSection = useMemo(
@@ -207,7 +234,9 @@ export function DashboardSidebar({
   }, [activeSection]);
 
   return (
-    <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-x-hidden bg-sidebar text-sidebar-foreground"
+      style={{ overflowY: flatMode ? "visible" : "auto" }}
+    >
       {/* Logo + organisation */}
       <div className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5 pb-4 pt-5">
         <img src="/logo.png" alt="Casa Minga Lieux" className="size-[34px] shrink-0 rounded-lg object-contain bg-white p-0.5" />
@@ -231,7 +260,7 @@ export function DashboardSidebar({
         </div>
       </div>
 
-      {/* Navigation — groupes repliables (accordéon) */}
+      {/* Navigation — flat si ≤ 10 items, accordéon sinon */}
       <nav className="flex-1 py-1">
         {MODULE_SECTIONS.map((section) => (
           <SectionGroup
@@ -244,6 +273,7 @@ export function DashboardSidebar({
             }
             openRequests={openRequests}
             enabledModules={enabledModules}
+            forceOpen={flatMode}
           />
         ))}
 
