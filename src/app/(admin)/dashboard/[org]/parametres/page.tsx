@@ -3,9 +3,14 @@ import { PageHeader } from "@/components/mc/page-header";
 import { HelloAssoSettings } from "@/components/mc/helloasso-settings";
 import { RibSettingsCard } from "@/components/mc/rib-settings-card";
 import { PolesManager } from "@/components/mc/poles-manager";
-import { getOrganizationBySlug } from "@/lib/data";
+import { PoleBudgetsPanel } from "@/components/mc/pole-budgets-panel";
+import { PoleMembersPanel } from "@/components/mc/pole-members-panel";
+import { getOrganizationBySlug, getTeamMembers } from "@/lib/data";
 import { getInvoiceSettings } from "@/lib/invoicing/data";
 import { getAllPolesForOrg } from "@/lib/poles";
+import { getPoleBudgets, getPoleFinancials } from "@/lib/pole-budgets";
+import { getPoleMembers } from "@/lib/pole-members";
+import { currentFiscalYear } from "@/lib/pole-meta";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ParametresPage({ params }: { params: Promise<{ org: string }> }) {
@@ -13,10 +18,18 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [invoiceSettings, poles] = await Promise.all([
+  const year = currentFiscalYear();
+  const [invoiceSettings, poles, teamMembers, budgetsMap, financialsMap, poleAssignments] = await Promise.all([
     getInvoiceSettings(organization.id),
     getAllPolesForOrg(organization.id),
+    getTeamMembers(organization.id),
+    getPoleBudgets(organization.id, year),
+    getPoleFinancials(organization.id, year),
+    getPoleMembers(organization.id),
   ]);
+  const activePoles = poles.filter((p) => p.active);
+  const budgets = Object.fromEntries(budgetsMap);
+  const financials = Object.fromEntries(financialsMap);
 
   // Récupérer les infos HelloAsso (champs sensibles)
   let haOrgSlug: string | null = null;
@@ -90,6 +103,35 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
           </p>
           <PolesManager poles={poles} orgId={organization.id} orgSlug={organization.slug} />
         </div>
+
+        {/* Budgets par pôle */}
+        {activePoles.length > 0 && (
+          <div className="mc-card p-6 md:col-span-2">
+            <h3 className="mb-1 font-heading text-base font-bold text-foreground">Budgets par pôle</h3>
+            <p className="mb-4 text-[13px] text-warmgray">
+              Allouez un budget annuel à chaque pôle et suivez l&apos;alloué vs. le réalisé (dépenses payées / factures encaissées).
+            </p>
+            <PoleBudgetsPanel
+              poles={activePoles} year={year}
+              orgId={organization.id} orgSlug={organization.slug}
+              budgets={budgets} financials={financials}
+            />
+          </div>
+        )}
+
+        {/* Membres par pôle */}
+        {activePoles.length > 0 && (
+          <div className="mc-card p-6 md:col-span-2">
+            <h3 className="mb-1 font-heading text-base font-bold text-foreground">Équipes par pôle</h3>
+            <p className="mb-4 text-[13px] text-warmgray">
+              Affectez les membres à leurs pôles (responsable, référent CA, responsable facturation…).
+            </p>
+            <PoleMembersPanel
+              poles={activePoles} members={teamMembers} assignments={poleAssignments}
+              orgId={organization.id} orgSlug={organization.slug}
+            />
+          </div>
+        )}
 
         {/* RIB / Coordonnées bancaires */}
         <div className="md:col-span-2">
