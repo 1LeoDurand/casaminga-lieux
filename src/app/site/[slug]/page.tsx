@@ -11,6 +11,8 @@ import {
 import { getPublishedSiteContent } from "@/lib/site-public/data";
 import { mergeSiteContent } from "@/lib/site-public/types";
 import { eventTypeLabel, eventRange, isFuture } from "@/lib/events-meta";
+import { getEstablishmentForPublic } from "@/lib/establishments";
+import type { Establishment } from "@/lib/types";
 import { PublicContactForm } from "@/components/mc/public-contact-form";
 
 export async function generateMetadata({
@@ -20,11 +22,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const site = await getPublicSiteBySlug(slug);
-  if (!site) return { title: "Lieu introuvable" };
-  return {
-    title: site.title,
-    description: site.seo_description ?? undefined,
-  };
+  if (site) {
+    return { title: site.title, description: site.seo_description ?? undefined };
+  }
+  // Vitrine par établissement
+  const est = await getEstablishmentForPublic(slug);
+  if (est) {
+    const orgSite = await getPublicSiteBySlug(est.orgSlug);
+    return {
+      title: est.establishment.name,
+      description: est.establishment.description ?? orgSite?.seo_description ?? undefined,
+    };
+  }
+  return { title: "Lieu introuvable" };
 }
 
 function fmt(n: number) {
@@ -37,11 +47,21 @@ export default async function PublicSitePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [site, org] = await Promise.all([
-    getPublicSiteBySlug(slug),
-    getOrganizationBySlug(slug),
-  ]);
-  if (!site || !org) notFound();
+
+  // Résolution : d'abord une org par slug ; sinon, un établissement (vitrine par lieu).
+  let org = await getOrganizationBySlug(slug);
+  let establishment: Establishment | null = null;
+  if (!org) {
+    const est = await getEstablishmentForPublic(slug);
+    if (est) {
+      establishment = est.establishment;
+      org = await getOrganizationBySlug(est.orgSlug);
+    }
+  }
+  if (!org) notFound();
+
+  const site = await getPublicSiteBySlug(org.slug);
+  if (!site) notFound();
 
   const [content, campaignsRaw, eventsRaw] = await Promise.all([
     getPublishedSiteContent(org.id),
@@ -51,9 +71,13 @@ export default async function PublicSitePage({
   const c = mergeSiteContent(content);
   const accent = c.accent_color || "#FF8A65";
 
+  // Nom affiché = établissement si vitrine par lieu, sinon l'org mère.
+  const displayName = establishment?.name ?? org.name;
+
   const campaigns = campaignsRaw.filter((cp) => cp.status === "publie");
   const events = eventsRaw
     .filter((e) => e.status === "publie" && isFuture(e.start_at) && e.show_on_public_site)
+    .filter((e) => !establishment || e.establishment_id === establishment.id)
     .sort((a, b) => a.start_at.localeCompare(b.start_at))
     .slice(0, 6);
 
@@ -72,7 +96,7 @@ export default async function PublicSitePage({
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border/60 bg-cream/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-4">
-          <span className="min-w-0 truncate font-heading text-lg font-extrabold">{org.name}</span>
+          <span className="min-w-0 truncate font-heading text-lg font-extrabold">{displayName}</span>
           <nav className="ml-auto flex shrink-0 items-center gap-4 text-sm text-muted-foreground">
             {showLieu ? <a href="#lieu" className="hover:opacity-70">Le lieu</a> : null}
             {showAgenda ? <a href="#agenda" className="hover:opacity-70">Agenda</a> : null}
@@ -91,8 +115,11 @@ export default async function PublicSitePage({
               {org.structure}
             </span>
             <h1 className="mt-4 font-heading text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
-              {org.name}
+              {displayName}
             </h1>
+            {establishment?.address ? (
+              <p className="mt-2 text-sm text-muted-foreground">📍 {establishment.address}</p>
+            ) : null}
             {c.hero_tagline ? (
               <p className="mt-4 text-lg text-muted-foreground">{c.hero_tagline}</p>
             ) : org.description ? (

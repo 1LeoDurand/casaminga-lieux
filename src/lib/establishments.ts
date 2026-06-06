@@ -30,6 +30,26 @@ export async function getActiveEstablishments(orgId: string): Promise<Establishm
   return all.filter((e) => e.active);
 }
 
+/** Résolution publique : un slug d'établissement → l'établissement + le slug de son org.
+ *  Sert aux vitrines casaminga.com/<slug-établissement>. */
+export async function getEstablishmentForPublic(
+  slug: string
+): Promise<{ establishment: Establishment; orgSlug: string } | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("establishments")
+    .select("*, organizations(slug)")
+    .eq("slug", slug)
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const orgSlug = (data as { organizations?: { slug: string } }).organizations?.slug;
+  if (!orgSlug) return null;
+  return { establishment: data as Establishment, orgSlug };
+}
+
 export interface EstablishmentInput {
   name: string;
   slug?: string;
