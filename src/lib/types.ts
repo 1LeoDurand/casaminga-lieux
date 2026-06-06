@@ -599,6 +599,21 @@ export interface Evenement {
   updated_at: string;
 }
 
+export interface Establishment {
+  id: string;
+  organization_id: string;
+  name: string;
+  slug: string;
+  city: string | null;
+  address: string | null;
+  siret: string | null;
+  description: string | null;
+  is_primary: boolean;
+  active: boolean;
+  position: number;
+  created_at: string;
+}
+
 export type PoleType = "operationnel" | "support";
 
 export interface Pole {

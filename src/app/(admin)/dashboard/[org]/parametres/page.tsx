@@ -5,12 +5,15 @@ import { RibSettingsCard } from "@/components/mc/rib-settings-card";
 import { PolesManager } from "@/components/mc/poles-manager";
 import { PoleBudgetsPanel } from "@/components/mc/pole-budgets-panel";
 import { PoleMembersPanel } from "@/components/mc/pole-members-panel";
+import { EstablishmentsManager } from "@/components/mc/establishments-manager";
 import { getOrganizationBySlug, getTeamMembers } from "@/lib/data";
 import { getInvoiceSettings } from "@/lib/invoicing/data";
 import { getAllPolesForOrg } from "@/lib/poles";
 import { getPoleBudgets, getPoleFinancials } from "@/lib/pole-budgets";
 import { getPoleMembers } from "@/lib/pole-members";
 import { currentFiscalYear } from "@/lib/pole-meta";
+import { getEstablishments } from "@/lib/establishments";
+import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ParametresPage({ params }: { params: Promise<{ org: string }> }) {
@@ -19,13 +22,14 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
   if (!organization) notFound();
 
   const year = currentFiscalYear();
-  const [invoiceSettings, poles, teamMembers, budgetsMap, financialsMap, poleAssignments] = await Promise.all([
+  const [invoiceSettings, poles, teamMembers, budgetsMap, financialsMap, poleAssignments, establishments] = await Promise.all([
     getInvoiceSettings(organization.id),
     getAllPolesForOrg(organization.id),
     getTeamMembers(organization.id),
     getPoleBudgets(organization.id, year),
     getPoleFinancials(organization.id, year),
     getPoleMembers(organization.id),
+    getEstablishments(organization.id),
   ]);
   const activePoles = poles.filter((p) => p.active);
   const budgets = Object.fromEntries(budgetsMap);
@@ -94,6 +98,22 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
             <p className="text-sm leading-relaxed text-warmgray">{organization.description}</p>
           </div>
         ) : null}
+
+        {/* Établissements / Lieux */}
+        <div className="mc-card p-6 md:col-span-2">
+          <h3 className="mb-1 font-heading text-base font-bold text-foreground">Établissements / Lieux</h3>
+          <p className="mb-4 text-[13px] text-warmgray">
+            Si votre structure gère plusieurs lieux (établissements secondaires), créez-les ici.
+            Chaque établissement a sa vitrine publique, ses événements et ses adhérents ; la facturation,
+            les dépenses et la gouvernance restent communes à la structure mère.
+          </p>
+          <EstablishmentsManager
+            establishments={establishments}
+            orgId={organization.id}
+            orgSlug={organization.slug}
+            publicBaseUrl={PUBLIC_SITE_BASE.replace(/^https?:\/\//, "")}
+          />
+        </div>
 
         {/* Pôles / activités */}
         <div className="mc-card p-6 md:col-span-2">
