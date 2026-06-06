@@ -19,7 +19,9 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Host public (apex) : casaminga.com/<slug> → /site/<slug>
-  if (PUBLIC_APEX_HOSTS.includes(host) && !pathname.startsWith("/site")) {
+  // Exclusions : routes publiques propres (billet/scan/api) + le site lui-même.
+  const APEX_PASSTHROUGH = ["/site", "/billet", "/scan", "/api"];
+  if (PUBLIC_APEX_HOSTS.includes(host) && !APEX_PASSTHROUGH.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = `/site${pathname === "/" ? "" : pathname}`;
     return NextResponse.rewrite(url);

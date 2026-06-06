@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserCheck, UserX, Plus, X, Download } from "lucide-react";
+import { UserCheck, UserX, Plus, X, Download, QrCode, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
   getRegistrationsForEvent, addRegistrationManual,
   checkInRegistration, cancelRegistration,
   type EventRegistration,
 } from "@/lib/registrations";
+import { getOrCreateScanLink } from "@/lib/tickets";
+import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
 import type { Evenement } from "@/lib/types";
 
 function fmtDate(iso: string) {
@@ -33,7 +35,30 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newSeats, setNewSeats] = useState("1");
+  const [scanToken, setScanToken] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  function openScanner() {
+    startTransition(async () => {
+      const res = await getOrCreateScanLink(orgSlug, orgId, event.id);
+      if (res.ok && res.token) {
+        setScanToken(res.token);
+        window.open(`${window.location.origin}/scan/${res.token}`, "_blank");
+      } else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  function copyScanLink() {
+    startTransition(async () => {
+      const res = await getOrCreateScanLink(orgSlug, orgId, event.id);
+      if (res.ok && res.token) {
+        const url = `${PUBLIC_SITE_BASE}/scan/${res.token}`;
+        setScanToken(res.token);
+        await navigator.clipboard.writeText(url);
+        toast.success("Lien de scan copié — partagez-le aux bénévoles");
+      } else toast.error(res.error ?? "Erreur");
+    });
+  }
 
   async function load() {
     if (loaded) return;
@@ -118,6 +143,21 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
             </button>
             <button onClick={() => setAddOpen(true)} className="flex items-center gap-1 text-coral-dark hover:underline">
               <Plus className="size-3.5" /> Ajouter
+            </button>
+          </div>
+
+          {/* Scan billets QR */}
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+            <QrCode className="size-4 text-slate-500" />
+            <span className="text-[12px] font-semibold text-slate-700">Scanner les billets à l&apos;entrée</span>
+            <button onClick={openScanner}
+              className="ml-auto inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-slate-700">
+              <ExternalLink className="size-3.5" /> Ouvrir le scanner
+            </button>
+            <button onClick={copyScanLink}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 hover:border-slate-400"
+              title="Lien à partager aux bénévoles (sans compte)">
+              <Copy className="size-3.5" /> Copier le lien bénévole
             </button>
           </div>
 

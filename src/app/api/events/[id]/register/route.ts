@@ -52,8 +52,9 @@ export async function POST(
       status: registrationStatus,
       notes: notes?.trim() || null,
       source: "public",
+      ticket_token: crypto.randomUUID().replace(/-/g, ""),
     })
-    .select("id, status")
+    .select("id, status, ticket_token")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -65,6 +66,23 @@ export async function POST(
       weekday: "long", day: "2-digit", month: "long", year: "numeric",
     });
     const isWaiting = registrationStatus === "liste_attente";
+
+    // Billet QR (seulement si inscrit confirmé)
+    let ticketBlock = "";
+    if (!isWaiting && reg.ticket_token) {
+      const { ticketQrDataUrl } = await import("@/lib/tickets");
+      const { PUBLIC_SITE_BASE } = await import("@/lib/site-public/url");
+      const qr = await ticketQrDataUrl(reg.ticket_token);
+      const billetUrl = `${PUBLIC_SITE_BASE}/billet/${reg.ticket_token}`;
+      ticketBlock = `
+        <div style="margin-top:20px;padding:20px;border:1px solid #E5DDD6;border-radius:14px;text-align:center">
+          <p style="margin:0 0 8px;font-weight:700">🎟️ Votre billet</p>
+          <img src="${qr}" alt="QR billet" width="200" height="200" style="display:block;margin:0 auto" />
+          <p style="margin:10px 0 0;font-size:12px;color:#9c9590">Présentez ce QR code à l'entrée.</p>
+          <a href="${billetUrl}" style="display:inline-block;margin-top:10px;color:#E8714D;font-weight:600;text-decoration:none">Voir mon billet en ligne →</a>
+        </div>`;
+    }
+
     await sendMail({
       to: email,
       subject: isWaiting
@@ -79,7 +97,7 @@ export async function POST(
             : `Votre inscription à <strong>${event.title}</strong> est confirmée.`
           }</p>
           <p><strong>📅 ${eventDate}</strong></p>
-          <p style="color:#9c9590;font-size:12px">Référence : ${reg.id}</p>
+          ${ticketBlock}
         </div>`,
       category: "bienvenue",
       organizationId: event.organization_id,

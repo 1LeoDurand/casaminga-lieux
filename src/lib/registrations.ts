@@ -20,6 +20,7 @@ export interface EventRegistration {
   checked_in_at: string | null;
   source: string;
   notes: string | null;
+  ticket_token: string | null;
   created_at: string;
 }
 
