@@ -595,6 +595,7 @@ export interface Evenement {
   description: string | null;
   photos: string[];
   show_on_public_site: boolean;
+  establishment_id: string | null;
   created_at: string;
   updated_at: string;
 }

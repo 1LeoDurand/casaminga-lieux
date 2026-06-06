@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { X, Globe } from "lucide-react";
 import { EVENT_STATUSES, EVENT_TYPES } from "@/lib/events-meta";
-import type { Evenement, Space } from "@/lib/types";
+import type { Evenement, Space, Establishment } from "@/lib/types";
 
 export interface EventFormValues {
   title: string;
   type: string;
   status: Evenement["status"];
   spaceId: string;
+  establishmentId: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -25,15 +26,16 @@ function localDate(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function fromEvenement(e: Evenement | null, defaultSpaceId: string): EventFormValues {
+function fromEvenement(e: Evenement | null, defaultSpaceId: string, defaultEstId: string): EventFormValues {
   if (!e) {
-    return { title: "", type: "autre", status: "brouillon", spaceId: defaultSpaceId,
+    return { title: "", type: "autre", status: "brouillon", spaceId: defaultSpaceId, establishmentId: defaultEstId,
       date: localDate(new Date()), startTime: "18:00", endTime: "21:00",
       capacity: "", price: "", description: "", photosInput: "", showOnPublicSite: false };
   }
   const s = new Date(e.start_at); const en = new Date(e.end_at);
   return {
     title: e.title, type: e.type, status: e.status, spaceId: e.space_id ?? "",
+    establishmentId: e.establishment_id ?? "",
     date: localDate(s),
     startTime: `${pad(s.getHours())}:${pad(s.getMinutes())}`,
     endTime: `${pad(en.getHours())}:${pad(en.getMinutes())}`,
@@ -45,12 +47,13 @@ function fromEvenement(e: Evenement | null, defaultSpaceId: string): EventFormVa
   };
 }
 
-export function EventForm({ open, evenement, spaces, busy = false, onSubmit, onClose }: {
-  open: boolean; evenement: Evenement | null; spaces: Space[];
+export function EventForm({ open, evenement, spaces, establishments = [], busy = false, onSubmit, onClose }: {
+  open: boolean; evenement: Evenement | null; spaces: Space[]; establishments?: Establishment[];
   busy?: boolean; onSubmit: (v: EventFormValues) => void; onClose: () => void;
 }) {
   const defaultSpaceId = evenement?.space_id ?? spaces[0]?.id ?? "";
-  const [values, setValues] = useState<EventFormValues>(fromEvenement(evenement, defaultSpaceId));
+  const defaultEstId = evenement?.establishment_id ?? (establishments.length === 1 ? establishments[0].id : "");
+  const [values, setValues] = useState<EventFormValues>(fromEvenement(evenement, defaultSpaceId, defaultEstId));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,6 +123,16 @@ export function EventForm({ open, evenement, spaces, busy = false, onSubmit, onC
               </select>
             </div>
           </div>
+
+          {establishments.length > 1 && (
+            <div className="mc-form-group">
+              <label className="mc-form-label">Établissement / Lieu</label>
+              <select className="mc-input" value={values.establishmentId} onChange={(e) => set("establishmentId", e.target.value)}>
+                <option value="">— Tous / non précisé —</option>
+                {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="mc-form-group">
             <label className="mc-form-label">Espace (optionnel)</label>

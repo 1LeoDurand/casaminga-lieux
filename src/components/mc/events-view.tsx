@@ -20,7 +20,7 @@ import {
 import {
   createEvenementAction, deleteEvenementAction, updateEvenementAction,
 } from "@/app/(admin)/dashboard/[org]/evenements/actions";
-import type { Evenement, Space } from "@/lib/types";
+import type { Evenement, Space, Establishment } from "@/lib/types";
 
 type View = "cards" | "calendrier" | "agenda" | "table";
 
@@ -52,10 +52,11 @@ function Cover({ ev, children }: { ev: Evenement; children?: React.ReactNode }) 
   );
 }
 
-export function EventsView({ evenements, spaces, orgSlug, orgId }: {
-  evenements: Evenement[]; spaces: Space[]; orgSlug: string; orgId: string;
+export function EventsView({ evenements, spaces, establishments = [], orgSlug, orgId }: {
+  evenements: Evenement[]; spaces: Space[]; establishments?: Establishment[]; orgSlug: string; orgId: string;
 }) {
   const [view, setView] = useState<View>("cards");
+  const [estFilter, setEstFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState<Set<string>>(new Set());
   const [statusF, setStatusF] = useState<Set<string>>(new Set());
@@ -80,6 +81,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return evenements.filter((e) => {
+      if (estFilter !== "all" && (e.establishment_id ?? "none") !== estFilter) return false;
       if (typeF.size && !typeF.has(e.type)) return false;
       if (statusF.size && !statusF.has(e.status)) return false;
       if (q) {
@@ -90,7 +92,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evenements, search, typeF, statusF, spaceById]);
+  }, [evenements, search, typeF, statusF, spaceById, estFilter]);
 
   const agendaDays = useMemo(() => {
     const groups = new Map<string, Evenement[]>();
@@ -121,6 +123,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
       description: values.description.trim() || null,
       photos: values.photosInput.split(",").map((p) => p.trim()).filter(Boolean),
       show_on_public_site: values.showOnPublicSite,
+      establishment_id: values.establishmentId || null,
     };
     startTransition(async () => {
       const res = editing
@@ -166,7 +169,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
           </div>
         </div>
         <EventForm key={formOpen ? "create-open" : "create-closed"} open={formOpen} evenement={null}
-          spaces={spaces} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
+          spaces={spaces} establishments={establishments} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
       </>
     );
   }
@@ -198,6 +201,17 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
           <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" onClick={openCreate}><Plus className="size-3.5" /> Nouvel</button>
           <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={() => { setSearch(""); setTypeF(new Set()); setStatusF(new Set()); }} disabled={!hasFilters}><RotateCcw className="size-3.5" /> Réinitialiser</button>
         </div>
+        {establishments.length > 1 && (
+          <div className="mc-filter-row">
+            <span className="mc-filter-lbl">Lieu</span>
+            <div className="mc-chips">
+              <button type="button" className={`mc-chip ${estFilter === "all" ? "active" : ""}`} onClick={() => setEstFilter("all")}>Tous les lieux</button>
+              {establishments.map((es) => (
+                <button key={es.id} type="button" className={`mc-chip ${estFilter === es.id ? "active" : ""}`} onClick={() => setEstFilter(es.id)}>{es.name}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mc-filter-row">
           <span className="mc-filter-lbl">Type</span>
           <div className="mc-chips">{EVENT_TYPES.map((t) => (
@@ -349,7 +363,7 @@ export function EventsView({ evenements, spaces, orgSlug, orgId }: {
 
       <EventForm
         key={formOpen ? `edit-${editing?.id ?? "new"}` : "edit-closed"}
-        open={formOpen} evenement={editing} spaces={spaces} busy={pending}
+        open={formOpen} evenement={editing} spaces={spaces} establishments={establishments} busy={pending}
         onClose={() => { setFormOpen(false); setEditing(null); }} onSubmit={submitForm} />
 
       <ConfirmDialog

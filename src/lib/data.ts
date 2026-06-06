@@ -570,6 +570,7 @@ export interface EvenementInput {
   description: string | null;
   photos: string[];
   show_on_public_site: boolean;
+  establishment_id: string | null;
 }
 
 export async function createEvenement(input: EvenementInput): Promise<boolean> {
