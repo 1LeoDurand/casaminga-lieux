@@ -293,6 +293,7 @@ export interface CommunityPost {
   title: string;
   content: string;
   status: CommunityStatus;
+  establishment_id: string | null;
   created_at: string;
   updated_at: string;
 }

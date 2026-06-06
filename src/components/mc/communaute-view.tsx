@@ -8,7 +8,7 @@ import {
   communityTypeLabel, communityTypeBadge, communityStatusLabel, communityStatusBadge, formatDate,
 } from "@/lib/community-meta";
 import { createCommunityPostAction, deleteCommunityPostAction, updateCommunityPostAction } from "@/app/(admin)/dashboard/[org]/communaute/actions";
-import type { CommunityPost, Person } from "@/lib/types";
+import type { CommunityPost, Person, Establishment } from "@/lib/types";
 
 function toggle<T>(set: Set<T>, v: T): Set<T> {
   const n = new Set(set); if (n.has(v)) { n.delete(v); } else { n.add(v); } return n;
@@ -16,13 +16,13 @@ function toggle<T>(set: Set<T>, v: T): Set<T> {
 function TypeBadge({ t }: { t: string }) { return <span className={`mc-badge ${communityTypeBadge(t)}`}>{communityTypeLabel(t)}</span>; }
 function StatBadge({ s }: { s: string }) { return <span className={`mc-badge ${communityStatusBadge(s)}`}>{communityStatusLabel(s)}</span>; }
 
-interface FormValues { type: CommunityPost["type"]; title: string; content: string; status: CommunityPost["status"]; authorId: string; }
+interface FormValues { type: CommunityPost["type"]; title: string; content: string; status: CommunityPost["status"]; authorId: string; establishmentId: string; }
 function fromPost(p: CommunityPost | null): FormValues {
-  return { type: p?.type ?? "info", title: p?.title ?? "", content: p?.content ?? "", status: p?.status ?? "actif", authorId: p?.author_id ?? "" };
+  return { type: p?.type ?? "info", title: p?.title ?? "", content: p?.content ?? "", status: p?.status ?? "actif", authorId: p?.author_id ?? "", establishmentId: p?.establishment_id ?? "" };
 }
 
-function PostModal({ open, post, persons, busy, onSubmit, onClose }: {
-  open: boolean; post: CommunityPost | null; persons: Person[]; busy: boolean;
+function PostModal({ open, post, persons, establishments = [], busy, onSubmit, onClose }: {
+  open: boolean; post: CommunityPost | null; persons: Person[]; establishments?: Establishment[]; busy: boolean;
   onSubmit: (v: FormValues) => void; onClose: () => void;
 }) {
   const [v, setV] = useState<FormValues>(fromPost(post));
@@ -57,6 +57,13 @@ function PostModal({ open, post, persons, busy, onSubmit, onClose }: {
               <option value="">— Anonyme —</option>
               {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select></div>
+          {establishments.length > 1 && (
+            <div className="mc-form-group"><label className="mc-form-label">Établissement / Lieu</label>
+              <select className="mc-input" value={v.establishmentId} onChange={(e) => set("establishmentId", e.target.value)}>
+                <option value="">— Tous / non précisé —</option>
+                {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
+              </select></div>
+          )}
           <div className="mc-form-group"><label className="mc-form-label">Titre *</label>
             <input className="mc-input" value={v.title} autoFocus onChange={(e) => set("title", e.target.value)} placeholder="Prêt de matériel, recherche bénévoles…" /></div>
           <div className="mc-form-group"><label className="mc-form-label">Contenu *</label>
@@ -72,10 +79,11 @@ function PostModal({ open, post, persons, busy, onSubmit, onClose }: {
   );
 }
 
-export function CommunauteView({ posts, persons, orgSlug, orgId }: {
-  posts: CommunityPost[]; persons: Person[]; orgSlug: string; orgId: string;
+export function CommunauteView({ posts, persons, establishments = [], orgSlug, orgId }: {
+  posts: CommunityPost[]; persons: Person[]; establishments?: Establishment[]; orgSlug: string; orgId: string;
 }) {
   const [typeF, setTypeF] = useState<Set<string>>(new Set());
+  const [estFilter, setEstFilter] = useState<string>("all");
   const [showResolved, setShowResolved] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -95,13 +103,14 @@ export function CommunauteView({ posts, persons, orgSlug, orgId }: {
   }), [posts]);
 
   const filtered = useMemo(() => posts.filter((p) => {
+    if (estFilter !== "all" && (p.establishment_id ?? "none") !== estFilter) return false;
     if (!showResolved && p.status !== "actif") return false;
     if (typeF.size && !typeF.has(p.type)) return false;
     return true;
-  }), [posts, typeF, showResolved]);
+  }), [posts, typeF, showResolved, estFilter]);
 
   function submitForm(values: FormValues) {
-    const payload = { type: values.type, title: values.title, content: values.content, status: values.status, author_id: values.authorId || null };
+    const payload = { type: values.type, title: values.title, content: values.content, status: values.status, author_id: values.authorId || null, establishment_id: values.establishmentId || null };
     startTransition(async () => {
       const res = editing
         ? await updateCommunityPostAction(orgSlug, editing.id, payload)
@@ -133,7 +142,7 @@ export function CommunauteView({ posts, persons, orgSlug, orgId }: {
         <p className="mc-empty-sub">Offres, demandes, entraide, infos — animez la vie du collectif.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouvelle publication</button>
       </div></div>
-      <PostModal open={formOpen} post={null} persons={persons} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
+      <PostModal open={formOpen} post={null} persons={persons} establishments={establishments} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
     </>
   );
 
@@ -153,6 +162,16 @@ export function CommunauteView({ posts, persons, orgSlug, orgId }: {
             {showResolved ? "Tout afficher" : "Masquer résolus/archivés"}
           </button>
         </div>
+        {establishments.length > 1 && (
+          <div className="mc-filter-row"><span className="mc-filter-lbl">Lieu</span>
+            <div className="mc-chips">
+              <button type="button" className={`mc-chip ${estFilter === "all" ? "active" : ""}`} onClick={() => setEstFilter("all")}>Tous les lieux</button>
+              {establishments.map((es) => (
+                <button key={es.id} type="button" className={`mc-chip ${estFilter === es.id ? "active" : ""}`} onClick={() => setEstFilter(es.id)}>{es.name}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mc-filter-row"><span className="mc-filter-lbl">Type</span>
           <div className="mc-chips">{COMMUNITY_TYPES.map((t) => (
             <button key={t.value} type="button" className={`mc-chip ${typeF.has(t.value) ? "active" : ""}`} onClick={() => setTypeF((s) => toggle(s, t.value))}>{t.label}</button>
@@ -200,7 +219,7 @@ export function CommunauteView({ posts, persons, orgSlug, orgId }: {
       ) : null}
 
       <PostModal key={formOpen ? `edit-${editing?.id ?? "new"}` : "edit-closed"}
-        open={formOpen} post={editing} persons={persons} busy={pending}
+        open={formOpen} post={editing} persons={persons} establishments={establishments} busy={pending}
         onClose={() => { setFormOpen(false); setEditing(null); }} onSubmit={submitForm} />
 
       <ConfirmDialog open={confirmDelete !== null} title="Supprimer cette publication ?"

@@ -4,15 +4,17 @@ import { CommunauteView } from "@/components/mc/communaute-view";
 import { NewsletterComposer } from "@/components/mc/newsletter-composer";
 import { getOrganizationBySlug, getCommunityPostsForOrg, getPersonsForOrg } from "@/lib/data";
 import { getMemberGroups } from "@/lib/member-groups";
+import { getActiveEstablishments } from "@/lib/establishments";
 
 export default async function CommunautePage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
-  const [posts, persons, groups] = await Promise.all([
+  const [posts, persons, groups, establishments] = await Promise.all([
     getCommunityPostsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getMemberGroups(organization.id),
+    getActiveEstablishments(organization.id),
   ]);
   return (
     <div className="flex flex-col gap-6">
@@ -25,7 +27,7 @@ export default async function CommunautePage({ params }: { params: Promise<{ org
             orgSlug={organization.slug}
           />
         } />
-      <CommunauteView posts={posts} persons={persons} orgSlug={organization.slug} orgId={organization.id} />
+      <CommunauteView posts={posts} persons={persons} establishments={establishments} orgSlug={organization.slug} orgId={organization.id} />
     </div>
   );
 }

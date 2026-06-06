@@ -893,6 +893,7 @@ export interface CommunityPostInput {
   title: string;
   content: string;
   status: CommunityPost["status"];
+  establishment_id: string | null;
 }
 
 export async function createCommunityPost(input: CommunityPostInput): Promise<boolean> {
