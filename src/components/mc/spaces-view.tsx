@@ -35,7 +35,7 @@ import {
   deleteSpaceAction,
   updateSpaceAction,
 } from "@/app/(admin)/dashboard/[org]/espaces/actions";
-import type { Space } from "@/lib/types";
+import type { Space, Establishment } from "@/lib/types";
 
 type View = "cards" | "table";
 
@@ -76,14 +76,17 @@ function Cover({ space, children }: { space: Space; children?: React.ReactNode }
 
 export function SpacesView({
   spaces,
+  establishments = [],
   orgSlug,
   orgId,
 }: {
   spaces: Space[];
+  establishments?: Establishment[];
   orgSlug: string;
   orgId: string;
 }) {
   const [view, setView] = useState<View>("cards");
+  const [estFilter, setEstFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState<Set<string>>(new Set());
   const [statusF, setStatusF] = useState<Set<string>>(new Set());
@@ -111,6 +114,7 @@ export function SpacesView({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return spaces.filter((s) => {
+      if (estFilter !== "all" && (s.establishment_id ?? "none") !== estFilter) return false;
       if (typeF.size && !typeF.has(s.type)) return false;
       if (statusF.size && !statusF.has(s.status)) return false;
       if (q) {
@@ -122,7 +126,7 @@ export function SpacesView({
       }
       return true;
     });
-  }, [spaces, search, typeF, statusF]);
+  }, [spaces, search, typeF, statusF, estFilter]);
 
   const hasFilters = search.trim() !== "" || typeF.size > 0 || statusF.size > 0;
 
@@ -153,6 +157,7 @@ export function SpacesView({
         price_day: toNum(values.priceDay),
         description: values.description.trim() || null,
         photos: values.photos,
+        establishment_id: values.establishmentId || null,
       };
       const res = editing
         ? await updateSpaceAction(orgSlug, editing.id, payload)
@@ -203,6 +208,7 @@ export function SpacesView({
           key={formOpen ? "create-open" : "create-closed"}
           open={formOpen}
           space={null}
+          establishments={establishments}
           busy={pending}
           onClose={() => setFormOpen(false)}
           onSubmit={submitForm}
@@ -280,6 +286,17 @@ export function SpacesView({
           </button>
         </div>
 
+        {establishments.length > 1 && (
+          <div className="mc-filter-row">
+            <span className="mc-filter-lbl">Lieu</span>
+            <div className="mc-chips">
+              <button type="button" className={`mc-chip ${estFilter === "all" ? "active" : ""}`} onClick={() => setEstFilter("all")}>Tous les lieux</button>
+              {establishments.map((es) => (
+                <button key={es.id} type="button" className={`mc-chip ${estFilter === es.id ? "active" : ""}`} onClick={() => setEstFilter(es.id)}>{es.name}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mc-filter-row">
           <span className="mc-filter-lbl">Type</span>
           <div className="mc-chips">
@@ -485,6 +502,7 @@ export function SpacesView({
         key={formOpen ? `edit-${editing?.id ?? "new"}` : "edit-closed"}
         open={formOpen}
         space={editing}
+        establishments={establishments}
         busy={pending}
         onClose={() => {
           setFormOpen(false);

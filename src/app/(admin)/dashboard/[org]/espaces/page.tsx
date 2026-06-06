@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
 import { SpacesView } from "@/components/mc/spaces-view";
 import { getOrganizationBySlug, getSpacesForOrg } from "@/lib/data";
+import { getActiveEstablishments } from "@/lib/establishments";
 
 export default async function EspacesPage({
   params,
@@ -12,7 +13,10 @@ export default async function EspacesPage({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const spaces = await getSpacesForOrg(organization.id);
+  const [spaces, establishments] = await Promise.all([
+    getSpacesForOrg(organization.id),
+    getActiveEstablishments(organization.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,6 +27,7 @@ export default async function EspacesPage({
       />
       <SpacesView
         spaces={spaces}
+        establishments={establishments}
         orgSlug={organization.slug}
         orgId={organization.id}
       />

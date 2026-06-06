@@ -117,6 +117,7 @@ export interface Space {
   description: string | null;
   photos: string[];
   status: SpaceStatus;
+  establishment_id: string | null;
   created_at: string;
   updated_at: string;
 }

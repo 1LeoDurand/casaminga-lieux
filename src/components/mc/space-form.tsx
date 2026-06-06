@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { SPACE_STATUSES, SPACE_TYPES } from "@/lib/spaces-meta";
-import type { Space } from "@/lib/types";
+import type { Space, Establishment } from "@/lib/types";
 
 export interface SpaceFormValues {
   name: string;
@@ -15,6 +15,7 @@ export interface SpaceFormValues {
   priceDay: string;
   description: string;
   photos: string[];
+  establishmentId: string;
 }
 
 function fromSpace(s: Space | null): SpaceFormValues {
@@ -28,6 +29,7 @@ function fromSpace(s: Space | null): SpaceFormValues {
     priceDay: s?.price_day != null ? String(s.price_day) : "",
     description: s?.description ?? "",
     photos: s?.photos ? [...s.photos] : [],
+    establishmentId: s?.establishment_id ?? "",
   };
 }
 
@@ -39,12 +41,14 @@ function fromSpace(s: Space | null): SpaceFormValues {
 export function SpaceForm({
   open,
   space,
+  establishments = [],
   busy = false,
   onSubmit,
   onClose,
 }: {
   open: boolean;
   space: Space | null;
+  establishments?: Establishment[];
   busy?: boolean;
   onSubmit: (values: SpaceFormValues) => void;
   onClose: () => void;
@@ -134,6 +138,16 @@ export function SpaceForm({
               autoFocus
             />
           </div>
+
+          {establishments.length > 1 && (
+            <div className="mc-form-group">
+              <label className="mc-form-label">Établissement / Lieu</label>
+              <select className="mc-input" value={values.establishmentId} onChange={(e) => set("establishmentId", e.target.value)}>
+                <option value="">— Non précisé —</option>
+                {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="mc-form-group">

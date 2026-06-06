@@ -367,6 +367,7 @@ export interface SpaceInput {
   description: string | null;
   photos: string[];
   status: Space["status"];
+  establishment_id: string | null;
 }
 
 /** Crée un espace. Membre uniquement (RLS). */
