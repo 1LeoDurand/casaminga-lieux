@@ -40,3 +40,11 @@ jobs:
             -H "Content-Type: application/json" \
             "https://admin.casaminga.com/api/cron/newsletters" \
             -w "\nHTTP %{http_code}\n"
+
+      - name: Séquence onboarding (J+3 check-in · J+7 invitation 1-to-1)
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://admin.casaminga.com/api/cron/onboarding-followup" \
+            -w "\nHTTP %{http_code}\n"

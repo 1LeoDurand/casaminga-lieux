@@ -30,6 +30,9 @@ export interface Organization {
   helloasso_client_secret?: string | null;
   helloasso_org_slug?: string | null;
   helloasso_connected_at?: string | null;
+  /** Suivi séquence onboarding email — null = pas encore envoyé. */
+  onboarding_j3_sent_at?: string | null;
+  onboarding_j7_sent_at?: string | null;
 }
 
 export type RequestStatus =
