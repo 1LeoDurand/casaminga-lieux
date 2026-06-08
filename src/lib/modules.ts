@@ -64,7 +64,7 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     ],
   },
   {
-    title: "Publication",
+    title: "Communication",
     modules: [
       { key: "site-public",   label: "Site public",   segment: "site-public",   layer: 0, description: "Votre vitrine publique." },
       { key: "communication", label: "Communication", segment: "communication", layer: 1, tableKey: "newsletters",  description: "Newsletter et bulletins de l'équipe.", minTier: "complete" },

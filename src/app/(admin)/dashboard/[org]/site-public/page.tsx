@@ -14,7 +14,7 @@ export default async function SitePublicPage({ params }: { params: Promise<{ org
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        tag="Publication"
+        tag="Communication"
         title="Site public"
         sub="Personnalisez la vitrine de votre lieu : photos, présentation, sections. Publiez quand vous êtes prêt."
       />

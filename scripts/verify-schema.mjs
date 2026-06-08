@@ -40,7 +40,7 @@ const EXPECTED = {
   event_scan_links: ["event_id", "token", "revoked", "expires_at"],
   tax_receipts: ["donor_name", "amount", "fiscal_year"],
   subscriptions: ["tier", "status", "comped", "founding_member", "trial_ends_at"],
-  feedback: ["screenshot_url"],
+  feedback: ["screenshot_url", "user_agent", "device_type", "screen_width", "screen_height", "os_hint"],
   grant_opportunities: ["title", "funder", "funder_type", "themes", "regions", "structure_types", "amount_min", "amount_max", "deadline", "recurring", "published"],
   grant_applications: ["organization_id", "opportunity_id", "status", "notes", "amount_requested", "applied_at", "result_at"],
 };

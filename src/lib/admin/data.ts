@@ -32,6 +32,12 @@ export interface FeedbackRow {
   status: string;
   screenshot_url: string | null;
   created_at: string;
+  // Infos environnement (migration feedback_device_info)
+  user_agent: string | null;
+  device_type: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  os_hint: string | null;
 }
 
 /** Statistiques globales de la plateforme. */
@@ -342,7 +348,7 @@ export async function getAllFeedback(): Promise<FeedbackRow[]> {
 
   const { data } = await admin
     .from("feedback")
-    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at")
+    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at, user_agent, device_type, screen_width, screen_height, os_hint")
     .order("created_at", { ascending: false });
 
   return data ?? [];

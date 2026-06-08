@@ -182,6 +182,14 @@ export function FeedbackList({ items }: { items: FeedbackRow[] }) {
                       📍 {f.page_title || f.url}
                     </a>
                   )}
+                  {/* Infos environnement */}
+                  {f.os_hint && <span title={f.user_agent ?? undefined}>💻 {f.os_hint}</span>}
+                  {f.device_type && f.device_type !== "desktop" && (
+                    <span>{f.device_type === "mobile" ? "📱 Mobile" : "📱 Tablette"}</span>
+                  )}
+                  {f.screen_width && f.screen_height && (
+                    <span className="font-mono text-[10.5px]">{f.screen_width}×{f.screen_height}</span>
+                  )}
                   <span className="ml-auto">{fmtDate(f.created_at)}</span>
                 </div>
 

@@ -105,6 +105,27 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
     setLoading(true);
     const supabase = createClient();
 
+    // Infos environnement (collectées côté client)
+    let deviceType: "mobile" | "tablet" | "desktop" = "desktop";
+    let osHint: string | null = null;
+    let userAgentStr: string | null = null;
+    let screenW: number | null = null;
+    let screenH: number | null = null;
+    if (typeof window !== "undefined") {
+      userAgentStr = navigator.userAgent;
+      screenW = window.screen.width;
+      screenH = window.screen.height;
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|android.*mobile|windows phone/.test(ua)) deviceType = "mobile";
+      else if (/ipad|android(?!.*mobile)|tablet/.test(ua)) deviceType = "tablet";
+      // OS hint
+      if (/windows/.test(ua))      osHint = "Windows";
+      else if (/macintosh|mac os x/.test(ua)) osHint = "macOS";
+      else if (/iphone|ipad/.test(ua)) osHint = "iOS";
+      else if (/android/.test(ua)) osHint = "Android";
+      else if (/linux/.test(ua))   osHint = "Linux";
+    }
+
     const { error } = await supabase.from("feedback").insert({
       type,
       priority,
@@ -113,6 +134,11 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
       page_title: typeof document !== "undefined" ? document.title : "",
       org_slug: orgSlug ?? null,
       screenshot_url: screenshotUrl ?? null,
+      user_agent: userAgentStr,
+      device_type: deviceType,
+      screen_width: screenW,
+      screen_height: screenH,
+      os_hint: osHint,
     });
 
     setLoading(false);
@@ -137,9 +163,9 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
         />
       )}
 
-      {/* Panel */}
+      {/* Panel — max-height pour éviter d'être coupé sur les petits écrans */}
       {open && (
-        <div className="fixed bottom-20 right-4 z-50 w-80 rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div className="fixed bottom-20 right-4 z-50 w-80 rounded-xl border border-slate-200 bg-white shadow-xl max-h-[calc(100vh-6rem)] flex flex-col">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <span className="text-sm font-semibold text-slate-800">
               Signaler un retour
@@ -154,7 +180,7 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
             {/* Type */}
             <div className="grid grid-cols-2 gap-2">
               {(["bug", "amélioration"] as FeedbackType[]).map((t) => (

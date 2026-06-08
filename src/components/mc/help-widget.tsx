@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { HelpCircle, X, BookOpen, Calendar, MessageCircle, Mail } from "lucide-react";
+import { HelpCircle, X, BookOpen, Calendar, Mail } from "lucide-react";
 
 /**
- * Bouton d'aide flottant (bas-gauche).
- * Inspiré de Yapla/AssoConnect : accès docs + réservation de démo + contact.
+ * Bouton d'aide flottant.
+ * Positionné au-dessus du FeedbackWidget (bottom-20 right-4) pour éviter
+ * tout chevauchement avec la sidebar (232 px à gauche) ou d'autres éléments.
  */
 export function HelpWidget() {
   const [open, setOpen] = useState(false);
@@ -21,7 +22,7 @@ export function HelpWidget() {
       {open && <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />}
 
       {open && (
-        <div className="fixed bottom-20 left-4 z-50 w-72 rounded-xl border border-border bg-white shadow-xl">
+        <div className="fixed bottom-[88px] right-4 z-50 w-72 rounded-xl border border-border bg-white shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <span className="text-sm font-semibold text-foreground">Besoin d'aide ?</span>
             <button onClick={() => setOpen(false)} className="text-warmgray/50 hover:text-warmgray">
@@ -50,10 +51,11 @@ export function HelpWidget() {
         </div>
       )}
 
+      {/* Bouton : empilé au-dessus du FeedbackWidget (bottom-4 right-4, h-12) */}
       <button
         onClick={() => setOpen((v) => !v)}
         title="Aide et support"
-        className={`fixed bottom-4 left-4 z-50 flex h-11 items-center gap-2 rounded-full px-4 shadow-lg transition-all hover:scale-105 active:scale-95 ${
+        className={`fixed bottom-20 right-4 z-50 flex h-11 items-center gap-2 rounded-full px-4 shadow-lg transition-all hover:scale-105 active:scale-95 ${
           open ? "bg-coral-dark text-white" : "bg-white text-foreground border border-border"
         }`}
       >

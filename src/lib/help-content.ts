@@ -137,7 +137,7 @@ Le bloc **Premiers pas** vous guide à travers les actions de configuration reco
 
 ### La navigation
 
-Le menu de gauche est organisé en sections repliables : **Pilotage**, **Gestion du lieu**, **Structure**, **Publication** et **Système**. Cliquez sur un titre de section pour la déplier.
+Le menu de gauche est organisé en sections repliables : **Pilotage**, **Gestion du lieu**, **Structure**, **Communication** et **Système**. Cliquez sur un titre de section pour la déplier.
 `,
   },
 
