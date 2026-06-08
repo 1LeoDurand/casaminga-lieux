@@ -24,19 +24,19 @@ export async function createEventRegistration(
   }
 
   const supabase = await createClient();
+  // Réservation (acheteur) sur le schéma unifié.
   const { data, error } = await supabase
     .from("event_registrations")
     .insert({
       event_id: payload.eventId,
       organization_id: payload.organizationId,
-      prenom: payload.prenom,
-      nom: payload.nom,
+      full_name: `${payload.prenom} ${payload.nom}`.trim(),
       email: payload.email,
-      telephone: payload.telephone ?? null,
-      nb_places: payload.nbPlaces,
-      participants: payload.participants,
-      montant_total: payload.montantTotal,
-      status: "confirme",
+      phone: payload.telephone ?? null,
+      seats: payload.nbPlaces,
+      amount_ttc: payload.montantTotal,
+      status: "inscrit",
+      source: "public",
     })
     .select("id")
     .single();
@@ -44,6 +44,21 @@ export async function createEventRegistration(
   if (error) {
     console.error("[createEventRegistration]", error);
     return { ok: false, error: "Une erreur est survenue. Réessayez dans un instant." };
+  }
+
+  // Un billet nominatif par participant (chacun son QR).
+  const holders = (payload.participants?.length
+    ? payload.participants.map((p) => `${p.prenom} ${p.nom}`.trim()).filter(Boolean)
+    : [`${payload.prenom} ${payload.nom}`.trim()]);
+  if (holders.length) {
+    await supabase.from("event_tickets").insert(
+      holders.map((name) => ({
+        organization_id: payload.organizationId,
+        event_id: payload.eventId,
+        registration_id: data.id,
+        holder_name: name,
+      }))
+    );
   }
 
   return { ok: true, id: data.id };

@@ -89,7 +89,7 @@ export async function resolveScanLink(linkToken: string): Promise<{ eventId: str
   return { eventId: ev.id, eventTitle: ev.title, startAt: ev.start_at };
 }
 
-/** Valide un billet et marque la présence. Public, protégé par le lien de scan. */
+/** Valide un BILLET (event_tickets) et marque la présence. Public, protégé par le lien de scan. */
 export async function checkInByTicket(linkToken: string, ticketToken: string): Promise<CheckInResult> {
   const admin = createAdminClient();
   if (!admin) return { status: "error" };
@@ -105,21 +105,20 @@ export async function checkInByTicket(linkToken: string, ticketToken: string): P
 
   // 2. Le billet existe ? (le token peut arriver brut ou dans une URL /billet/<token>)
   const clean = ticketToken.trim().split("/").filter(Boolean).pop() ?? ticketToken.trim();
-  const { data: reg } = await admin
-    .from("event_registrations")
-    .select("id, event_id, full_name, seats, status, checked_in_at")
+  const { data: ticket } = await admin
+    .from("event_tickets")
+    .select("id, event_id, holder_name, checked_in_at")
     .eq("ticket_token", clean)
     .maybeSingle();
-  if (!reg) return { status: "invalid" };
-  if (reg.event_id !== link.event_id) return { status: "wrong_event", fullName: reg.full_name };
-  if (reg.status === "annule") return { status: "cancelled", fullName: reg.full_name };
-  if (reg.checked_in_at) {
-    return { status: "already", fullName: reg.full_name, seats: reg.seats, checkedAt: reg.checked_in_at };
+  if (!ticket) return { status: "invalid" };
+  if (ticket.event_id !== link.event_id) return { status: "wrong_event", fullName: ticket.holder_name };
+  if (ticket.checked_in_at) {
+    return { status: "already", fullName: ticket.holder_name, checkedAt: ticket.checked_in_at };
   }
 
   // 3. Marquer la présence
   const now = new Date().toISOString();
-  const { error } = await admin.from("event_registrations").update({ checked_in_at: now }).eq("id", reg.id);
-  if (error) return { status: "error", fullName: reg.full_name };
-  return { status: "ok", fullName: reg.full_name, seats: reg.seats, checkedAt: now };
+  const { error } = await admin.from("event_tickets").update({ checked_in_at: now }).eq("id", ticket.id);
+  if (error) return { status: "error", fullName: ticket.holder_name };
+  return { status: "ok", fullName: ticket.holder_name, checkedAt: now };
 }

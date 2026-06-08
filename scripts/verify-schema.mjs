@@ -35,7 +35,8 @@ const EXPECTED = {
   membership_campaigns: ["establishment_id"],
   persons: ["establishment_id"],
   organization_members: ["status", "last_seen_at"],
-  event_registrations: ["ticket_token", "checked_in_at", "full_name", "seats", "source", "status"],
+  event_registrations: ["full_name", "seats", "source", "status", "amount_ttc"],
+  event_tickets: ["event_id", "registration_id", "holder_name", "ticket_token", "checked_in_at"],
   event_scan_links: ["event_id", "token", "revoked", "expires_at"],
   tax_receipts: ["donor_name", "amount", "fiscal_year"],
 };

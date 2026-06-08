@@ -10,24 +10,37 @@ export function PublicEventRegisterForm({ eventId, eventTitle, accentColor = "#F
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [seats, setSeats] = useState("1");
+  const [participants, setParticipants] = useState<string[]>([""]); // billets nominatifs supplémentaires
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState<"inscrit" | "liste_attente" | null>(null);
+  const [done, setDone] = useState<{ status: string; tickets: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", borderRadius: 12, border: "1px solid #e5e7eb", background: "#f9fafb",
+    padding: "10px 14px", fontSize: 14, outline: "none",
+  };
+
+  function setParticipant(i: number, v: string) {
+    setParticipants((p) => p.map((x, idx) => (idx === i ? v : x)));
+  }
+  function addParticipant() { setParticipants((p) => [...p, ""]); }
+  function removeParticipant(i: number) { setParticipants((p) => p.filter((_, idx) => idx !== i)); }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!fullName.trim() || !email.trim()) return;
     setLoading(true); setError(null);
     try {
+      // L'acheteur = 1er billet ; + participants nominatifs renseignés
+      const names = [fullName.trim(), ...participants.map((p) => p.trim()).filter(Boolean)];
       const res = await fetch(`/api/events/${eventId}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: fullName, email, phone, seats: parseInt(seats) || 1 }),
+        body: JSON.stringify({ full_name: fullName, email, phone, participants: names }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur");
-      setDone(data.status);
+      setDone({ status: data.status, tickets: data.tickets ?? names.length });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -36,55 +49,67 @@ export function PublicEventRegisterForm({ eventId, eventTitle, accentColor = "#F
   }
 
   if (done) {
+    const waiting = done.status === "liste_attente";
     return (
-      <div className="rounded-2xl border p-6 text-center" style={{ borderColor: accentColor + "40" }}>
-        <div className="mb-2 text-3xl">{done === "liste_attente" ? "🕐" : "✅"}</div>
-        <h3 className="font-bold text-lg" style={{ color: accentColor }}>
-          {done === "liste_attente" ? "Vous êtes sur liste d'attente" : "Inscription confirmée !"}
+      <div style={{ borderRadius: 16, border: `1px solid ${accentColor}40`, padding: 24, textAlign: "center" }}>
+        <div style={{ fontSize: 32 }}>{waiting ? "🕐" : "✅"}</div>
+        <h3 style={{ fontWeight: 700, fontSize: 18, color: accentColor }}>
+          {waiting ? "Vous êtes sur liste d'attente" : "Inscription confirmée !"}
         </h3>
-        <p className="mt-1 text-sm text-gray-500">
-          {done === "liste_attente"
-            ? "L'événement est complet. Vous serez prévenu(e) si une place se libère."
-            : "Un email de confirmation vous a été envoyé."}
+        <p style={{ marginTop: 6, fontSize: 14, color: "#6b7280" }}>
+          {waiting
+            ? "L'événement est complet. Vous serez prévenu(e) si des places se libèrent."
+            : `${done.tickets} billet${done.tickets > 1 ? "s" : ""} envoyé${done.tickets > 1 ? "s" : ""} par email (un QR code par participant).`}
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 rounded-2xl border p-6" style={{ borderColor: accentColor + "40" }}>
-      <h3 className="font-bold text-lg" style={{ color: accentColor }}>S'inscrire</h3>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14, borderRadius: 16, border: `1px solid ${accentColor}40`, padding: 24 }}>
+      <h3 style={{ fontWeight: 700, fontSize: 18, color: accentColor, margin: 0 }}>S&apos;inscrire — {eventTitle}</h3>
+
+      <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
         <div>
-          <label className="mb-1 block text-[12px] font-semibold text-gray-700">Prénom & Nom *</label>
-          <input required value={fullName} onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-gray-400"
-            placeholder="Marie Dupont" />
+          <label style={labelStyle}>Votre prénom & nom *</label>
+          <input required value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputStyle} placeholder="Marie Dupont" />
         </div>
         <div>
-          <label className="mb-1 block text-[12px] font-semibold text-gray-700">Email *</label>
-          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-gray-400"
-            placeholder="marie@exemple.fr" />
+          <label style={labelStyle}>Email *</label>
+          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} placeholder="marie@exemple.fr" />
         </div>
-        <div>
-          <label className="mb-1 block text-[12px] font-semibold text-gray-700">Téléphone</label>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-gray-400"
-            placeholder="06 12 34 56 78" />
-        </div>
-        <div>
-          <label className="mb-1 block text-[12px] font-semibold text-gray-700">Nombre de places</label>
-          <input type="number" min={1} max={10} value={seats} onChange={(e) => setSeats(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-gray-400" />
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={labelStyle}>Téléphone</label>
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} placeholder="06 12 34 56 78" />
         </div>
       </div>
-      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+
+      {/* Participants supplémentaires (billets pour proches/amis) */}
+      <div>
+        <label style={labelStyle}>Billets supplémentaires (proches, amis…)</label>
+        <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 8px" }}>
+          Un QR code nominatif sera généré pour chaque participant. Vous comptez déjà pour 1 billet.
+        </p>
+        {participants.map((p, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input value={p} onChange={(e) => setParticipant(i, e.target.value)} style={inputStyle} placeholder={`Nom du participant ${i + 1}`} />
+            <button type="button" onClick={() => removeParticipant(i)}
+              style={{ border: "1px solid #e5e7eb", borderRadius: 12, background: "#fff", padding: "0 12px", color: "#9ca3af", cursor: "pointer" }}>✕</button>
+          </div>
+        ))}
+        <button type="button" onClick={addParticipant}
+          style={{ background: "none", border: "none", color: accentColor, fontWeight: 600, fontSize: 13, cursor: "pointer", padding: 0 }}>
+          + Ajouter un participant
+        </button>
+      </div>
+
+      {error && <p style={{ fontSize: 14, color: "#dc2626", fontWeight: 500 }}>{error}</p>}
       <button type="submit" disabled={loading}
-        className="rounded-full px-6 py-3 text-sm font-bold text-white transition-opacity disabled:opacity-60"
-        style={{ background: accentColor }}>
+        style={{ borderRadius: 100, padding: "12px 24px", fontSize: 14, fontWeight: 700, color: "#fff", background: accentColor, border: "none", opacity: loading ? 0.6 : 1 }}>
         {loading ? "Inscription en cours…" : "Confirmer mon inscription →"}
       </button>
     </form>
   );
 }
+
+const labelStyle: React.CSSProperties = { display: "block", marginBottom: 4, fontSize: 12, fontWeight: 600, color: "#374151" };
