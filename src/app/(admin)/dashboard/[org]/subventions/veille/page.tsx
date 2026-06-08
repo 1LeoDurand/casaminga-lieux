@@ -4,16 +4,17 @@ import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/mc/page-header";
 import { VeilleView } from "@/components/mc/veille-view";
 import { getOrganizationBySlug } from "@/lib/data";
-import { getOpportunities, getOrgGrantProfile } from "@/lib/grants/data";
+import { getOpportunities, getOrgGrantProfile, getApplications } from "@/lib/grants/data";
 
 export default async function VeillePage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [opportunities, profile] = await Promise.all([
+  const [opportunities, profile, applications] = await Promise.all([
     getOpportunities(),
     getOrgGrantProfile(organization.id),
+    getApplications(organization.id),
   ]);
 
   return (
@@ -29,6 +30,7 @@ export default async function VeillePage({ params }: { params: Promise<{ org: st
       <VeilleView
         opportunities={opportunities}
         profile={profile}
+        applications={applications}
         defaultStructure={organization.structure}
         orgId={organization.id}
         orgSlug={org}

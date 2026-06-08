@@ -3,20 +3,25 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SlidersHorizontal, ExternalLink, X, CalendarClock, Sparkles } from "lucide-react";
+import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown } from "lucide-react";
 import {
   type GrantOpportunity,
   type OrgGrantProfile,
+  type GrantApplication,
+  type ApplicationStatus,
   FUNDER_TYPE_LABELS,
   GRANT_THEMES,
   FRENCH_REGIONS,
+  APPLICATION_STATUS_META,
   eligibilityScore,
 } from "@/lib/grants/types";
-import { saveGrantProfile } from "@/app/(admin)/dashboard/[org]/subventions/veille/actions";
+import { saveGrantProfile, upsertApplicationAction } from "@/app/(admin)/dashboard/[org]/subventions/veille/actions";
 
 const inputCls = "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none focus:border-coral";
 const labelCls = "mb-1 block text-[12px] font-semibold text-ink";
 const STRUCTURE_TYPES = ["association", "scic", "scop", "collectif", "etablissement", "autre"];
+
+const STATUS_ORDER: ApplicationStatus[] = ["interesse", "en_cours", "depose", "obtenu", "refuse"];
 
 function fmtAmount(min: number | null, max: number | null) {
   const f = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
@@ -31,16 +36,94 @@ function scoreColor(s: number) {
   return "bg-slate-100 text-slate-500";
 }
 
+/** Sélecteur de statut candidature intégré à la carte. */
+function ApplicationStatusPicker({
+  current,
+  onChange,
+  busy,
+}: {
+  current: ApplicationStatus | null;
+  onChange: (s: ApplicationStatus) => void;
+  busy: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const meta = current ? APPLICATION_STATUS_META[current] : null;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition ${
+          meta
+            ? `${meta.color}`
+            : "border-border bg-white text-warmgray hover:border-coral/40"
+        } disabled:opacity-50`}
+      >
+        {meta ? (
+          <>{meta.icon} {meta.label}</>
+        ) : (
+          <span className="text-warmgray">Suivre ce dossier</span>
+        )}
+        <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-20 mt-1.5 min-w-[200px] overflow-hidden rounded-xl border border-border bg-white shadow-lg"
+          onMouseLeave={() => setOpen(false)}
+        >
+          {STATUS_ORDER.map((s) => {
+            const m = APPLICATION_STATUS_META[s];
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => { onChange(s); setOpen(false); }}
+                className={`flex w-full items-center gap-2 px-3.5 py-2 text-[12.5px] font-semibold transition hover:bg-cream ${
+                  current === s ? "bg-cream" : ""
+                }`}
+              >
+                <span>{m.icon}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[11px] ${m.color}`}>{m.label}</span>
+              </button>
+            );
+          })}
+          {current && (
+            <>
+              <div className="mx-3 border-t border-border" />
+              <button
+                type="button"
+                onClick={() => { /* handled by parent */ onChange("" as ApplicationStatus); setOpen(false); }}
+                className="flex w-full items-center gap-2 px-3.5 py-2 text-[12px] text-warmgray transition hover:bg-cream"
+              >
+                <X className="size-3.5" /> Retirer du suivi
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VeilleView({
-  opportunities, profile, defaultStructure, orgId, orgSlug,
+  opportunities, profile, applications: initialApplications, defaultStructure, orgId, orgSlug,
 }: {
   opportunities: GrantOpportunity[];
   profile: OrgGrantProfile | null;
+  applications: Map<string, GrantApplication>;
   defaultStructure: string | null;
   orgId: string; orgSlug: string;
 }) {
   const [showProfile, setShowProfile] = useState(false);
   const [onlyEligible, setOnlyEligible] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  // Optimistic local state for applications map
+  const [localApps, setLocalApps] = useState<Map<string, ApplicationStatus | null>>(new Map());
 
   const scored = useMemo(() => {
     return opportunities
@@ -50,6 +133,37 @@ export function VeilleView({
 
   const visible = onlyEligible ? scored.filter((s) => s.score >= 50) : scored;
   const hasProfile = Boolean(profile?.region || profile?.structure_type || (profile?.themes.length ?? 0) > 0);
+
+  function getStatus(oppId: string): ApplicationStatus | null {
+    if (localApps.has(oppId)) return localApps.get(oppId) ?? null;
+    return initialApplications.get(oppId)?.status ?? null;
+  }
+
+  function handleStatusChange(oppId: string, status: ApplicationStatus | "") {
+    const newStatus = status === "" ? null : status;
+    // Optimistic update
+    setLocalApps((prev) => new Map(prev).set(oppId, newStatus));
+    setBusyId(oppId);
+
+    startTransition(async () => {
+      if (newStatus === null) {
+        // TODO: deleteApplication — for now just revert with no server call, show info
+        toast.info("Retrait du suivi disponible prochainement.");
+        setLocalApps((prev) => { const m = new Map(prev); m.delete(oppId); return m; });
+        setBusyId(null);
+        return;
+      }
+      const res = await upsertApplicationAction(orgId, orgSlug, oppId, newStatus);
+      if (res.ok) {
+        toast.success(`Statut mis à jour : ${APPLICATION_STATUS_META[newStatus].label}`);
+      } else {
+        toast.error(res.error ?? "Erreur");
+        // Revert
+        setLocalApps((prev) => { const m = new Map(prev); m.delete(oppId); return m; });
+      }
+      setBusyId(null);
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -84,53 +198,58 @@ export function VeilleView({
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
-          {visible.map(({ opp, score }) => (
-            <li key={opp.id} className="rounded-2xl border border-border bg-white p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${scoreColor(score)}`}>{score}% compatible</span>
-                    {opp.funder_type && <span className="rounded-full bg-peach-pale px-2.5 py-0.5 text-[11px] font-semibold text-coral-dark">{FUNDER_TYPE_LABELS[opp.funder_type]}</span>}
-                    {opp.recurring && <span className="text-[11px] text-warmgray">↻ récurrent</span>}
-                  </div>
-                  <h3 className="mt-2 font-heading text-base font-bold text-ink">{opp.title}</h3>
-                  {opp.funder && <p className="text-[13px] text-warmgray">{opp.funder}</p>}
-                </div>
-                <div className="text-right text-[13px]">
-                  <div className="font-semibold text-ink">{fmtAmount(opp.amount_min, opp.amount_max)}</div>
-                  {opp.deadline && (
-                    <div className="mt-0.5 inline-flex items-center gap-1 text-warmgray">
-                      <CalendarClock className="size-3.5" /> {new Date(opp.deadline).toLocaleDateString("fr-FR")}
+          {visible.map(({ opp, score }) => {
+            const currentStatus = getStatus(opp.id);
+            const isBusy = busyId === opp.id;
+            return (
+              <li key={opp.id} className="rounded-2xl border border-border bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${scoreColor(score)}`}>{score}% compatible</span>
+                      {opp.funder_type && <span className="rounded-full bg-peach-pale px-2.5 py-0.5 text-[11px] font-semibold text-coral-dark">{FUNDER_TYPE_LABELS[opp.funder_type]}</span>}
+                      {opp.recurring && <span className="text-[11px] text-warmgray">↻ récurrent</span>}
                     </div>
+                    <h3 className="mt-2 font-heading text-base font-bold text-ink">{opp.title}</h3>
+                    {opp.funder && <p className="text-[13px] text-warmgray">{opp.funder}</p>}
+                  </div>
+                  <div className="text-right text-[13px]">
+                    <div className="font-semibold text-ink">{fmtAmount(opp.amount_min, opp.amount_max)}</div>
+                    {opp.deadline && (
+                      <div className="mt-0.5 inline-flex items-center gap-1 text-warmgray">
+                        <CalendarClock className="size-3.5" /> {new Date(opp.deadline).toLocaleDateString("fr-FR")}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {opp.description && <p className="mt-3 text-[13.5px] leading-relaxed text-ink/80">{opp.description}</p>}
+
+                {opp.themes.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {opp.themes.map((t) => (
+                      <span key={t} className={`rounded-full border px-2 py-0.5 text-[11px] ${profile?.themes.includes(t) ? "border-coral/40 bg-peach-pale text-coral-dark" : "border-border text-warmgray"}`}>{t}</span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                  {/* Statut candidature */}
+                  <ApplicationStatusPicker
+                    current={currentStatus}
+                    onChange={(s) => handleStatusChange(opp.id, s)}
+                    busy={isBusy}
+                  />
+
+                  {opp.application_url && (
+                    <a href={opp.application_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40">
+                      <ExternalLink className="size-3.5" /> Page officielle
+                    </a>
                   )}
                 </div>
-              </div>
-
-              {opp.description && <p className="mt-3 text-[13.5px] leading-relaxed text-ink/80">{opp.description}</p>}
-
-              {opp.themes.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {opp.themes.map((t) => (
-                    <span key={t} className={`rounded-full border px-2 py-0.5 text-[11px] ${profile?.themes.includes(t) ? "border-coral/40 bg-peach-pale text-coral-dark" : "border-border text-warmgray"}`}>{t}</span>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                <button
-                  onClick={() => toast.info("Aide au dossier (checklist, pré-remplissage, rédaction IA) — bientôt disponible.")}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-coral px-4 py-2 text-[13px] font-bold text-white hover:bg-coral-dark"
-                >
-                  <Sparkles className="size-3.5" /> Préparer le dossier
-                </button>
-                {opp.application_url && (
-                  <a href={opp.application_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40">
-                    <ExternalLink className="size-3.5" /> Page officielle
-                  </a>
-                )}
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 

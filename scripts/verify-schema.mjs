@@ -41,6 +41,8 @@ const EXPECTED = {
   tax_receipts: ["donor_name", "amount", "fiscal_year"],
   subscriptions: ["tier", "status", "comped", "founding_member", "trial_ends_at"],
   feedback: ["screenshot_url"],
+  grant_opportunities: ["title", "funder", "funder_type", "themes", "regions", "structure_types", "amount_min", "amount_max", "deadline", "recurring", "published"],
+  grant_applications: ["organization_id", "opportunity_id", "status", "notes", "amount_requested", "applied_at", "result_at"],
 };
 
 const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };

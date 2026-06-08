@@ -31,6 +31,29 @@ export interface OrgGrantProfile {
   project_summary: string | null;
 }
 
+export type ApplicationStatus = "interesse" | "en_cours" | "depose" | "obtenu" | "refuse";
+
+export interface GrantApplication {
+  id: string;
+  organization_id: string;
+  opportunity_id: string;
+  status: ApplicationStatus;
+  notes: string | null;
+  amount_requested: number | null;
+  applied_at: string | null;
+  result_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const APPLICATION_STATUS_META: Record<ApplicationStatus, { label: string; color: string; icon: string }> = {
+  interesse: { label: "Intéressé",      color: "bg-blue-50 text-blue-700 border-blue-200",      icon: "👀" },
+  en_cours:  { label: "Dossier en cours", color: "bg-amber-50 text-amber-700 border-amber-200",   icon: "✏️" },
+  depose:    { label: "Déposé",          color: "bg-violet-50 text-violet-700 border-violet-200", icon: "📤" },
+  obtenu:    { label: "Obtenu ✓",        color: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: "🎉" },
+  refuse:    { label: "Refusé",          color: "bg-red-50 text-red-600 border-red-200",          icon: "✕" },
+};
+
 export const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   etat: "État",
   region: "Région",
