@@ -854,7 +854,10 @@ export interface TaskInput {
 }
 
 export async function createTask(input: TaskInput): Promise<boolean> {
-  if (!isSupabaseConfigured()) { addDemoTask(input); return true; }
+  if (!isSupabaseConfigured()) {
+    addDemoTask({ ...input, assignee_notified_at: null, last_reminder_at: null, validation_token: null, validated_at: null });
+    return true;
+  }
   const supabase = await createClient();
   const { error } = await supabase.from("tasks").insert(input);
   if (error) console.error("createTask:", error);

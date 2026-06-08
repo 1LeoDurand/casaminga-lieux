@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { X, Plus, Pencil, Trash2, ListTodo, Calendar, User, AlertTriangle, Check } from "lucide-react";
+import { X, Plus, Pencil, Trash2, ListTodo, Calendar, User, AlertTriangle, Check, Mail, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { TaskForm, type TaskFormValues } from "@/components/mc/task-form";
@@ -8,7 +8,7 @@ import {
   TASK_PRIORITIES, TASK_KANBAN, taskStatusLabel, taskStatusDot,
   priorityLabel, priorityBadge, formatDue, isOverdue,
 } from "@/lib/tasks-meta";
-import { createTaskAction, deleteTaskAction, updateTaskAction } from "@/app/(admin)/dashboard/[org]/taches/actions";
+import { createTaskAction, deleteTaskAction, updateTaskAction, notifyAssigneeAction, remindAssigneeAction } from "@/app/(admin)/dashboard/[org]/taches/actions";
 import type { Person, Task, TaskStatus } from "@/lib/types";
 
 function toggle<T>(set: Set<T>, v: T): Set<T> {
@@ -100,6 +100,20 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
       else toast.error("Suppression impossible.");
     });
   }
+  function notifyAssignee(t: Task) {
+    startTransition(async () => {
+      const res = await notifyAssigneeAction(orgSlug, t.id);
+      if (res.ok) toast.success("Email d'assignation envoyé ✓");
+      else toast.error(res.error ?? "Envoi impossible.");
+    });
+  }
+  function remindAssignee(t: Task) {
+    startTransition(async () => {
+      const res = await remindAssigneeAction(orgSlug, t.id);
+      if (res.ok) toast.success("Relance envoyée ✓");
+      else toast.error(res.error ?? "Envoi impossible.");
+    });
+  }
 
   if (tasks.length === 0) return (
     <>
@@ -108,7 +122,7 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
         <div className="mc-empty-title">Aucune tâche pour le moment</div>
         <p className="mc-empty-sub">Suivez le travail de l&apos;équipe : à faire, en cours, fait.</p>
         <button type="button" className="mc-btn mc-btn-lime mc-btn-sm mt-1" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-3.5" /> Nouvelle tâche</button>
-        <p className="mt-2 text-[11px] text-warmgray/60 max-w-xs">💡 Assignez des tâches à l'équipe, définissez une priorité et suivez l'avancement en temps réel</p>
+        <p className="mt-2 text-[11px] text-warmgray/60 max-w-xs">💡 Assignez des tâches à l&apos;équipe, définissez une priorité et suivez l&apos;avancement en temps réel</p>
       </div></div>
       <TaskForm key="create-open" open={formOpen} task={null} persons={persons} busy={pending} onClose={() => setFormOpen(false)} onSubmit={submitForm} />
     </>
@@ -165,6 +179,54 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
                 {selected.related_label ? <div><span className="mc-tag">{selected.related_label}</span></div> : null}
               </dl>
               {selected.description ? <p className="whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed">{selected.description}</p> : null}
+
+              {/* Assignation & suivi par email */}
+              {(() => {
+                const assignee = selected.assignee_id ? personById.get(selected.assignee_id) : null;
+                if (!assignee) return null;
+                const fmtDateTime = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+                return (
+                  <div className="rounded-xl bg-white p-4 text-sm">
+                    <div className="mb-2 flex items-center gap-2 font-semibold text-foreground">
+                      <Mail className="size-4 text-warmgray" /> Suivi de l&apos;assignation
+                    </div>
+                    {selected.validated_at ? (
+                      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[13px] font-medium text-emerald-700">
+                        <CheckCircle2 className="size-4" /> Validée par {assignee.name} le {fmtDateTime(selected.validated_at)}
+                      </div>
+                    ) : !assignee.email ? (
+                      <p className="text-[12.5px] leading-snug text-warmgray">
+                        💡 Ajoutez un email à <strong>{assignee.name}</strong> dans <em>Personnes</em> pour pouvoir le/la prévenir et lui permettre de valider la tâche en un clic.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-2.5 text-[12.5px] leading-snug text-warmgray">
+                          {selected.assignee_notified_at
+                            ? <>Prévenu·e le {fmtDateTime(selected.assignee_notified_at)}{selected.last_reminder_at ? <> · relancé·e le {fmtDateTime(selected.last_reminder_at)}</> : null}</>
+                            : <>{assignee.name} n&apos;a pas encore été prévenu·e par email.</>}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {selected.assignee_notified_at ? (
+                            <button type="button" disabled={pending} onClick={() => remindAssignee(selected)} className="mc-btn mc-btn-outline mc-btn-sm">
+                              <Send className="size-3.5" /> Relancer
+                            </button>
+                          ) : (
+                            <button type="button" disabled={pending} onClick={() => notifyAssignee(selected)} className="mc-btn mc-btn-lime mc-btn-sm">
+                              <Mail className="size-3.5" /> Prévenir par email
+                            </button>
+                          )}
+                          {selected.assignee_notified_at ? (
+                            <button type="button" disabled={pending} onClick={() => notifyAssignee(selected)} className="mc-btn mc-btn-outline mc-btn-sm">
+                              Renvoyer l&apos;assignation
+                            </button>
+                          ) : null}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="flex flex-wrap gap-2">
                 {selected.status !== "a_faire" ? <button type="button" disabled={pending} onClick={() => quickStatus(selected, "a_faire")} className="mc-btn mc-btn-outline mc-btn-sm">À faire</button> : null}
                 {selected.status !== "en_cours" ? <button type="button" disabled={pending} onClick={() => quickStatus(selected, "en_cours")} className="mc-btn mc-btn-outline mc-btn-sm">En cours</button> : null}

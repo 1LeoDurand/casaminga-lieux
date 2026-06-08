@@ -316,6 +316,11 @@ export interface Task {
   related_label: string | null;
   created_at: string;
   updated_at: string;
+  // Notification / validation de l'assigné (ticket 608af0d2)
+  assignee_notified_at: string | null;
+  last_reminder_at: string | null;
+  validation_token: string | null;
+  validated_at: string | null;
 }
 
 // ── Subventions ───────────────────────────────────────────────

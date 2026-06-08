@@ -574,6 +574,81 @@ export function tplOnboardingJ7(opts: {
   );
 }
 
+// ── 18. Tâche assignée (à l'assigné) ──────────────────────────────────────
+
+export function tplTacheAssignee(opts: {
+  orgName: string;
+  assigneeName: string;
+  title: string;
+  description?: string | null;
+  dueDate?: string | null;
+  priorityLabel: string;
+  validateUrl: string;
+}) {
+  return base(
+    `
+    ${badge("Tâche qui vous est confiée", "#E8714D")}
+    <div style="height:12px;"></div>
+    ${h1(opts.title)}
+    ${p(`Bonjour <strong>${opts.assigneeName}</strong>,`)}
+    ${p(`L'équipe de <strong>${opts.orgName}</strong> vous a confié une tâche.`)}
+    ${card([
+      { label: "Priorité", value: opts.priorityLabel },
+      ...(opts.dueDate ? [{ label: "Échéance", value: new Date(opts.dueDate).toLocaleDateString("fr-FR") }] : []),
+      ...(opts.description ? [{ label: "Détails", value: opts.description.slice(0, 300) + (opts.description.length > 300 ? "…" : "") }] : []),
+    ])}
+    ${p(`Quand c'est fait, cliquez ci-dessous : l'équipe sera prévenue automatiquement. Pas besoin de compte.`)}
+    ${btn("✓ Marquer comme faite", opts.validateUrl)}
+  `,
+    opts.orgName
+  );
+}
+
+// ── 19. Rappel de tâche (à l'assigné) ─────────────────────────────────────
+
+export function tplTacheRappel(opts: {
+  orgName: string;
+  assigneeName: string;
+  title: string;
+  dueDate?: string | null;
+  validateUrl: string;
+}) {
+  const overdue = opts.dueDate ? new Date(opts.dueDate) < new Date() : false;
+  return base(
+    `
+    ${badge(overdue ? "Tâche en retard" : "Petit rappel", overdue ? "#EF4444" : "#F59E0B")}
+    <div style="height:12px;"></div>
+    ${h1("Cette tâche vous attend")}
+    ${p(`Bonjour <strong>${opts.assigneeName}</strong>,`)}
+    ${p(`Un rappel concernant la tâche <strong>« ${opts.title} »</strong> confiée par <strong>${opts.orgName}</strong>${opts.dueDate ? `, à rendre pour le <strong>${new Date(opts.dueDate).toLocaleDateString("fr-FR")}</strong>` : ""}.`)}
+    ${p(`Si c'est déjà fait, un clic suffit pour prévenir l'équipe :`)}
+    ${btn("✓ Marquer comme faite", opts.validateUrl)}
+  `,
+    opts.orgName
+  );
+}
+
+// ── 20. Tâche validée par l'assigné (au coordinateur) ─────────────────────
+
+export function tplTacheValidee(opts: {
+  orgName: string;
+  assigneeName: string;
+  title: string;
+  dashboardUrl: string;
+}) {
+  return base(
+    `
+    ${badge("Tâche terminée ✓", "#22C55E")}
+    <div style="height:12px;"></div>
+    ${h1("Une tâche vient d'être validée")}
+    ${p(`<strong>${opts.assigneeName}</strong> a marqué la tâche <strong>« ${opts.title} »</strong> comme faite.`)}
+    ${p(`Elle est désormais en colonne « Fait » dans votre tableau.`)}
+    ${btn("Voir le tableau des tâches →", opts.dashboardUrl)}
+  `,
+    opts.orgName
+  );
+}
+
 // ── 17. Newsletter / bulletin (aux membres) ───────────────────────────────
 
 export function tplNewsletter(opts: {
