@@ -8,6 +8,7 @@ import {
   getOrganizationBySlug,
   type PersonInput,
 } from "@/lib/data";
+import { publicSiteUrl } from "@/lib/site-public/url";
 
 function refresh(orgSlug: string) {
   revalidatePath(`/dashboard/${orgSlug}/personnes`);
@@ -38,6 +39,7 @@ export async function createPersonAction(
               orgName: org?.name ?? "Casa Minga Lieux",
               firstName: input.name.split(" ")[0],
               role: input.role,
+              siteUrl: org?.slug ? publicSiteUrl(org.slug) : undefined,
             }),
             category: "bienvenue",
             organizationId: input.organization_id,
