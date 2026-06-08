@@ -184,6 +184,88 @@ export async function getAllSubscriptions(): Promise<SubscriptionRow[]> {
   return (data as SubscriptionRow[]) ?? [];
 }
 
+// ── Engagement ────────────────────────────────────────────────────────────────
+
+export interface OrgEngagementRow {
+  id: string;
+  slug: string;
+  name: string;
+  structure: string | null;
+  created_at: string;
+  memberCount: number;
+  lastSeenAt: string | null;          // max(last_seen_at) de ses membres
+  enabledModules: string[];           // clés des modules activés
+  tier: string;                       // tier abonnement
+  founding_member: boolean;
+  comped: boolean;
+}
+
+export type ActivityBucket = "active" | "recent" | "dormant" | "never";
+
+export function activityBucket(lastSeenAt: string | null): ActivityBucket {
+  if (!lastSeenAt) return "never";
+  const days = (Date.now() - new Date(lastSeenAt).getTime()) / 86_400_000;
+  if (days <= 7) return "active";
+  if (days <= 30) return "recent";
+  return "dormant";
+}
+
+export async function getEngagementStats(): Promise<OrgEngagementRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+
+  const [orgsRes, membersRes, modulesRes, subsRes] = await Promise.all([
+    admin.from("organizations").select("id, slug, name, structure, created_at").eq("is_demo", false).order("created_at", { ascending: false }),
+    admin.from("organization_members").select("organization_id, last_seen_at, status"),
+    admin.from("organization_modules").select("organization_id, module_key, enabled"),
+    admin.from("subscriptions").select("organization_id, tier, founding_member, comped"),
+  ]);
+
+  const orgs = orgsRes.data ?? [];
+  const members = membersRes.data ?? [];
+  const modules = modulesRes.data ?? [];
+  const subs = subsRes.data ?? [];
+
+  // Agréger par org
+  const memberCountMap = new Map<string, number>();
+  const lastSeenMap = new Map<string, string>();
+  for (const m of members) {
+    if (m.status !== "actif") continue;
+    memberCountMap.set(m.organization_id, (memberCountMap.get(m.organization_id) ?? 0) + 1);
+    const cur = lastSeenMap.get(m.organization_id);
+    if (!cur || (m.last_seen_at && m.last_seen_at > cur)) {
+      lastSeenMap.set(m.organization_id, m.last_seen_at);
+    }
+  }
+
+  const modulesMap = new Map<string, string[]>();
+  for (const mod of modules) {
+    if (!mod.enabled) continue;
+    const list = modulesMap.get(mod.organization_id) ?? [];
+    list.push(mod.module_key);
+    modulesMap.set(mod.organization_id, list);
+  }
+
+  const subMap = new Map(subs.map((s) => [s.organization_id, s]));
+
+  return orgs.map((o) => {
+    const sub = subMap.get(o.id);
+    return {
+      id: o.id,
+      slug: o.slug,
+      name: o.name,
+      structure: o.structure,
+      created_at: o.created_at,
+      memberCount: memberCountMap.get(o.id) ?? 0,
+      lastSeenAt: lastSeenMap.get(o.id) ?? null,
+      enabledModules: modulesMap.get(o.id) ?? [],
+      tier: sub?.tier ?? "free",
+      founding_member: sub?.founding_member ?? false,
+      comped: sub?.comped ?? false,
+    };
+  });
+}
+
 /** Tous les tickets feedback, plus récents en premier. */
 export async function getAllFeedback(): Promise<FeedbackRow[]> {
   const admin = createAdminClient();
