@@ -36,6 +36,7 @@ export default async function ReservationsPage({
         persons={persons}
         orgSlug={organization.slug}
         orgId={organization.id}
+        stripeReady={!!organization.stripe_charges_enabled}
       />
     </div>
   );

@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   Ban,
   CalendarClock,
+  CreditCard,
+  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
@@ -41,6 +43,7 @@ import {
   createReservationAction,
   deleteReservationAction,
   updateReservationAction,
+  sendReservationPaymentLinkAction,
 } from "@/app/(admin)/dashboard/[org]/reservations/actions";
 import type { Person, Reservation, ReservationStatus, Space } from "@/lib/types";
 
@@ -118,12 +121,14 @@ export function ReservationsView({
   persons,
   orgSlug,
   orgId,
+  stripeReady = false,
 }: {
   reservations: Reservation[];
   spaces: Space[];
   persons: Person[];
   orgSlug: string;
   orgId: string;
+  stripeReady?: boolean;
 }) {
   const [view, setView] = useState<View>("kanban");
   const [search, setSearch] = useState("");
@@ -262,6 +267,24 @@ export function ReservationsView({
         toast.error("Ce créneau chevauche une autre réservation sur cet espace.");
       } else {
         toast.error("Action impossible. Réessayez.");
+      }
+    });
+  }
+
+  function sendPaymentLink(r: Reservation) {
+    startTransition(async () => {
+      const res = await sendReservationPaymentLinkAction(orgSlug, r.id);
+      if (res.ok) {
+        const hasEmail = !!personById.get(r.person_id ?? "")?.email;
+        toast.success(hasEmail ? "Lien de paiement envoyé par email ✓" : "Lien de paiement créé ✓");
+        if (res.url && !hasEmail && typeof navigator !== "undefined" && navigator.clipboard) {
+          navigator.clipboard.writeText(res.url).then(
+            () => toast.message("Lien copié dans le presse-papier — à transmettre au réservant."),
+            () => { /* clipboard indispo : ignorer */ }
+          );
+        }
+      } else {
+        toast.error(res.error ?? "Action impossible.");
       }
     });
   }
@@ -627,6 +650,41 @@ export function ReservationsView({
                   </button>
                 ) : null}
               </div>
+
+              {/* Paiement en ligne (Stripe) */}
+              {selected.price && Number(selected.price) > 0 && selected.status !== "annulee" ? (
+                <div className="rounded-xl bg-white p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <CreditCard className="size-4 text-warmgray" /> Paiement en ligne
+                  </div>
+                  {selected.payment_status === "paid" ? (
+                    <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[13px] font-medium text-emerald-700">
+                      <BadgeCheck className="size-4" /> Payé
+                      {selected.amount_paid ? ` · ${formatPrice(selected.amount_paid)}` : ""}
+                      {selected.paid_at ? ` le ${new Date(selected.paid_at).toLocaleDateString("fr-FR")}` : ""}
+                    </div>
+                  ) : !stripeReady ? (
+                    <p className="text-[12.5px] leading-snug text-warmgray">
+                      💳 Connectez Stripe dans <strong>Paramètres</strong> pour encaisser cette réservation en ligne.
+                    </p>
+                  ) : (
+                    <>
+                      {selected.payment_status === "pending" ? (
+                        <p className="mb-2 text-[12.5px] text-warmgray">Lien de paiement envoyé — en attente du règlement.</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => sendPaymentLink(selected)}
+                        className="mc-btn mc-btn-lime mc-btn-sm"
+                      >
+                        <CreditCard className="size-3.5" />
+                        {selected.payment_status === "pending" ? "Renvoyer le lien de paiement" : "Envoyer le lien de paiement"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-auto flex gap-3 border-t border-border p-6">

@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
 import { HelloAssoSettings } from "@/components/mc/helloasso-settings";
+import { StripeSettings } from "@/components/mc/stripe-settings";
+import { isStripeConfigured } from "@/lib/stripe";
 import { RibSettingsCard } from "@/components/mc/rib-settings-card";
 import { PolesManager } from "@/components/mc/poles-manager";
 import { PoleBudgetsPanel } from "@/components/mc/pole-budgets-panel";
@@ -166,11 +168,19 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
         {/* Intégrations */}
         <div className="md:col-span-2">
           <h2 className="mb-3 font-heading text-sm font-bold uppercase tracking-wider text-warmgray">Intégrations</h2>
-          <HelloAssoSettings
-            orgSlug={organization.slug}
-            connected={haConnected}
-            haOrgSlug={haOrgSlug}
-          />
+          <div className="flex flex-col gap-4">
+            <StripeSettings
+              orgSlug={organization.slug}
+              platformConfigured={isStripeConfigured()}
+              connected={!!organization.stripe_account_id}
+              chargesEnabled={!!organization.stripe_charges_enabled}
+            />
+            <HelloAssoSettings
+              orgSlug={organization.slug}
+              connected={haConnected}
+              haOrgSlug={haOrgSlug}
+            />
+          </div>
         </div>
       </div>
     </div>

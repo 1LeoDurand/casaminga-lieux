@@ -424,6 +424,14 @@ ALTER TABLE documents ADD COLUMN IF NOT EXISTS signing_token text;
 Aujourd'hui : page pricing existe, mais **aucun encaissement d'abonnement**. Chaque client = acte manuel de Léo.
 **À décider** : plans (gratuit/asso/pro ?), prix, essai 30j, Stripe Checkout + Customer Portal, paywall après essai, webhook `customer.subscription.*` → table `org_subscriptions`. **C'est le chantier #1 pour scaler.**
 
+> ℹ️ **À ne pas confondre avec l'encaissement des réservations (fait, Lot A ci-dessous).** 10.1 = abonnement SaaS *des lieux à Casa Minga*. Le Lot A = paiement *des clients aux lieux* (Stripe Connect).
+
+### 10.1-bis — Paiement des réservations par lieu (Stripe Connect) — ✅ Lot A FAIT
+Décisions Léo : **Stripe Connect** (compte par lieu), **0 % de commission**, périmètre **lien de paiement sur réservation confirmée** (pas de tunnel public self-service).
+Livré : connexion Stripe dans Paramètres, bouton « Envoyer le lien de paiement » dans le tiroir réservation, webhook `checkout.session.completed` → réservation payée, email `tplLienPaiement`.
+- **Lot B (à faire)** : tunnel public self-service « réserver + payer » depuis le site public.
+- **Lot C (à faire)** : acompte %, remboursement, reçu PDF.
+
 ### 10.2 — RGPD opérationnel
 Droit à l'oubli (export + suppression d'un membre sur demande), registre des traitements, anonymisation. Risque légal réel (centaines d'adhérents).
 
@@ -444,6 +452,12 @@ Vérifier si la barre de recherche topbar est fonctionnelle ; sinon, recherche c
 - **NODE_OPTIONS** : Infomaniak → Node.js 56239 → Variables d'env → `NODE_OPTIONS = --max-old-space-size=1536`.
 - **CRON_SECRET** : secret GitHub Actions + même valeur en env serveur `.env.local` (active crons factures/relances/rappels).
 - **Google Analytics** : créer une propriété GA4 sur analytics.google.com → Administration → Flux de données → copier l'ID de mesure (ex: `G-XXXXXXXXXX`) → `.env.local` : `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX`. Le bandeau cookies et le chargement conditionnel sont déjà en place.
+- **Stripe Connect (paiement des réservations — Lot A)** : le code est prêt, il manque la config plateforme :
+  1. Compte Stripe plateforme Casa Minga → Développeurs → clés API → `.env.local` : `STRIPE_SECRET_KEY=sk_live_...`
+  2. Activer **Connect** dans le dashboard Stripe (Settings → Connect), type de compte **Standard**.
+  3. Créer **un seul** endpoint webhook **Connect** → URL `https://admin.casaminga.com/api/orgs/platform/stripe/webhook` (le `[slug]` est ignoré, le matching se fait par `metadata.reservation_id`), événement **`checkout.session.completed`** → copier le secret de signature → `.env.local` : `STRIPE_WEBHOOK_SECRET=whsec_...`
+  4. `NEXT_PUBLIC_APP_URL=https://admin.casaminga.com` (déjà utilisé ailleurs) sert aux URLs de retour d'onboarding.
+  Ensuite chaque lieu connecte son compte depuis Paramètres → Intégrations → Stripe.
 
 ---
 

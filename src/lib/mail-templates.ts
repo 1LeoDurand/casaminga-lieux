@@ -649,6 +649,36 @@ export function tplTacheValidee(opts: {
   );
 }
 
+// ── 21. Lien de paiement d'une réservation (au réservant) ─────────────────
+
+export function tplLienPaiement(opts: {
+  orgName: string;
+  contactName: string;
+  label: string;
+  amount: number;
+  startAt?: string | null;
+  payUrl: string;
+}) {
+  const fmt = (d: string) => new Date(d).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+  return base(
+    `
+    ${badge("Paiement sécurisé", "#635BFF")}
+    <div style="height:12px;"></div>
+    ${h1("Réglez votre réservation en ligne")}
+    ${p(`Bonjour <strong>${opts.contactName}</strong>,`)}
+    ${p(`Voici le lien pour régler votre réservation auprès de <strong>${opts.orgName}</strong>.`)}
+    ${card([
+      { label: "Objet", value: opts.label },
+      ...(opts.startAt ? [{ label: "Créneau", value: fmt(opts.startAt) }] : []),
+      { label: "Montant", value: `${opts.amount.toFixed(2)} €` },
+    ])}
+    ${btn("Payer maintenant →", opts.payUrl)}
+    ${p(`Le paiement est traité de façon sécurisée par Stripe. Vous recevrez automatiquement un reçu.`)}
+  `,
+    opts.orgName
+  );
+}
+
 // ── 17. Newsletter / bulletin (aux membres) ───────────────────────────────
 
 export function tplNewsletter(opts: {

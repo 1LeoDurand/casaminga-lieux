@@ -30,6 +30,10 @@ export interface Organization {
   helloasso_client_secret?: string | null;
   helloasso_org_slug?: string | null;
   helloasso_connected_at?: string | null;
+  /** Stripe Connect — encaissement des réservations par le lieu. */
+  stripe_account_id?: string | null;
+  stripe_connected_at?: string | null;
+  stripe_charges_enabled?: boolean;
   /** Suivi séquence onboarding email — null = pas encore envoyé. */
   onboarding_j3_sent_at?: string | null;
   onboarding_j7_sent_at?: string | null;
@@ -144,7 +148,14 @@ export interface Reservation {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // Paiement en ligne (Stripe Connect — Lot A)
+  payment_status?: ReservationPaymentStatus;
+  stripe_session_id?: string | null;
+  amount_paid?: number | null;
+  paid_at?: string | null;
 }
+
+export type ReservationPaymentStatus = "none" | "pending" | "paid" | "refunded";
 
 export type MembershipCampaignStatus = "brouillon" | "publie" | "prive" | "archive";
 export type MembershipPeriodType = "annee_glissante" | "illimitee" | "personnalisee";
