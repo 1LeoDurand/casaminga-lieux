@@ -443,6 +443,7 @@ Vérifier si la barre de recherche topbar est fonctionnelle ; sinon, recherche c
 - **Domaine casaminga.com** : Infomaniak → Hébergement → ajouter `casaminga.com` (+ www) sur la même app Node que `admin.casaminga.com` + cert SSL. Code déjà prêt (`proxy.ts`, `publicSiteUrl()`).
 - **NODE_OPTIONS** : Infomaniak → Node.js 56239 → Variables d'env → `NODE_OPTIONS = --max-old-space-size=1536`.
 - **CRON_SECRET** : secret GitHub Actions + même valeur en env serveur `.env.local` (active crons factures/relances/rappels).
+- **Google Analytics** : créer une propriété GA4 sur analytics.google.com → Administration → Flux de données → copier l'ID de mesure (ex: `G-XXXXXXXXXX`) → `.env.local` : `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX`. Le bandeau cookies et le chargement conditionnel sont déjà en place.
 
 ---
 
