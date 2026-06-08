@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse } from "lucide-react";
+import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
   { href: "/admin/organisations", label: "Organisations", icon: Building2, exact: false },
+  { href: "/admin/moderation", label: "Modération", icon: ShieldCheck, exact: false },
   { href: "/admin/engagement", label: "Engagement", icon: Activity, exact: false },
   { href: "/admin/sante", label: "Santé technique", icon: HeartPulse, exact: false },
   { href: "/admin/demos", label: "Démos", icon: FlaskConical, exact: false },
@@ -16,7 +17,7 @@ const NAV = [
   { href: "/admin/aide", label: "Centre d'aide", icon: BookOpen, exact: false },
 ];
 
-export function AdminSidebar({ email, feedbackOpen = 0 }: { email: string; feedbackOpen?: number }) {
+export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0 }: { email: string; feedbackOpen?: number; moderationPending?: number }) {
   const pathname = usePathname();
 
   return (
@@ -35,7 +36,10 @@ export function AdminSidebar({ email, feedbackOpen = 0 }: { email: string; feedb
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
-          const badge = item.href === "/admin/feedback" && feedbackOpen > 0 ? feedbackOpen : 0;
+          const badge =
+            item.href === "/admin/feedback" && feedbackOpen > 0 ? feedbackOpen
+            : item.href === "/admin/moderation" && moderationPending > 0 ? moderationPending
+            : 0;
           return (
             <Link
               key={item.href}
@@ -62,7 +66,7 @@ export function AdminSidebar({ email, feedbackOpen = 0 }: { email: string; feedb
           href="/login"
           className="mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-white/50 transition-colors hover:bg-white/[0.07] hover:text-white/80"
         >
-          <ArrowLeft className="size-3.5" /> Quitter l'admin
+          <ArrowLeft className="size-3.5" /> Quitter l&apos;admin
         </Link>
         <div className="rounded-lg bg-white/[0.05] px-3 py-2">
           <div className="text-[10px] uppercase tracking-wide text-white/35">Super-admin</div>

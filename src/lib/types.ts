@@ -623,7 +623,12 @@ export interface Establishment {
   active: boolean;
   position: number;
   created_at: string;
+  // Modération admin (ticket c30a1369)
+  public_site_status?: ModerationStatus;
+  portal_status?: ModerationStatus;
 }
+
+export type ModerationStatus = "pending" | "approved" | "rejected";
 
 export type PoleType = "operationnel" | "support";
 

@@ -341,6 +341,93 @@ export async function getEngagementStats(): Promise<OrgEngagementRow[]> {
   });
 }
 
+// ── Modération (site public + portail casaminga.com) ──────────────────────────
+
+export type ModStatus = "pending" | "approved" | "rejected";
+
+export interface ModerationLieu {
+  id: string;
+  name: string;
+  city: string | null;
+  slug: string;
+  active: boolean;
+  org_name: string;
+  org_slug: string;
+  public_site_status: ModStatus;
+  portal_status: ModStatus;
+}
+
+export interface ModerationEvent {
+  id: string;
+  title: string;
+  start_at: string;
+  org_name: string;
+  org_slug: string;
+  portal_status: ModStatus;
+}
+
+/** Tous les lieux (établissements) de la plateforme, avec leur statut de modération. */
+export async function getModerationLieux(): Promise<ModerationLieu[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("establishments")
+    .select("id, name, city, slug, active, public_site_status, portal_status, organizations(name, slug)")
+    .order("created_at", { ascending: false });
+  return (data ?? []).map((e) => {
+    const org = e.organizations as unknown as { name: string; slug: string } | null;
+    return {
+      id: e.id as string,
+      name: e.name as string,
+      city: (e.city as string | null) ?? null,
+      slug: e.slug as string,
+      active: e.active as boolean,
+      public_site_status: (e.public_site_status as ModStatus) ?? "pending",
+      portal_status: (e.portal_status as ModStatus) ?? "pending",
+      org_name: org?.name ?? "—",
+      org_slug: org?.slug ?? "",
+    };
+  });
+}
+
+/** Événements publiés, à venir, en attente de validation pour le portail. */
+export async function getPortalPendingEvents(): Promise<ModerationEvent[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("evenements")
+    .select("id, title, start_at, portal_status, organizations(name, slug)")
+    .eq("portal_status", "pending")
+    .eq("status", "publie")
+    .eq("show_on_public_site", true)
+    .gte("start_at", new Date().toISOString())
+    .order("start_at", { ascending: true })
+    .limit(100);
+  return (data ?? []).map((e) => {
+    const org = e.organizations as unknown as { name: string; slug: string } | null;
+    return {
+      id: e.id as string,
+      title: e.title as string,
+      start_at: e.start_at as string,
+      portal_status: (e.portal_status as ModStatus) ?? "pending",
+      org_name: org?.name ?? "—",
+      org_slug: org?.slug ?? "",
+    };
+  });
+}
+
+/** Nombre d'éléments en attente de modération (badge sidebar / KPI). */
+export async function getModerationPendingCount(): Promise<number> {
+  const admin = createAdminClient();
+  if (!admin) return 0;
+  const [lieux, events] = await Promise.all([
+    admin.from("establishments").select("id", { count: "exact", head: true }).eq("portal_status", "pending"),
+    admin.from("evenements").select("id", { count: "exact", head: true })
+      .eq("portal_status", "pending").eq("status", "publie").eq("show_on_public_site", true),
+  ]);
+  return (lieux.count ?? 0) + (events.count ?? 0);
+}
+
 /** Tous les tickets feedback, plus récents en premier. */
 export async function getAllFeedback(): Promise<FeedbackRow[]> {
   const admin = createAdminClient();

@@ -42,6 +42,7 @@ export async function getEstablishmentForPublic(
     .select("*, organizations(slug)")
     .eq("slug", slug)
     .eq("active", true)
+    .eq("public_site_status", "approved")
     .limit(1)
     .maybeSingle();
   if (!data) return null;
