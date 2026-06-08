@@ -4,11 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, Globe, Bell } from "lucide-react";
 import { moduleLabelForSegment } from "@/lib/modules";
+import { LieuSwitcher, type LieuOption } from "@/components/mc/lieu-switcher";
 
 export function DashboardTopbar({
   orgSlug,
+  establishments = [],
+  selectedLieuId = null,
 }: {
   orgSlug: string;
+  establishments?: LieuOption[];
+  selectedLieuId?: string | null;
 }) {
   const pathname = usePathname();
   // /dashboard/[org] ou /dashboard/[org]/[segment]
@@ -16,11 +21,19 @@ export function DashboardTopbar({
   const segment = parts.length > 2 ? parts[2] : null;
   const title = moduleLabelForSegment(segment);
 
+  // Lien « site public » : vitrine du lieu sélectionné, sinon site de l'org
+  const selectedLieu = establishments.find((e) => e.id === selectedLieuId) ?? null;
+  const publicHref = selectedLieu ? `/site/${selectedLieu.slug}` : `/site/${orgSlug}`;
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-cream px-7 shadow-[0_2px_12px_rgba(255,138,101,0.08)]">
-      <div className="flex-1 truncate font-heading text-[17px] font-bold text-[#2c2c2c]">
+      <div className="truncate font-heading text-[17px] font-bold text-[#2c2c2c]">
         {title}
       </div>
+
+      <LieuSwitcher orgSlug={orgSlug} establishments={establishments} selectedId={selectedLieuId} />
+
+      <div className="flex-1" />
 
       <label className="hidden w-[220px] items-center gap-2 rounded-[13px] border-[1.5px] border-peach bg-cream px-3.5 py-[7px] transition-colors focus-within:border-coral md:flex">
         <Search className="size-3.5 text-warmgray" />
@@ -32,7 +45,7 @@ export function DashboardTopbar({
       </label>
 
       <Link
-        href={`/site/${orgSlug}`}
+        href={publicHref}
         target="_blank"
         title="Voir le site public généré"
         className="flex h-9 items-center gap-1.5 rounded-xl border-[1.5px] border-peach bg-peach-pale px-3 text-[12.5px] font-semibold text-foreground transition-colors hover:border-coral hover:bg-peach"

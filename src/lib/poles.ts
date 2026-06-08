@@ -39,6 +39,7 @@ export interface PoleInput {
   description?: string | null;
   active?: boolean;
   position?: number;
+  establishment_id?: string | null;
 }
 
 export async function createPole(orgId: string, orgSlug: string, input: PoleInput): Promise<ActionResult> {

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { PageHeader } from "@/components/mc/page-header";
 import { EventsView } from "@/components/mc/events-view";
 import { getOrganizationBySlug, getEvenementsForOrg, getSpacesForOrg } from "@/lib/data";
@@ -15,6 +16,11 @@ export default async function EvenementsPage({ params }: { params: Promise<{ org
     getActiveEstablishments(organization.id),
   ]);
 
+  // Lieu sélectionné via le switcher topbar (cookie) → pré-filtre la vue
+  const cookieStore = await cookies();
+  const rawLieuId = cookieStore.get(`cm_lieu_${organization.slug}`)?.value ?? null;
+  const initialEstablishmentId = establishments.some((e) => e.id === rawLieuId) ? rawLieuId : null;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -22,7 +28,7 @@ export default async function EvenementsPage({ params }: { params: Promise<{ org
         title="Événements"
         sub="Ateliers, concerts, expositions, marchés — la programmation publique et interne du lieu."
       />
-      <EventsView evenements={evenements} spaces={spaces} establishments={establishments} orgSlug={organization.slug} orgId={organization.id} />
+      <EventsView evenements={evenements} spaces={spaces} establishments={establishments} orgSlug={organization.slug} orgId={organization.id} initialEstablishmentId={initialEstablishmentId} />
     </div>
   );
 }

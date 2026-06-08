@@ -52,11 +52,11 @@ function Cover({ ev, children }: { ev: Evenement; children?: React.ReactNode }) 
   );
 }
 
-export function EventsView({ evenements, spaces, establishments = [], orgSlug, orgId }: {
-  evenements: Evenement[]; spaces: Space[]; establishments?: Establishment[]; orgSlug: string; orgId: string;
+export function EventsView({ evenements, spaces, establishments = [], orgSlug, orgId, initialEstablishmentId = null }: {
+  evenements: Evenement[]; spaces: Space[]; establishments?: Establishment[]; orgSlug: string; orgId: string; initialEstablishmentId?: string | null;
 }) {
   const [view, setView] = useState<View>("cards");
-  const [estFilter, setEstFilter] = useState<string>("all");
+  const [estFilter, setEstFilter] = useState<string>(initialEstablishmentId ?? "all");
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState<Set<string>>(new Set());
   const [statusF, setStatusF] = useState<Set<string>>(new Set());

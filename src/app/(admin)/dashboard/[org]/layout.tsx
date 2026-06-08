@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { DashboardSidebar } from "@/components/mc/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
 import { FeedbackWidget } from "@/components/mc/feedback-widget";
 import { HelpWidget } from "@/components/mc/help-widget";
 import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
+import { getActiveEstablishments } from "@/lib/establishments";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdminEmail } from "@/lib/admin/guard";
@@ -52,15 +54,22 @@ export default async function DashboardLayout({
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [requests, enabledModules, subscription] = await Promise.all([
+  const [requests, enabledModules, subscription, establishments] = await Promise.all([
     getRequestsForOrg(organization.id),
     getEnabledModules(organization.id),
     getOrgSubscription(organization.id),
+    getActiveEstablishments(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   ).length;
   const orgTier = effectiveTier(subscription);
+
+  // Lieu sélectionné (switcher topbar) — persisté en cookie par org
+  const cookieStore = await cookies();
+  const rawLieuId = cookieStore.get(`cm_lieu_${organization.slug}`)?.value ?? null;
+  const selectedLieuId = establishments.some((e) => e.id === rawLieuId) ? rawLieuId : null;
+  const lieuOptions = establishments.map((e) => ({ id: e.id, name: e.name, slug: e.slug, city: e.city }));
 
   return (
     <div className="grid h-screen grid-cols-[232px_1fr] grid-rows-[56px_1fr] overflow-hidden">
@@ -74,7 +83,7 @@ export default async function DashboardLayout({
           orgTier={orgTier}
         />
       </div>
-      <DashboardTopbar orgSlug={organization.slug} />
+      <DashboardTopbar orgSlug={organization.slug} establishments={lieuOptions} selectedLieuId={selectedLieuId} />
       <main className="overflow-y-auto p-7">{children}</main>
       <FeedbackWidget orgSlug={organization.slug} />
       <HelpWidget />

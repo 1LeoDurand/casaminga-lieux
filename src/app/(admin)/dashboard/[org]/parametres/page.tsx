@@ -120,8 +120,9 @@ export default async function ParametresPage({ params }: { params: Promise<{ org
           <h3 className="mb-1 font-heading text-base font-bold text-foreground">Pôles / Activités</h3>
           <p className="mb-4 text-[13px] text-warmgray">
             Classifiez vos factures et dépenses par pôle d&apos;activité (Culture, Coworking, Résidences…).
+            {establishments.length > 0 ? " Chaque pôle peut être commun à la structure ou rattaché à un lieu précis (ex. les pôles du tiers-lieu d'une ville)." : ""}
           </p>
-          <PolesManager poles={poles} orgId={organization.id} orgSlug={organization.slug} />
+          <PolesManager poles={poles} orgId={organization.id} orgSlug={organization.slug} establishments={establishments} />
         </div>
 
         {/* Budgets par pôle */}

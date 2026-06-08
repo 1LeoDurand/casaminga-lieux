@@ -642,6 +642,8 @@ export interface Pole {
   position: number;
   type: PoleType;
   created_at: string;
+  // Rattachement à un lieu (null = commun à la structure) — ticket 0d7a9a45
+  establishment_id?: string | null;
 }
 
 export type ExpenseCategory =
