@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins, Syne, DM_Sans, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { CookieBanner } from "@/components/mc/cookie-banner";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -44,6 +46,8 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster position="top-right" richColors closeButton />
+        <CookieBanner />
+        <GoogleAnalytics />
       </body>
     </html>
   );

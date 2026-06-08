@@ -39,17 +39,23 @@ export default function CgvPage() {
           <p style={{ fontSize: 14, color: "#6B6460" }}>Dernière mise à jour : {LEGAL.updated}</p>
         </div>
 
+        {/* Champ d'application B2B */}
+        <div style={{ marginBottom: 32, padding: "14px 18px", borderRadius: 12, background: "#FFF0EB", border: "1px solid #FFB4A2", fontSize: 13.5, color: "#7A4030" }}>
+          <strong>Clients professionnels uniquement.</strong> Les présentes CGV s'appliquent exclusivement aux personnes morales (associations, entreprises, collectivités, structures professionnelles) concluant un abonnement dans le cadre de leur activité. {LEGAL.product} n'est pas destiné aux consommateurs particuliers agissant à titre privé.
+        </div>
+
         <Section title="1. Objet et champ d'application">
           <p>
             Les présentes Conditions Générales de Vente (« CGV ») régissent la souscription aux offres payantes de la
-            plateforme <strong>{LEGAL.product}</strong>, éditée par {LEGAL.editor} (ci-après « l'Éditeur »), par toute
-            personne physique ou morale souscrivant un abonnement (ci-après « le Client »).
+            plateforme <strong>{LEGAL.product}</strong>, éditée par {LEGAL.editor} (ci-après « l'Éditeur »), par tout
+            client professionnel (ci-après « le Client »).
           </p>
           <br />
           <p>
             Elles complètent les{" "}
             <Link href="/cgu" style={{ color: "#E8714D", fontWeight: 600 }}>Conditions Générales d'Utilisation</Link>.
-            La souscription d'une offre payante emporte acceptation pleine et entière des présentes CGV.
+            La souscription d'une offre payante emporte acceptation pleine et entière des présentes CGV, qui prévalent
+            sur tout autre document du Client.
           </p>
         </Section>
 
@@ -57,158 +63,106 @@ export default function CgvPage() {
           <p>{LEGAL.product} est proposé selon un modèle « freemium » :</p>
           <ul style={ulStyle}>
             <li>
-              <strong>Offre gratuite</strong> — accès à un socle de fonctionnalités (gestion des adhésions, événements et
-              site public), sans limitation de durée et sans engagement de paiement.
+              <strong>Offre gratuite</strong> — accès à un socle de fonctionnalités (adhésions, événements, site public),
+              sans limitation de durée et sans engagement de paiement.
             </li>
             <li>
               <strong>Offres payantes par abonnement</strong> — déblocage de fonctionnalités avancées (facturation,
               dépenses, gouvernance, multi-lieux, etc.). Le détail des offres et leur contenu sont présentés sur la page
-              Tarifs de la plateforme, qui prévaut en cas de divergence.
+              Tarifs, qui prévaut en cas de divergence avec tout autre document.
             </li>
           </ul>
           <br />
           <p>
-            L'Éditeur peut faire évoluer le périmètre des offres ; toute réduction substantielle des fonctionnalités d'une
-            offre en cours est notifiée au Client dans les conditions de l'article 9.
+            L'Éditeur peut faire évoluer le périmètre des offres. Toute réduction substantielle des fonctionnalités d'une
+            offre en cours est notifiée au Client dans les conditions de l'article 8.
           </p>
         </Section>
 
         <Section title="3. Prix">
           <p>
-            Les prix des abonnements sont indiqués en euros sur la page Tarifs de la plateforme. Ils sont fermes pour la
-            durée de la période d'abonnement en cours.
+            Les prix des abonnements sont indiqués en euros sur la page Tarifs. Ils sont fermes pour la durée de la
+            période d'abonnement en cours.
           </p>
           <br />
-          {LEGAL.vatFranchise ? (
-            <p>
-              <strong>TVA non applicable, article 293 B du Code général des impôts</strong> (l'Éditeur bénéficie de la
-              franchise en base de TVA). Les prix affichés sont nets de taxe.
-            </p>
-          ) : (
-            <p>
-              Les prix sont indiqués hors taxes (HT) et toutes taxes comprises (TTC). La TVA applicable est celle en
-              vigueur au jour de la facturation.
-            </p>
-          )}
+          <p>
+            <strong>TVA non applicable, article 293 B du Code général des impôts</strong> (franchise en base de TVA).
+            Les prix affichés sont nets de toute taxe.
+          </p>
         </Section>
 
         <Section title="4. Souscription et facturation">
           <p>
             La souscription s'effectue en ligne depuis la plateforme. L'abonnement est conclu pour une durée d'un (1) mois
             ou d'un (1) an selon l'option choisie, et se renouvelle automatiquement par tacite reconduction pour des
-            périodes identiques, sauf résiliation dans les conditions de l'article 7.
+            périodes identiques, sauf résiliation dans les conditions de l'article 6.
           </p>
           <br />
           <p>
             Le paiement intervient à la souscription puis à chaque renouvellement, par carte bancaire via notre prestataire
-            de paiement sécurisé. Une facture est émise et mise à disposition du Client pour chaque échéance. Conformément
-            à l'article L. 215-1 du Code de la consommation, le Client consommateur est informé par écrit, au plus tôt trois
-            mois et au plus tard un mois avant le terme de la période, de la possibilité de ne pas reconduire le contrat.
+            de paiement sécurisé. Une facture est mise à disposition du Client pour chaque échéance.
           </p>
         </Section>
 
         <Section title="5. Prestataire de paiement">
           <p>
             Les paiements sont traités par <strong>Stripe Payments Europe, Ltd.</strong>, prestataire de services de
-            paiement agréé. L'Éditeur n'a jamais accès aux numéros de carte bancaire du Client, qui sont transmis de manière
-            chiffrée directement à Stripe. En cas d'incident de paiement, l'accès aux fonctionnalités payantes peut être
-            suspendu après notification.
+            paiement agréé. L'Éditeur n'a jamais accès aux numéros de carte du Client. En cas d'incident de paiement,
+            l'accès aux fonctionnalités payantes peut être suspendu après notification.
           </p>
         </Section>
 
-        <Section title="6. Droit de rétractation">
+        <Section title="6. Durée, résiliation">
           <p>
-            Conformément aux articles L. 221-18 et suivants du Code de la consommation, le Client <strong>consommateur</strong>
-            {" "}dispose d'un délai de quatorze (14) jours à compter de la souscription pour exercer son droit de rétractation,
-            sans avoir à motiver sa décision.
-          </p>
-          <br />
-          <p>
-            Toutefois, le Client peut demander à bénéficier du service immédiatement. En commençant à utiliser une
-            fonctionnalité payante avant la fin du délai de rétractation, il <strong>demande expressément l'exécution
-            immédiate</strong> du service et reconnaît que son droit de rétractation prend fin une fois le service
-            pleinement exécuté, ou qu'il devra régler le montant correspondant à l'usage effectué jusqu'à sa rétractation
-            (article L. 221-25 du Code de la consommation).
-          </p>
-          <br />
-          <p style={{ fontSize: 13, color: "#6B6460" }}>
-            Le droit de rétractation ne s'applique pas aux Clients professionnels (associations, entreprises, collectivités)
-            agissant dans le cadre de leur activité.
-          </p>
-        </Section>
-
-        <Section title="7. Durée, résiliation et remboursement">
-          <p>
-            Le Client peut résilier son abonnement à tout moment depuis son espace ou en écrivant à{" "}
+            Le Client peut résilier son abonnement à tout moment depuis son espace ou par email à{" "}
             <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D" }}>{LEGAL.email}</a>. La résiliation prend effet
             au terme de la période d'abonnement en cours : le Client conserve l'accès aux fonctionnalités payantes
-            jusqu'à cette date, et aucun renouvellement n'est facturé ensuite.
+            jusqu'à cette date, sans renouvellement ultérieur.
           </p>
           <br />
           <p>
-            Sauf exercice du droit de rétractation (article 6) ou disposition légale impérative, les sommes versées au titre
-            d'une période entamée ne sont pas remboursées. En cas de retour à l'offre gratuite, les données du Client sont
-            conservées dans les limites de cette offre.
+            Sauf disposition légale impérative, les sommes versées au titre d'une période entamée ne sont pas
+            remboursées. En cas de retour à l'offre gratuite, les données sont conservées dans les limites de cette offre.
           </p>
         </Section>
 
-        <Section title="8. Disponibilité du service">
+        <Section title="7. Disponibilité du service">
           <p>
-            L'Éditeur est tenu à une obligation de moyens quant à la disponibilité et au bon fonctionnement du service.
-            Les modalités de disponibilité et de maintenance sont précisées à l'article 6 des{" "}
-            <Link href="/cgu" style={{ color: "#E8714D", fontWeight: 600 }}>CGU</Link>. En cas d'indisponibilité prolongée
-            imputable à l'Éditeur, le Client pourra demander un avoir au prorata de la durée d'indisponibilité.
+            L'Éditeur est tenu à une obligation de moyens quant à la disponibilité du service (voir article 6 des{" "}
+            <Link href="/cgu" style={{ color: "#E8714D", fontWeight: 600 }}>CGU</Link>). En cas d'indisponibilité
+            prolongée imputable à l'Éditeur, le Client pourra demander un avoir au prorata de la durée d'indisponibilité.
           </p>
         </Section>
 
-        <Section title="9. Modification des offres et des prix">
+        <Section title="8. Modification des offres et des prix">
           <p>
-            L'Éditeur peut modifier ses offres et tarifs. Toute modification de prix d'un abonnement en cours est notifiée
-            au Client au moins trente (30) jours avant son entrée en vigueur, au prochain renouvellement. Le Client qui
-            n'accepte pas la modification peut résilier son abonnement avant cette date, sans frais.
+            Toute modification de prix d'un abonnement en cours est notifiée au Client au moins trente (30) jours avant
+            son entrée en vigueur, au prochain renouvellement. Le Client qui n'accepte pas la modification peut résilier
+            son abonnement avant cette date sans frais.
           </p>
         </Section>
 
-        <Section title="10. Responsabilité">
+        <Section title="9. Responsabilité">
           <p>
-            La responsabilité de l'Éditeur au titre des présentes CGV est limitée, tous préjudices confondus, au montant
-            des sommes effectivement versées par le Client au cours des douze (12) mois précédant le fait générateur.
-            L'Éditeur ne saurait être tenu responsable des dommages indirects. Les présentes stipulations ne limitent pas
-            les droits dont bénéficie le Client consommateur au titre des garanties légales.
+            La responsabilité de l'Éditeur est limitée, tous préjudices confondus, au montant des sommes effectivement
+            versées par le Client au cours des douze (12) mois précédant le fait générateur. L'Éditeur ne saurait être
+            tenu responsable des dommages indirects (perte d'exploitation, manque à gagner, atteinte à l'image).
           </p>
         </Section>
 
-        <Section title="11. Données personnelles">
+        <Section title="10. Données personnelles">
           <p>
             Les traitements de données réalisés dans le cadre de l'abonnement sont décrits dans la{" "}
             <Link href="/confidentialite" style={{ color: "#E8714D", fontWeight: 600 }}>Politique de confidentialité</Link>.
           </p>
         </Section>
 
-        <Section title="12. Droit applicable et règlement des litiges">
+        <Section title="11. Droit applicable et juridiction">
           <p>
-            Les présentes CGV sont soumises au droit français. En cas de litige, le Client s'adresse en priorité à l'Éditeur
-            pour rechercher une solution amiable.
-          </p>
-          <br />
-          <p>
-            <strong>Médiation de la consommation.</strong> Conformément aux articles L. 612-1 et suivants du Code de la
-            consommation, le Client consommateur peut recourir gratuitement à un médiateur de la consommation en vue de la
-            résolution amiable d'un litige.{" "}
-            <span style={{ color: "#6B6460" }}>
-              {/* ⚠️ À COMPLÉTER : nom et coordonnées du médiateur de la consommation auquel l'Éditeur adhère. */}
-              Les coordonnées du médiateur compétent sont communiquées sur demande à{" "}
-              <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D" }}>{LEGAL.email}</a>.
-            </span>
-          </p>
-          <br />
-          <p>
-            Le Client consommateur peut également utiliser la plateforme européenne de Règlement en Ligne des Litiges (RLL) :{" "}
-            <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>ec.europa.eu/consumers/odr</a>.
-          </p>
-          <br />
-          <p style={{ fontSize: 13, color: "#6B6460" }}>
-            À défaut de résolution amiable, le litige sera porté devant les tribunaux français compétents.
+            Les présentes CGV sont soumises au droit français. En cas de litige, les parties recherchent une solution
+            amiable avant toute action judiciaire. À défaut d'accord, le litige sera porté devant les tribunaux
+            compétents du ressort du siège de l'Éditeur (Montpellier), nonobstant pluralité de défendeurs ou appel en
+            garantie, y compris pour les procédures d'urgence ou les procédures conservatoires.
           </p>
         </Section>
 
