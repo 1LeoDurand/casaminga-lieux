@@ -32,6 +32,7 @@ import {
   LayoutGrid,
   ChevronDown,
   Plus,
+  TrendingDown,
   type LucideIcon,
 } from "lucide-react";
 import { MODULE_SECTIONS, type ModuleDef, type ModuleSection } from "@/lib/modules";
@@ -49,6 +50,7 @@ const ICONS: Record<string, LucideIcon> = {
   evenements: CalendarDays,
   finances: Wallet,
   factures: ReceiptText,
+  depenses: TrendingDown,
   subventions: Landmark,
   caisse: Lock,
   documents: FileText,
