@@ -60,6 +60,24 @@ function btn(text: string, href: string) {
 function divider() {
   return `<hr style="border:none;border-top:1px solid #F0E8E0;margin:24px 0;" />`;
 }
+function resourceLinks(links: { label: string; href: string }[]) {
+  const items = links
+    .map(
+      (l) =>
+        `<a href="${l.href}" style="display:inline-block;margin:4px 6px;padding:8px 16px;background:#FAFAF7;border:1px solid #E5DDD6;border-radius:8px;font-size:13px;color:#FF8A65;font-weight:600;text-decoration:none;">${l.label}</a>`
+    )
+    .join("");
+  return `<div style="margin:20px 0;text-align:center;">${items}</div>`;
+}
+function signatureLeo() {
+  return `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #F0E8E0;">
+    <p style="margin:0;font-size:14px;color:#4A4540;line-height:1.5;">
+      Léo Durand<br/>
+      <span style="color:#9C9590;font-size:13px;">Fondateur · Casa Minga Lieux</span><br/>
+      <a href="mailto:leo@casaminga.com" style="color:#FF8A65;font-size:13px;text-decoration:none;">leo@casaminga.com</a>
+    </p>
+  </div>`;
+}
 
 // ── 1. Confirmation demande reçue (au demandeur) ───────────────────────────
 
@@ -395,12 +413,14 @@ export function tplPersonneBienvenue(opts: {
   orgName: string;
   firstName: string;
   role?: string;
+  siteUrl?: string;
 }) {
   return base(
     `
     ${h1(`Bienvenue, ${opts.firstName} !`)}
     ${p(`Vous avez été ajouté(e) à l'annuaire de <strong>${opts.orgName}</strong>${opts.role ? ` en tant que <strong>${opts.role}</strong>` : ""}.`)}
     ${p("N'hésitez pas à prendre contact avec l'équipe pour toute question.")}
+    ${opts.siteUrl ? btn(`Découvrir ${opts.orgName} →`, opts.siteUrl) : ""}
   `,
     opts.orgName
   );
@@ -442,18 +462,115 @@ export function tplCompteBienvenue(opts: {
   orgSlug: string;
   firstName: string;
   dashboardUrl: string;
+  helpUrl?: string;
+  demoUrl?: string;
 }) {
+  const helpUrl = opts.helpUrl ?? "https://admin.casaminga.com/aide";
+  const demoUrl = opts.demoUrl ?? "https://admin.casaminga.com/demo";
   return base(
     `
     ${h1(`Bienvenue sur Casa Minga Lieux !`)}
     ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
-    ${p(`Votre espace de gestion pour <strong>${opts.orgName}</strong> est prêt.`)}
-    ${divider()}
-    ${p("Connectez-vous pour commencer à gérer votre lieu :")}
+    ${p(`Votre espace de gestion pour <strong>${opts.orgName}</strong> est prêt. Vous avez accès à l'ensemble des outils pour gérer votre lieu : adhésions, événements, réservations, site public et bien plus.`)}
     ${btn("Accéder à mon espace →", opts.dashboardUrl)}
-    ${p("Si vous avez des questions, répondez directement à cet email.")}
+    ${divider()}
+    <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#2C2C2C;">Pour bien démarrer en 3 étapes :</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;">
+      <tr>
+        <td style="padding:10px 12px;background:#FAFAF7;border:1px solid #E5DDD6;border-radius:10px;margin-bottom:8px;display:block;">
+          <span style="font-size:18px;">1.</span>
+          <span style="font-size:14px;color:#2C2C2C;font-weight:600;margin-left:8px;">Configurez votre profil d'organisation</span>
+          <p style="margin:4px 0 0 28px;font-size:13px;color:#9C9590;">Nom, logo, description, coordonnées — ce sont les infos qui apparaissent sur votre site public.</p>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>
+      <tr>
+        <td style="padding:10px 12px;background:#FAFAF7;border:1px solid #E5DDD6;border-radius:10px;">
+          <span style="font-size:18px;">2.</span>
+          <span style="font-size:14px;color:#2C2C2C;font-weight:600;margin-left:8px;">Activez vos premiers modules</span>
+          <p style="margin:4px 0 0 28px;font-size:13px;color:#9C9590;">Adhésions, événements, réservations — activez uniquement ce dont vous avez besoin.</p>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>
+      <tr>
+        <td style="padding:10px 12px;background:#FAFAF7;border:1px solid #E5DDD6;border-radius:10px;">
+          <span style="font-size:18px;">3.</span>
+          <span style="font-size:14px;color:#2C2C2C;font-weight:600;margin-left:8px;">Invitez votre équipe</span>
+          <p style="margin:4px 0 0 28px;font-size:13px;color:#9C9590;">Ajoutez les membres de votre équipe pour qu'ils gèrent le lieu avec vous.</p>
+        </td>
+      </tr>
+    </table>
+    ${divider()}
+    <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#2C2C2C;">Ressources utiles</p>
+    ${resourceLinks([
+      { label: "📖 Centre d'aide", href: helpUrl },
+      { label: "🎬 Voir une démo", href: demoUrl },
+      { label: "✉️ Nous écrire", href: "mailto:leo@casaminga.com" },
+    ])}
+    ${divider()}
+    ${p("Si quelque chose ne fonctionne pas ou si vous avez la moindre question, répondez directement à cet email. Je lis personnellement tous les messages.")}
+    ${signatureLeo()}
   `,
-    opts.orgName
+    "Casa Minga Lieux"
+  );
+}
+
+// ── 17-bis. Onboarding J+3 : "Avez-vous commencé ?" ──────────────────────
+
+export function tplOnboardingJ3(opts: {
+  orgName: string;
+  firstName: string;
+  dashboardUrl: string;
+  helpUrl?: string;
+}) {
+  const helpUrl = opts.helpUrl ?? "https://admin.casaminga.com/aide";
+  return base(
+    `
+    ${h1(`Vous vous en sortez bien, ${opts.firstName} ?`)}
+    ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
+    ${p(`Il y a 3 jours, vous avez créé l'espace de <strong>${opts.orgName}</strong> sur Casa Minga Lieux. Je voulais juste m'assurer que tout s'est bien passé.`)}
+    ${divider()}
+    <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#2C2C2C;">Les modules les plus utilisés par les lieux comme le vôtre :</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;">
+      <tr>
+        <td style="padding:8px 12px;font-size:13px;color:#4A4540;line-height:1.6;">
+          🏷️ <strong>Adhésions</strong> — Gérez vos membres, les formules et les renouvellements en quelques clics.<br/>
+          📅 <strong>Événements</strong> — Créez un événement public et récoltez des inscriptions depuis votre site.<br/>
+          🔑 <strong>Réservations</strong> — Ouvrez vos espaces à la réservation avec un calendrier partagé.
+        </td>
+      </tr>
+    </table>
+    ${btn("Continuer la configuration →", opts.dashboardUrl)}
+    ${divider()}
+    ${p(`Si quelque chose vous bloque — une question technique, une fonctionnalité que vous ne trouvez pas — le <a href="${helpUrl}" style="color:#FF8A65;">centre d'aide</a> répond à 90% des cas. Et sinon, répondez à cet email. Je suis là.`)}
+    ${signatureLeo()}
+  `,
+    "Casa Minga Lieux"
+  );
+}
+
+// ── 17-ter. Onboarding J+7 : invitation 1-to-1 ───────────────────────────
+
+export function tplOnboardingJ7(opts: {
+  orgName: string;
+  firstName: string;
+  dashboardUrl: string;
+  calUrl?: string;
+}) {
+  const calUrl = opts.calUrl ?? "mailto:leo@casaminga.com?subject=Démo Casa Minga Lieux";
+  return base(
+    `
+    ${h1(`Un coup de main pour ${opts.orgName} ?`)}
+    ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
+    ${p(`Ça fait une semaine que vous utilisez Casa Minga Lieux. Je voulais vous proposer quelque chose : <strong>30 minutes ensemble</strong>, en visio ou par téléphone, pour faire le point sur votre configuration.`)}
+    ${p(`On regarde ensemble ce qui est déjà en place, je réponds à vos questions, et on identifie les modules qui pourraient vous faire gagner le plus de temps.`)}
+    ${p(`<em style="color:#9C9590;">Aucun engagement, aucune vente — juste un échange de terrain.</em>`)}
+    ${btn("Réserver un créneau avec Léo →", calUrl)}
+    ${divider()}
+    ${p(`Pas le temps pour un appel ? Vous pouvez aussi répondre directement à cet email avec vos questions, je réponds sous 24h.`)}
+    ${signatureLeo()}
+  `,
+    "Casa Minga Lieux"
   );
 }
 
