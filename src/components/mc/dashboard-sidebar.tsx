@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import type { OrgTier } from "@/lib/modules";
 import {
   LayoutDashboard,
   Inbox,
@@ -33,6 +34,7 @@ import {
   ChevronDown,
   Plus,
   TrendingDown,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { MODULE_SECTIONS, type ModuleDef, type ModuleSection } from "@/lib/modules";
@@ -88,23 +90,30 @@ function NavItem({
   orgSlug,
   m,
   badge,
+  locked = false,
 }: {
   orgSlug: string;
   m: ModuleDef;
   badge?: number;
+  locked?: boolean;
 }) {
   const pathname = usePathname();
-  const href = hrefFor(orgSlug, m);
-  const active = pathname === href;
+  const href = locked ? `/dashboard/${orgSlug}/upgrade` : hrefFor(orgSlug, m);
+  const active = !locked && pathname === hrefFor(orgSlug, m);
   const Icon = ICONS[m.key] ?? LayoutDashboard;
 
   return (
-    <Link href={href} className={`mc-nav-item ${active ? "active" : ""}`}>
+    <Link
+      href={href}
+      className={`mc-nav-item ${active ? "active" : ""} ${locked ? "opacity-50 hover:opacity-75" : ""}`}
+      title={locked ? "Module Asso complète — passer à l'offre supérieure" : undefined}
+    >
       <span className="mc-nav-icon">
-        <Icon className="size-[17px]" strokeWidth={1.7} />
+        {locked ? <Lock className="size-[14px]" strokeWidth={1.9} /> : <Icon className="size-[17px]" strokeWidth={1.7} />}
       </span>
       <span className="truncate">{m.label}</span>
       {badge ? <span className="mc-nav-badge danger">{badge}</span> : null}
+      {locked && <Sparkles className="ml-auto size-3 shrink-0 text-amber-400/70" />}
     </Link>
   );
 }
@@ -121,6 +130,7 @@ function SectionGroup({
   onToggle,
   openRequests,
   enabledModules,
+  orgTier,
   forceOpen = false,
 }: {
   section: ModuleSection;
@@ -129,18 +139,28 @@ function SectionGroup({
   onToggle: () => void;
   openRequests: number;
   enabledModules: Set<string>;
+  orgTier: OrgTier;
   forceOpen?: boolean;
 }) {
+  const TIER_ORDER: OrgTier[] = ["free", "complete", "multilieu"];
   const visibleModules = section.modules.filter(
     (m) => m.layer === 0 || enabledModules.has(m.key)
   );
+  // Les modules gated sont visibles mais avec cadenas
+  const gatedModules = section.modules.filter(
+    (m) => m.minTier && TIER_ORDER.indexOf(orgTier) < TIER_ORDER.indexOf(m.minTier)
+      && m.layer !== 0 && !enabledModules.has(m.key)
+  );
+  const allModules = [...visibleModules, ...gatedModules.filter(
+    (g) => !visibleModules.find((v) => v.key === g.key)
+  )];
 
-  if (visibleModules.length === 0) return null;
+  if (allModules.length === 0) return null;
 
   const isOpen = forceOpen || open;
 
   const groupBadge =
-    !isOpen && openRequests > 0 && visibleModules.some((m) => m.key === "demandes")
+    !isOpen && openRequests > 0 && allModules.some((m) => m.key === "demandes")
       ? openRequests
       : 0;
 
@@ -170,16 +190,20 @@ function SectionGroup({
       {/* Conteneur : toujours visible en mode flat, animé en mode accordéon */}
       <div
         className={forceOpen ? undefined : "overflow-hidden transition-[max-height] duration-200 ease-out"}
-        style={forceOpen ? undefined : { maxHeight: isOpen ? "500px" : "0px" }}
+        style={forceOpen ? undefined : { maxHeight: isOpen ? "600px" : "0px" }}
       >
-        {visibleModules.map((m) => (
-          <NavItem
-            key={m.key}
-            orgSlug={orgSlug}
-            m={m}
-            badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
-          />
-        ))}
+        {allModules.map((m) => {
+          const isLocked = !!(m.minTier && TIER_ORDER.indexOf(orgTier) < TIER_ORDER.indexOf(m.minTier) && !visibleModules.find((v) => v.key === m.key));
+          return (
+            <NavItem
+              key={m.key}
+              orgSlug={orgSlug}
+              m={m}
+              badge={m.key === "demandes" && openRequests > 0 ? openRequests : undefined}
+              locked={isLocked}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -193,6 +217,7 @@ export function DashboardSidebar({
   userRole = "Coordination",
   isDemo = false,
   enabledModules = new Set<string>(),
+  orgTier = "free",
 }: {
   orgSlug: string;
   orgName: string;
@@ -201,6 +226,7 @@ export function DashboardSidebar({
   userRole?: string;
   isDemo?: boolean;
   enabledModules?: Set<string>;
+  orgTier?: OrgTier;
 }) {
   const initials = userName
     .split(" ")
@@ -275,6 +301,7 @@ export function DashboardSidebar({
             }
             openRequests={openRequests}
             enabledModules={enabledModules}
+            orgTier={orgTier}
             forceOpen={flatMode}
           />
         ))}
@@ -292,6 +319,20 @@ export function DashboardSidebar({
           </Link>
         </div>
       </nav>
+
+      {/* Encart upgrade — visible uniquement pour les comptes free */}
+      {orgTier === "free" && !isDemo && (
+        <Link
+          href={`/dashboard/${orgSlug}/upgrade`}
+          className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2.5 transition-colors hover:bg-amber-400/20"
+        >
+          <Sparkles className="size-4 shrink-0 text-amber-400" />
+          <div className="min-w-0">
+            <div className="text-[12px] font-bold text-amber-300">Passer à l&apos;Asso complète</div>
+            <div className="text-[10px] text-amber-300/60">Tous les modules débloqués</div>
+          </div>
+        </Link>
+      )}
 
       {/* Pied : utilisateur */}
       <div className="mt-auto shrink-0 border-t border-white/[0.07] px-3 py-4">

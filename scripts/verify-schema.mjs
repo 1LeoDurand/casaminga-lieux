@@ -39,6 +39,7 @@ const EXPECTED = {
   event_tickets: ["event_id", "registration_id", "holder_name", "ticket_token", "checked_in_at"],
   event_scan_links: ["event_id", "token", "revoked", "expires_at"],
   tax_receipts: ["donor_name", "amount", "fiscal_year"],
+  subscriptions: ["tier", "status", "comped", "founding_member", "trial_ends_at"],
 };
 
 const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };

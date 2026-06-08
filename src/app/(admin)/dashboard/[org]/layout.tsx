@@ -7,7 +7,7 @@ import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { isSuperAdminEmail } from "@/lib/admin/guard";
-import { getEnabledModules } from "@/lib/modules-data";
+import { getEnabledModules, getOrgSubscription, effectiveTier } from "@/lib/modules-data";
 
 const OPEN_STATUSES_EXCLUDED = ["validee", "refusee", "archivee"];
 
@@ -52,13 +52,15 @@ export default async function DashboardLayout({
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [requests, enabledModules] = await Promise.all([
+  const [requests, enabledModules, subscription] = await Promise.all([
     getRequestsForOrg(organization.id),
     getEnabledModules(organization.id),
+    getOrgSubscription(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
   ).length;
+  const orgTier = effectiveTier(subscription);
 
   return (
     <div className="grid h-screen grid-cols-[232px_1fr] grid-rows-[56px_1fr] overflow-hidden">
@@ -69,6 +71,7 @@ export default async function DashboardLayout({
           openRequests={openRequests}
           isDemo={!isSupabaseConfigured()}
           enabledModules={enabledModules}
+          orgTier={orgTier}
         />
       </div>
       <DashboardTopbar orgSlug={organization.slug} />

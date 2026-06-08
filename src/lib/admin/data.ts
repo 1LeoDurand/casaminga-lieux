@@ -165,6 +165,25 @@ export async function getRecentEmails(limit = 200): Promise<EmailLogRow[]> {
   return (data as EmailLogRow[]) ?? [];
 }
 
+export interface SubscriptionRow {
+  organization_id: string;
+  tier: string;
+  status: string;
+  comped: boolean;
+  founding_member: boolean;
+  notes: string | null;
+}
+
+/** Tous les abonnements (pour la page admin organisations). */
+export async function getAllSubscriptions(): Promise<SubscriptionRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("subscriptions")
+    .select("organization_id, tier, status, comped, founding_member, notes");
+  return (data as SubscriptionRow[]) ?? [];
+}
+
 /** Tous les tickets feedback, plus récents en premier. */
 export async function getAllFeedback(): Promise<FeedbackRow[]> {
   const admin = createAdminClient();
