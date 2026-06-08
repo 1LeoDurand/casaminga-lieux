@@ -131,6 +131,74 @@ export async function getAllHelpCategories(): Promise<HelpCategoryAdmin[]> {
   return (data as HelpCategoryAdmin[]) ?? [];
 }
 
+// ── Santé technique ───────────────────────────────────────────────────────────
+
+export interface CronLastRun {
+  job_key: string;
+  status: string;
+  ran_at: string | null;
+  rows_affected: number | null;
+  error_msg: string | null;
+}
+
+export interface EmailDeliverability {
+  total7d: number;
+  sent7d: number;
+  failed7d: number;
+  rate7d: number;         // % de succès
+  lastFailure: string | null;
+  lastFailureMsg: string | null;
+}
+
+const KNOWN_CRONS = ["coworking-invoices", "payment-reminders", "reminders", "newsletters"];
+
+export async function getHealthStats(): Promise<{ crons: CronLastRun[]; email: EmailDeliverability }> {
+  const admin = createAdminClient();
+  if (!admin) {
+    return {
+      crons: KNOWN_CRONS.map((k) => ({ job_key: k, status: "unknown", ran_at: null, rows_affected: null, error_msg: null })),
+      email: { total7d: 0, sent7d: 0, failed7d: 0, rate7d: 100, lastFailure: null, lastFailureMsg: null },
+    };
+  }
+
+  const since7d = new Date(Date.now() - 7 * 86_400_000).toISOString();
+
+  const [cronRes, emailRes, lastFailRes] = await Promise.all([
+    // Dernière exécution de chaque job connu
+    admin.from("cron_log").select("job_key, status, ran_at, rows_affected, error_msg")
+      .in("job_key", KNOWN_CRONS)
+      .order("ran_at", { ascending: false })
+      .limit(50),
+    // Stats email 7j
+    admin.from("email_log").select("id, status, created_at", { count: "exact" }).gte("created_at", since7d),
+    // Dernier échec email
+    admin.from("email_log").select("created_at, error").eq("status", "failed").order("created_at", { ascending: false }).limit(1),
+  ]);
+
+  // Dédupliquer crons → garder la dernière par job_key
+  const cronMap = new Map<string, CronLastRun>();
+  for (const r of (cronRes.data ?? [])) {
+    if (!cronMap.has(r.job_key)) cronMap.set(r.job_key, r as CronLastRun);
+  }
+  const crons = KNOWN_CRONS.map((k) => cronMap.get(k) ?? { job_key: k, status: "jamais", ran_at: null, rows_affected: null, error_msg: null });
+
+  const emails = emailRes.data ?? [];
+  const sent7d = emails.filter((e) => e.status === "sent").length;
+  const failed7d = emails.filter((e) => e.status === "failed").length;
+  const total7d = emails.length;
+  const lf = (lastFailRes.data ?? [])[0];
+
+  return {
+    crons,
+    email: {
+      total7d, sent7d, failed7d,
+      rate7d: total7d > 0 ? Math.round((sent7d / total7d) * 100) : 100,
+      lastFailure: lf?.created_at ?? null,
+      lastFailureMsg: lf?.error ?? null,
+    },
+  };
+}
+
 import type { GrantOpportunity } from "@/lib/grants/types";
 
 export async function getAllOpportunities(): Promise<GrantOpportunity[]> {

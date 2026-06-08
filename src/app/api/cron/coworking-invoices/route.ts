@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/admin/guard";
 import { generateMonthlyInvoices } from "@/lib/invoicing/generate";
+import { logCronRun } from "@/lib/cron-logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,5 +33,6 @@ export async function POST(req: Request) {
     errors.push(...r.errors);
   }
 
+  await logCronRun("coworking-invoices", errors.length > 0 ? "error" : "ok", { rowsAffected: created });
   return NextResponse.json({ ok: true, orgs: orgs.length, created, emailed, errors });
 }

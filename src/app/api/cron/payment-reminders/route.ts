@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/admin/guard";
+import { logCronRun } from "@/lib/cron-logger";
 import type { Invoice, InvoiceSettings } from "@/lib/invoicing/types";
 
 export const dynamic = "force-dynamic";
@@ -82,5 +83,6 @@ export async function POST(req: Request) {
     }
   }
 
+  await logCronRun("payment-reminders", "ok", { rowsAffected: reminded });
   return NextResponse.json({ ok: true, overdue: overdue.length, reminded });
 }

@@ -10,6 +10,7 @@ import { getAllActiveNewsletterSettings } from "@/lib/newsletter/data";
 import { resolveAllBlocks, countNewEventsSince } from "@/lib/newsletter/resolvers";
 import { renderNewsletterHtml } from "@/lib/newsletter/renderer";
 import { sendMail } from "@/lib/mail";
+import { logCronRun } from "@/lib/cron-logger";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
 
@@ -205,5 +206,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  await logCronRun("newsletters", "ok", { rowsAffected: results.length });
   return NextResponse.json({ ok: true, processed: results.length, results });
 }

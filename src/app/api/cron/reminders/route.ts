@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/admin/guard";
+import { logCronRun } from "@/lib/cron-logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -88,5 +89,6 @@ export async function POST(req: Request) {
     if (ok) adhSent++;
   }
 
+  await logCronRun("reminders", "ok", { rowsAffected: resaSent + adhSent });
   return NextResponse.json({ ok: true, reservationsReminded: resaSent, adhesionsReminded: adhSent });
 }
