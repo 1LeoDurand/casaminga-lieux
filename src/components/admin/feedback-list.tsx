@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { toast } from "sonner";
-import { Check, X, Wrench, Clock, RotateCcw } from "lucide-react";
+import { Check, X, Wrench, Clock, RotateCcw, ZoomIn } from "lucide-react";
 import { updateFeedbackStatus, type FeedbackStatus } from "@/app/admin/feedback/actions";
 import type { FeedbackRow } from "@/lib/admin/data";
 
@@ -57,6 +57,7 @@ export function FeedbackList({ items }: { items: FeedbackRow[] }) {
   const [filter, setFilter] = useState<string>("open");
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (filter === "all" ? items : items.filter((f) => f.status === filter)),
@@ -81,6 +82,28 @@ export function FeedbackList({ items }: { items: FeedbackRow[] }) {
 
   return (
     <>
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox}
+            alt="Capture d'écran"
+            className="max-h-[90vh] max-w-[90vw] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+      )}
+
       {/* Filtres */}
       <div className="mb-5 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -128,6 +151,28 @@ export function FeedbackList({ items }: { items: FeedbackRow[] }) {
 
                 {/* Description */}
                 <p className="text-sm leading-relaxed text-ink">{f.description}</p>
+
+                {/* Screenshot */}
+                {f.screenshot_url && (
+                  <button
+                    type="button"
+                    onClick={() => setLightbox(f.screenshot_url!)}
+                    className="group relative mt-3 inline-flex overflow-hidden rounded-lg border border-border transition hover:border-coral/40"
+                    title="Voir la capture en plein écran"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={f.screenshot_url}
+                      alt="Capture d'écran"
+                      className="h-24 w-auto max-w-[280px] object-cover transition group-hover:opacity-90"
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center opacity-0 transition group-hover:opacity-100">
+                      <span className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white">
+                        <ZoomIn className="size-3.5" /> Agrandir
+                      </span>
+                    </span>
+                  </button>
+                )}
 
                 {/* Méta */}
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-warmgray">

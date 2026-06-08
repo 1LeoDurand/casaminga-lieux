@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { usePathname } from "next/navigation";
+import { Camera, X, Loader2 } from "lucide-react";
 
 type FeedbackType = "bug" | "amélioration";
 type Priority = "low" | "medium" | "high" | "critical";
@@ -22,17 +23,84 @@ const PRIORITY_COLORS: Record<Priority, string> = {
   critical: "bg-red-50 text-red-700 border-red-200",
 };
 
+const SCREENSHOT_BUCKET = "feedback-screenshots";
+const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
+
 export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("bug");
   const [priority, setPriority] = useState<Priority>("medium");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Screenshot
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const pathname = usePathname();
+
+  async function handleScreenshotFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Format non supporté (JPG, PNG, WebP, GIF).");
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast.error("Image trop lourde (5 Mo max).");
+      return;
+    }
+
+    // Aperçu local immédiat
+    const reader = new FileReader();
+    reader.onload = (e) => setScreenshotPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setUploadingScreenshot(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+      const { error } = await supabase.storage.from(SCREENSHOT_BUCKET).upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) {
+        toast.error("Échec de l'upload de la capture.");
+        setScreenshotPreview(null);
+        return;
+      }
+
+      const { data } = supabase.storage.from(SCREENSHOT_BUCKET).getPublicUrl(path);
+      setScreenshotUrl(data.publicUrl);
+    } finally {
+      setUploadingScreenshot(false);
+    }
+  }
+
+  function removeScreenshot() {
+    setScreenshotUrl(null);
+    setScreenshotPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function resetForm() {
+    setDescription("");
+    setType("bug");
+    setPriority("medium");
+    setScreenshotUrl(null);
+    setScreenshotPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!description.trim()) return;
+    if (uploadingScreenshot) {
+      toast.error("L'image est encore en cours d'envoi, patientez.");
+      return;
+    }
 
     setLoading(true);
     const supabase = createClient();
@@ -44,6 +112,7 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
       url: typeof window !== "undefined" ? window.location.href : pathname,
       page_title: typeof document !== "undefined" ? document.title : "",
       org_slug: orgSlug ?? null,
+      screenshot_url: screenshotUrl ?? null,
     });
 
     setLoading(false);
@@ -54,9 +123,7 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
     }
 
     toast.success("Ticket enregistré ✓");
-    setDescription("");
-    setType("bug");
-    setPriority("medium");
+    resetForm();
     setOpen(false);
   }
 
@@ -150,6 +217,60 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
               />
             </div>
 
+            {/* Screenshot */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                Capture d'écran <span className="font-normal text-slate-400">(optionnel)</span>
+              </label>
+
+              {screenshotPreview ? (
+                <div className="relative inline-flex">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={screenshotPreview}
+                    alt="Capture"
+                    className="h-16 w-auto max-w-full rounded-lg border border-slate-200 object-cover"
+                  />
+                  {uploadingScreenshot && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/70">
+                      <Loader2 className="size-4 animate-spin text-slate-500" />
+                    </div>
+                  )}
+                  {!uploadingScreenshot && (
+                    <button
+                      type="button"
+                      onClick={removeScreenshot}
+                      className="absolute -right-2 -top-2 flex size-5 items-center justify-center rounded-full bg-slate-700 text-white hover:bg-slate-900 transition-colors"
+                      title="Supprimer la capture"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full items-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-[12.5px] font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                >
+                  <Camera className="size-4 shrink-0 text-slate-400" />
+                  Ajouter une capture d'écran
+                </button>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleScreenshotFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+
             {/* URL actuelle */}
             <p className="text-[10px] text-slate-400 truncate">
               📍 {typeof window !== "undefined" ? window.location.pathname : pathname}
@@ -180,10 +301,10 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
 
             <button
               type="submit"
-              disabled={loading || !description.trim()}
+              disabled={loading || !description.trim() || uploadingScreenshot}
               className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {loading ? "Envoi…" : "Envoyer le ticket"}
+              {loading ? "Envoi…" : uploadingScreenshot ? "Capture en cours…" : "Envoyer le ticket"}
             </button>
           </form>
         </div>

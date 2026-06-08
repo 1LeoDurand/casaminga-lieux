@@ -30,6 +30,7 @@ export interface FeedbackRow {
   page_title: string | null;
   org_slug: string | null;
   status: string;
+  screenshot_url: string | null;
   created_at: string;
 }
 
@@ -341,7 +342,7 @@ export async function getAllFeedback(): Promise<FeedbackRow[]> {
 
   const { data } = await admin
     .from("feedback")
-    .select("id, type, priority, description, url, page_title, org_slug, status, created_at")
+    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at")
     .order("created_at", { ascending: false });
 
   return data ?? [];
