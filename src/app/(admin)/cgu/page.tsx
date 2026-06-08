@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LEGAL } from "@/lib/legal";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -8,6 +9,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   );
 }
+
+const ulStyle: React.CSSProperties = { paddingLeft: 20, marginTop: 10, display: "flex", flexDirection: "column", gap: 8 };
 
 export default function CguPage() {
   return (
@@ -33,104 +36,148 @@ export default function CguPage() {
             Légal
           </div>
           <h1 style={{ fontSize: "clamp(28px,4vw,42px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 12 }}>Conditions Générales d'Utilisation</h1>
-          <p style={{ fontSize: 14, color: "#6B6460" }}>Dernière mise à jour : juin 2026</p>
+          <p style={{ fontSize: 14, color: "#6B6460" }}>Dernière mise à jour : {LEGAL.updated}</p>
         </div>
 
         <Section title="1. Objet">
           <p>
-            Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme <strong>Casa Minga Lieux</strong>, accessible à l'adresse <a href="https://admin.casaminga.com" style={{ color: "#E8714D" }}>admin.casaminga.com</a>, éditée par Léo Durand.
+            Les présentes Conditions Générales d'Utilisation (« CGU ») définissent les modalités d'accès et d'utilisation
+            de la plateforme <strong>{LEGAL.product}</strong>, accessible à l'adresse{" "}
+            <a href={LEGAL.appUrl} style={{ color: "#E8714D" }}>{LEGAL.appUrl.replace("https://", "")}</a>, éditée par {LEGAL.editor}
+            (ci-après « l'Éditeur »).
           </p>
           <br />
-          <p>En créant un compte, vous acceptez pleinement et sans réserve les présentes CGU.</p>
+          <p>
+            En créant un compte ou en utilisant le service, l'utilisateur (ci-après « l'Utilisateur ») accepte pleinement
+            et sans réserve les présentes CGU. Les conditions financières des offres payantes sont régies par les{" "}
+            <Link href="/cgv" style={{ color: "#E8714D", fontWeight: 600 }}>Conditions Générales de Vente</Link>.
+          </p>
         </Section>
 
         <Section title="2. Description du service">
           <p>
-            Casa Minga Lieux est un logiciel en ligne (SaaS — Software as a Service) de pilotage pour tiers-lieux, résidences et lieux collectifs. Il offre notamment des fonctionnalités de gestion des membres, réservations, événements, adhésions, finances et communication.
+            {LEGAL.product} est un logiciel en ligne (SaaS — <em>Software as a Service</em>) de pilotage pour tiers-lieux,
+            résidences, associations et lieux collectifs. Il propose notamment des fonctionnalités de gestion des membres
+            et adhésions, des réservations d'espaces, des événements et billetterie, des finances et de la facturation,
+            de la communication et d'un site public.
           </p>
           <br />
-          <p>Le service est accessible depuis tout navigateur web. Aucune installation n'est requise.</p>
+          <p>Le service est accessible depuis tout navigateur web récent. Aucune installation n'est requise.</p>
         </Section>
 
         <Section title="3. Création de compte et accès">
-          <p>Pour utiliser Casa Minga Lieux, vous devez créer un compte avec une adresse email valide et un mot de passe sécurisé. Vous êtes responsable de la confidentialité de vos identifiants.</p>
+          <p>
+            L'accès au service nécessite la création d'un compte au moyen d'une adresse email valide et d'un mot de passe.
+            L'Utilisateur est responsable de la confidentialité de ses identifiants et de toute activité réalisée depuis son compte.
+          </p>
           <br />
-          <p>Chaque compte correspond à une organisation (lieu, association, structure). Un même email peut être lié à plusieurs organisations.</p>
+          <p>
+            Chaque compte est rattaché à une ou plusieurs organisations (lieu, association, structure). L'Utilisateur garantit
+            disposer de la capacité juridique et, le cas échéant, des autorisations nécessaires pour engager l'organisation
+            qu'il représente.
+          </p>
         </Section>
 
-        <Section title="4. Conditions d'utilisation">
-          <p>Vous vous engagez à :</p>
-          <ul style={{ paddingLeft: 20, marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-            <li>Fournir des informations exactes lors de l'inscription</li>
-            <li>Utiliser le service conformément à la législation en vigueur</li>
-            <li>Ne pas tenter d'accéder à des données d'autres organisations</li>
-            <li>Ne pas utiliser le service à des fins illicites, frauduleuses ou nuisibles</li>
-            <li>Respecter les droits des personnes dont vous gérez les données dans le service</li>
+        <Section title="4. Engagements de l'Utilisateur">
+          <p>L'Utilisateur s'engage à :</p>
+          <ul style={ulStyle}>
+            <li>Fournir des informations exactes et à jour lors de l'inscription ;</li>
+            <li>Utiliser le service conformément à la législation en vigueur et aux présentes CGU ;</li>
+            <li>Ne pas tenter d'accéder aux données d'autres organisations ni de compromettre la sécurité du service ;</li>
+            <li>Ne pas utiliser le service à des fins illicites, frauduleuses, diffamatoires ou nuisibles ;</li>
+            <li>Respecter les droits des personnes dont il gère les données dans le service.</li>
           </ul>
         </Section>
 
-        <Section title="5. Données et responsabilités">
+        <Section title="5. Rôles et responsabilités sur les données (RGPD)">
           <p>
-            En tant qu'administrateur d'une organisation sur Casa Minga Lieux, vous êtes <strong>responsable de traitement</strong> au sens du RGPD pour les données des membres et contacts que vous saisissez dans la plateforme. Casa Minga Lieux agit en qualité de <strong>sous-traitant</strong> pour ces données.
+            En saisissant dans la plateforme les données de ses membres, contacts ou usagers, l'organisation agit en qualité
+            de <strong>responsable de traitement</strong> au sens du RGPD. {LEGAL.product} agit en qualité de{" "}
+            <strong>sous-traitant</strong>, conformément à l'article 28 du RGPD et à la{" "}
+            <Link href="/confidentialite" style={{ color: "#E8714D", fontWeight: 600 }}>Politique de confidentialité</Link>.
           </p>
           <br />
-          <p>Vous êtes seul responsable :</p>
-          <ul style={{ paddingLeft: 20, marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-            <li>De la légalité des données que vous collectez via le service</li>
-            <li>De l'information de vos membres sur l'utilisation de leurs données</li>
-            <li>Du contenu publié sur votre site public généré</li>
+          <p>L'organisation est seule responsable :</p>
+          <ul style={ulStyle}>
+            <li>De la licéité des données qu'elle collecte via le service et de la base légale de ses traitements ;</li>
+            <li>De l'information des personnes concernées et du recueil de leur consentement le cas échéant ;</li>
+            <li>Du contenu qu'elle publie, notamment sur son site public généré par la plateforme.</li>
           </ul>
         </Section>
 
-        <Section title="6. Tarification et paiement">
+        <Section title="6. Disponibilité et maintenance">
           <p>
-            Le service est actuellement proposé en phase pilote. Les conditions tarifaires seront communiquées avant toute facturation. Aucun prélèvement ne sera effectué sans accord préalable et explicite.
+            L'Éditeur s'efforce d'assurer la disponibilité du service 24h/24 et 7j/7, sans toutefois garantir une
+            disponibilité ininterrompue. Des interruptions peuvent survenir pour des opérations de maintenance ou pour des
+            raisons indépendantes de sa volonté. L'Éditeur s'efforce d'informer à l'avance des maintenances planifiées
+            significatives. Le service est fourni en l'état, selon une obligation de moyens.
           </p>
         </Section>
 
-        <Section title="7. Disponibilité du service">
+        <Section title="7. Propriété des données et propriété intellectuelle">
           <p>
-            Casa Minga Lieux s'efforce d'assurer la disponibilité du service 24h/24, 7j/7. Des interruptions peuvent survenir pour maintenance ou pour des raisons indépendantes de notre volonté. Nous nous engageons à vous informer à l'avance des maintenances planifiées.
-          </p>
-        </Section>
-
-        <Section title="8. Propriété des données">
-          <p>
-            <strong>Vos données vous appartiennent.</strong> Casa Minga Lieux ne revendique aucun droit de propriété sur les données que vous saisissez dans le service. Vous pouvez les exporter et les supprimer à tout moment.
-          </p>
-        </Section>
-
-        <Section title="9. Résiliation">
-          <p>
-            Vous pouvez résilier votre compte à tout moment en contactant <a href="mailto:contact@casaminga.com" style={{ color: "#E8714D" }}>contact@casaminga.com</a>. Vos données seront supprimées dans un délai de 30 jours, sauf obligations légales de conservation.
+            <strong>Les données saisies par l'Utilisateur lui appartiennent.</strong> L'Éditeur ne revendique aucun droit
+            de propriété sur ces données et s'interdit de les exploiter à d'autres fins que la fourniture du service.
+            L'Utilisateur peut les exporter et en demander la suppression à tout moment.
           </p>
           <br />
           <p>
-            Casa Minga Lieux se réserve le droit de suspendre un compte en cas de violation grave des présentes CGU, après notification préalable.
+            La plateforme elle-même (code, design, marques, contenus de l'Éditeur) demeure la propriété exclusive de
+            l'Éditeur. Les présentes CGU ne confèrent à l'Utilisateur qu'un droit d'usage personnel, non exclusif et non
+            transférable, pour la durée de son abonnement.
           </p>
         </Section>
 
-        <Section title="10. Limitation de responsabilité">
+        <Section title="8. Limitation de responsabilité">
           <p>
-            Casa Minga Lieux est un outil d'assistance à la gestion. Il ne saurait être tenu responsable des décisions prises sur la base des informations présentes dans la plateforme, ni des erreurs de saisie de l'utilisateur.
+            {LEGAL.product} est un outil d'assistance à la gestion. L'Éditeur ne saurait être tenu responsable des décisions
+            prises par l'Utilisateur sur la base des informations présentes dans la plateforme, des erreurs de saisie, ni
+            des conséquences d'une utilisation non conforme du service. La responsabilité de l'Éditeur ne peut être engagée
+            pour les dommages indirects, et est en tout état de cause limitée, pour les offres payantes, au montant des
+            sommes versées par l'Utilisateur au cours des douze (12) derniers mois.
           </p>
         </Section>
 
-        <Section title="11. Modifications des CGU">
+        <Section title="9. Suspension et résiliation">
           <p>
-            Nous nous réservons le droit de modifier les présentes CGU. Vous serez notifié par email au moins 30 jours avant toute modification substantielle. La poursuite de l'utilisation du service après notification vaut acceptation des nouvelles conditions.
+            L'Utilisateur peut résilier son compte à tout moment depuis son espace ou en contactant{" "}
+            <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D" }}>{LEGAL.email}</a>. Les conditions de
+            résiliation des abonnements payants sont précisées dans les{" "}
+            <Link href="/cgv" style={{ color: "#E8714D", fontWeight: 600 }}>CGV</Link>.
+          </p>
+          <br />
+          <p>
+            L'Éditeur se réserve le droit de suspendre ou résilier un compte en cas de manquement grave aux présentes CGU,
+            après notification et, sauf urgence ou obligation légale, mise en demeure restée sans effet. Après résiliation,
+            les données sont supprimées dans les conditions prévues par la Politique de confidentialité.
           </p>
         </Section>
 
-        <Section title="12. Droit applicable">
+        <Section title="10. Modification des CGU">
           <p>
-            Les présentes CGU sont soumises au droit français. En cas de litige, et après tentative de résolution amiable, les tribunaux compétents seront ceux du ressort du domicile de l'éditeur.
+            L'Éditeur peut modifier les présentes CGU. L'Utilisateur est informé par email ou via la plateforme au moins
+            trente (30) jours avant l'entrée en vigueur de toute modification substantielle. La poursuite de l'utilisation
+            du service après cette date vaut acceptation des nouvelles conditions.
+          </p>
+        </Section>
+
+        <Section title="11. Droit applicable et litiges">
+          <p>
+            Les présentes CGU sont soumises au droit français. En cas de litige, les parties s'efforcent de trouver une
+            solution amiable avant toute action judiciaire. À défaut d'accord, le litige sera porté devant les tribunaux
+            français compétents.
+          </p>
+          <br />
+          <p style={{ fontSize: 13, color: "#6B6460" }}>
+            Pour les Utilisateurs ayant la qualité de consommateur, des dispositions spécifiques (médiation de la
+            consommation, plateforme européenne de règlement en ligne des litiges) sont prévues dans les{" "}
+            <Link href="/cgv" style={{ color: "#E8714D" }}>CGV</Link>.
           </p>
         </Section>
 
         <Section title="Contact">
           <p>
-            Pour toute question : <a href="mailto:contact@casaminga.com" style={{ color: "#E8714D", fontWeight: 600 }}>contact@casaminga.com</a>
+            Pour toute question : <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D", fontWeight: 600 }}>{LEGAL.email}</a>
           </p>
         </Section>
       </div>
@@ -141,6 +188,7 @@ export default function CguPage() {
           <Link href="/" style={{ color: "#9C9590", textDecoration: "none" }}>Accueil</Link>
           <Link href="/mentions-legales" style={{ color: "#9C9590", textDecoration: "none" }}>Mentions légales</Link>
           <Link href="/confidentialite" style={{ color: "#9C9590", textDecoration: "none" }}>Confidentialité</Link>
+          <Link href="/cgv" style={{ color: "#9C9590", textDecoration: "none" }}>CGV</Link>
         </div>
       </footer>
     </main>

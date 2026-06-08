@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LEGAL } from "@/lib/legal";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -33,67 +34,107 @@ export default function MentionsLegalesPage() {
             Légal
           </div>
           <h1 style={{ fontSize: "clamp(28px,4vw,42px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 12 }}>Mentions légales</h1>
-          <p style={{ fontSize: 14, color: "#6B6460" }}>Dernière mise à jour : juin 2026</p>
+          <p style={{ fontSize: 14, color: "#6B6460" }}>Dernière mise à jour : {LEGAL.updated}</p>
         </div>
 
         <Section title="Éditeur du site">
-          <p><strong>Casa Minga Lieux</strong> est édité par :</p>
+          <p>Le site et la plateforme <strong>{LEGAL.product}</strong> sont édités par :</p>
           <br />
-          <p><strong>Léo Durand</strong><br />
-          Micro-entrepreneur / Auto-entrepreneur<br />
-          {/* ⚠️ À COMPLÉTER : adresse, SIRET */}
-          Adresse : <em>[À compléter]</em><br />
-          SIRET : 824 430 375 00025<br />
-          Email : <a href="mailto:contact@casaminga.com" style={{ color: "#E8714D" }}>contact@casaminga.com</a>
+          <p>
+            <strong>{LEGAL.editor}</strong> (nom commercial : {LEGAL.brandName})<br />
+            {LEGAL.legalForm}<br />
+            Adresse : {LEGAL.address}<br />
+            SIREN : {LEGAL.siren}<br />
+            SIRET (siège) : {LEGAL.siret}<br />
+            RCS : {LEGAL.rcs} (immatriculé le {LEGAL.rcsDate})<br />
+            N° TVA intracommunautaire : {LEGAL.vatNumber}<br />
+            Code APE : {LEGAL.apeCode} — {LEGAL.apeLabel}<br />
+            Email : <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D" }}>{LEGAL.email}</a>
           </p>
+          {LEGAL.vatFranchise && (
+            <>
+              <br />
+              <p style={{ fontSize: 13, color: "#6B6460" }}>
+                TVA non applicable, article 293 B du Code général des impôts (franchise en base de TVA).
+              </p>
+            </>
+          )}
+        </Section>
+
+        <Section title="Directeur de la publication">
+          <p>{LEGAL.editor} — <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D" }}>{LEGAL.email}</a></p>
         </Section>
 
         <Section title="Hébergement">
           <p>
-            Le site <strong>admin.casaminga.com</strong> est hébergé par :<br /><br />
+            La plateforme <strong>{LEGAL.appUrl.replace("https://", "")}</strong> est hébergée par :<br /><br />
             <strong>Infomaniak Network SA</strong><br />
             Rue Eugène-Marziano 25, 1227 Les Acacias — Genève, Suisse<br />
             <a href="https://www.infomaniak.com" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>www.infomaniak.com</a>
           </p>
           <br />
           <p>
-            La base de données est hébergée par :<br /><br />
-            <strong>Supabase Inc.</strong> — infrastructure en région EU West (Irlande)<br />
+            La base de données et l'authentification sont fournies par :<br /><br />
+            <strong>Supabase Inc.</strong> — infrastructure située en région Union européenne (AWS EU West, Irlande)<br />
             <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>supabase.com</a>
           </p>
         </Section>
 
-        <Section title="Directeur de la publication">
-          <p>Léo Durand — <a href="mailto:contact@casaminga.com" style={{ color: "#E8714D" }}>contact@casaminga.com</a></p>
-        </Section>
-
         <Section title="Propriété intellectuelle">
           <p>
-            L'ensemble des contenus présents sur ce site (textes, images, logos, design) est la propriété exclusive de Casa Minga Lieux ou fait l'objet d'une autorisation d'utilisation. Toute reproduction, représentation, modification ou exploitation, totale ou partielle, est interdite sans l'accord préalable et écrit de l'éditeur.
+            L'ensemble des éléments composant la plateforme {LEGAL.product} (architecture logicielle, code source,
+            textes, interfaces, design, charte graphique, logos, marques) est la propriété exclusive de {LEGAL.editor},
+            sauf mentions contraires. Toute reproduction, représentation, modification, adaptation ou exploitation, totale
+            ou partielle, par quelque procédé que ce soit et sur quelque support que ce soit, sans l'autorisation préalable
+            et écrite de l'éditeur, est interdite et constitue une contrefaçon sanctionnée par le Code de la propriété intellectuelle.
+          </p>
+          <br />
+          <p>
+            Les données et contenus saisis par les utilisateurs dans la plateforme restent leur propriété exclusive
+            (voir les <Link href="/cgu" style={{ color: "#E8714D", fontWeight: 600 }}>CGU</Link>).
           </p>
         </Section>
 
         <Section title="Données personnelles">
           <p>
-            Les données collectées dans le cadre de l'utilisation de Casa Minga Lieux sont traitées conformément à notre{" "}
+            Les traitements de données personnelles réalisés dans le cadre de l'utilisation de {LEGAL.product} sont
+            détaillés dans notre{" "}
             <Link href="/confidentialite" style={{ color: "#E8714D", fontWeight: 600 }}>Politique de confidentialité</Link>.
           </p>
           <br />
           <p>
-            Conformément au RGPD et à la loi Informatique et Libertés, vous disposez d'un droit d'accès, de rectification, d'effacement et de portabilité de vos données. Pour exercer ces droits : <a href="mailto:contact@casaminga.com" style={{ color: "#E8714D" }}>contact@casaminga.com</a>
+            Conformément au Règlement général sur la protection des données (RGPD, UE 2016/679) et à la loi
+            « Informatique et Libertés » du 6 janvier 1978 modifiée, vous disposez d'un droit d'accès, de rectification,
+            d'effacement, de limitation, d'opposition et de portabilité de vos données. Pour les exercer :{" "}
+            <a href={`mailto:${LEGAL.email}`} style={{ color: "#E8714D" }}>{LEGAL.email}</a>.
+          </p>
+          <br />
+          <p>
+            Vous pouvez également introduire une réclamation auprès de la{" "}
+            <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>CNIL</a>.
           </p>
         </Section>
 
         <Section title="Cookies">
           <p>
-            Ce site utilise des cookies techniques strictement nécessaires au fonctionnement de la plateforme (authentification, session). Aucun cookie publicitaire ou de tracking tiers n'est déposé.
+            La gestion des cookies et traceurs est décrite dans la{" "}
+            <Link href="/confidentialite" style={{ color: "#E8714D", fontWeight: 600 }}>Politique de confidentialité</Link>.
+          </p>
+        </Section>
+
+        <Section title="Conditions générales">
+          <p>
+            L'utilisation de la plateforme est régie par les{" "}
+            <Link href="/cgu" style={{ color: "#E8714D", fontWeight: 600 }}>Conditions Générales d'Utilisation</Link>
+            {" "}et, pour les offres payantes, par les{" "}
+            <Link href="/cgv" style={{ color: "#E8714D", fontWeight: 600 }}>Conditions Générales de Vente</Link>.
           </p>
         </Section>
 
         <Section title="Crédits">
           <p>
-            Design et développement : <strong>Léo Durand</strong> avec l'assistance de <strong>Claude (Anthropic)</strong>.<br />
-            Icônes : <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>Lucide React</a>.<br />
+            Conception et développement : <strong>{LEGAL.editor}</strong>.<br />
+            Icônes : <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>Lucide</a>.<br />
             Police : <a href="https://fonts.google.com/specimen/Poppins" target="_blank" rel="noopener noreferrer" style={{ color: "#E8714D" }}>Poppins</a> (Google Fonts).
           </p>
         </Section>
@@ -105,6 +146,7 @@ export default function MentionsLegalesPage() {
           <Link href="/" style={{ color: "#9C9590", textDecoration: "none" }}>Accueil</Link>
           <Link href="/confidentialite" style={{ color: "#9C9590", textDecoration: "none" }}>Confidentialité</Link>
           <Link href="/cgu" style={{ color: "#9C9590", textDecoration: "none" }}>CGU</Link>
+          <Link href="/cgv" style={{ color: "#9C9590", textDecoration: "none" }}>CGV</Link>
         </div>
       </footer>
     </main>

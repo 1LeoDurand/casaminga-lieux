@@ -751,6 +751,7 @@ export default async function LandingPage() {
               <Link href="/mentions-legales" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Mentions légales</Link>
               <Link href="/confidentialite" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Confidentialité</Link>
               <Link href="/cgu" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>CGU</Link>
+              <Link href="/cgv" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>CGV</Link>
             </div>
           </div>
         </div>
