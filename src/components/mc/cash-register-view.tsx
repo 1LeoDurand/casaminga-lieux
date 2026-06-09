@@ -3,8 +3,8 @@
 import { useState, useTransition, useMemo } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
-  ChevronDown, CheckCircle2, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag,
+  ChevronDown, AlertTriangle, Fingerprint, Calculator,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
@@ -200,7 +200,7 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = []
   entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
   poles?: Pole[]; pointedIds?: string[];
 }) {
-  const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures">("ecritures");
+  const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures" | "statistiques">("ecritures");
   const [pointed, setPointed] = useState<Set<string>>(new Set(pointedIds));
   const [pointOperator, setPointOperator] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -336,13 +336,15 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = []
       {/* Barre d'outils */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
-          {(["ecritures", "pointage", "clotures"] as const).map((t) => (
+          {(["ecritures", "pointage", "clotures", "statistiques"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 tab === t ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-700"
               }`}>
               {t === "ecritures" ? `Écritures (${entries.length})`
-                : t === "pointage" ? `Pointage` : `Clôtures (${closures.length})`}
+                : t === "pointage" ? "Pointage"
+                : t === "clotures" ? `Clôtures (${closures.length})`
+                : <span className="flex items-center gap-1.5"><BarChart2 className="size-3.5" />Statistiques</span>}
             </button>
           ))}
         </div>
@@ -561,6 +563,11 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = []
         )
       )}
 
+      {/* ── Statistiques ── */}
+      {tab === "statistiques" && (
+        <StatsView entries={entries} poles={poles} />
+      )}
+
       <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} />
 
       {/* Dialog annulation */}
@@ -607,6 +614,177 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = []
           onCancel={() => setCloseType(null)}
         />
       )}
+    </div>
+  );
+}
+
+// ── Statistiques ─────────────────────────────────────────────
+function StatsView({ entries, poles }: { entries: CashEntry[]; poles: Pole[] }) {
+  const poleById = new Map(poles.map((p) => [p.id, p]));
+  const real = entries.filter((e) => !e.is_void);
+
+  // ── CA par jour (30 derniers jours) ──
+  const today = new Date();
+  const days: { label: string; total: number }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+    const total = real
+      .filter((e) => e.occurred_at.slice(0, 10) === key)
+      .reduce((s, e) => s + Number(e.amount_ttc), 0);
+    days.push({ label, total });
+  }
+  const maxDay = Math.max(...days.map((d) => d.total), 1);
+
+  // ── Répartition par source ──
+  const bySource = new Map<string, number>();
+  for (const e of real) {
+    bySource.set(e.source, (bySource.get(e.source) ?? 0) + Number(e.amount_ttc));
+  }
+  const sourceEntries = Array.from(bySource.entries()).sort((a, b) => b[1] - a[1]);
+  const totalSource = sourceEntries.reduce((s, [, v]) => s + v, 0) || 1;
+
+  // ── Répartition par moyen de paiement ──
+  const byMethod = new Map<string, number>();
+  for (const e of real) {
+    byMethod.set(e.payment_method, (byMethod.get(e.payment_method) ?? 0) + Number(e.amount_ttc));
+  }
+  const methodEntries = Array.from(byMethod.entries()).sort((a, b) => b[1] - a[1]);
+  const totalMethod = methodEntries.reduce((s, [, v]) => s + v, 0) || 1;
+
+  // ── Répartition par pôle ──
+  const byPole = new Map<string, number>();
+  for (const e of real) {
+    const key = e.pole_id ?? "__none__";
+    byPole.set(key, (byPole.get(key) ?? 0) + Number(e.amount_ttc));
+  }
+  const poleEntries = Array.from(byPole.entries()).sort((a, b) => b[1] - a[1]);
+  const totalPole = poleEntries.reduce((s, [, v]) => s + v, 0) || 1;
+
+  const totalAll = real.reduce((s, e) => s + Number(e.amount_ttc), 0);
+
+  if (real.length === 0) {
+    return <EmptyBox icon={<BarChart2 className="size-8 opacity-30" />} text="Aucune écriture pour calculer les statistiques." />;
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* KPI résumé */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Total encaissé</div>
+          <div className="text-2xl font-bold text-slate-800">{fmtEuro(totalAll)}</div>
+          <div className="mt-0.5 text-[11px] text-slate-400">{real.length} écriture{real.length > 1 ? "s" : ""}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Mois en cours</div>
+          <div className="text-2xl font-bold text-slate-800">
+            {fmtEuro(real.filter((e) => e.occurred_at.slice(0, 7) === today.toISOString().slice(0, 7)).reduce((s, e) => s + Number(e.amount_ttc), 0))}
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-400">{today.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Panier moyen</div>
+          <div className="text-2xl font-bold text-slate-800">{fmtEuro(real.length ? totalAll / real.length : 0)}</div>
+          <div className="mt-0.5 text-[11px] text-slate-400">par écriture</div>
+        </div>
+      </div>
+
+      {/* CA sur 30 jours */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mb-4 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+          <TrendingUp className="size-3.5" /> CA quotidien — 30 derniers jours
+        </div>
+        <div className="flex h-36 items-end gap-0.5">
+          {days.map((d) => (
+            <div key={d.label} className="group relative flex flex-1 flex-col items-center justify-end">
+              <div
+                className="w-full rounded-sm bg-slate-200 transition-colors group-hover:bg-slate-400"
+                style={{ height: `${Math.max(d.total > 0 ? 4 : 0, (d.total / maxDay) * 100)}%` }}
+                title={`${d.label} — ${fmtEuro(d.total)}`}
+              />
+              {/* Tooltip */}
+              {d.total > 0 && (
+                <div className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-white group-hover:block">
+                  {fmtEuro(d.total)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+          <span>{days[0]?.label}</span>
+          <span>{days[14]?.label}</span>
+          <span>{days[29]?.label}</span>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Par source */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Par nature</div>
+          <div className="flex flex-col gap-2">
+            {sourceEntries.map(([src, val]) => (
+              <div key={src}>
+                <div className="mb-0.5 flex items-center justify-between text-[12px]">
+                  <span className="font-medium text-slate-700">{sourceLabel(src)}</span>
+                  <span className="text-slate-500">{fmtEuro(val)}</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-slate-500" style={{ width: `${(val / totalSource) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Par moyen de paiement */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Par paiement</div>
+          <div className="flex flex-col gap-2">
+            {methodEntries.map(([method, val]) => (
+              <div key={method}>
+                <div className="mb-0.5 flex items-center justify-between text-[12px]">
+                  <span className="font-medium text-slate-700">{paymentLabel(method)}</span>
+                  <span className="text-slate-500">{fmtEuro(val)}</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${(val / totalMethod) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Par pôle */}
+        {poles.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Par pôle</div>
+            <div className="flex flex-col gap-2">
+              {poleEntries.map(([key, val]) => {
+                const pole = key === "__none__" ? null : poleById.get(key);
+                const color = pole?.color ?? "#94a3b8";
+                return (
+                  <div key={key}>
+                    <div className="mb-0.5 flex items-center justify-between text-[12px]">
+                      <span className="flex items-center gap-1.5 font-medium text-slate-700">
+                        {pole && <span className="size-2 rounded-full" style={{ background: color }} />}
+                        {key === "__none__" ? "Sans pôle" : pole?.name ?? "Inconnu"}
+                      </span>
+                      <span className="text-slate-500">{fmtEuro(val)}</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full" style={{ width: `${(val / totalPole) * 100}%`, background: color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
