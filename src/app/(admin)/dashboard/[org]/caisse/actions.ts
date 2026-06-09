@@ -2,10 +2,12 @@
 import { revalidatePath } from "next/cache";
 import {
   addCashEntry, voidCashEntry, closeCashRegister, verifyCashChain,
-  getCashEntries, getOrganizationBySlug, createTransaction,
+  getCashEntries, getOrganizationBySlug, createTransaction, getPersonsForOrg,
   type CashEntryInput,
 } from "@/lib/data";
 import type { CashEntry, CashClosureType } from "@/lib/types";
+import { saveInvoice, type InvoiceInput } from "@/app/(admin)/dashboard/[org]/factures/actions";
+import type { PaymentMethod } from "@/lib/invoicing/types";
 
 function refresh(orgSlug: string) {
   revalidatePath(`/dashboard/${orgSlug}/caisse`);
@@ -105,4 +107,65 @@ export async function closeCashRegisterAction(
 
 export async function verifyCashChainAction(orgId: string) {
   return verifyCashChain(orgId);
+}
+
+// ── Caisse → Facture brouillon ────────────────────────────────
+/** Crée une facture brouillon pré-remplie depuis une écriture de caisse.
+ *  Renvoie { ok, id } — le client peut then naviguer vers /factures/${id}/modifier.
+ */
+export async function createInvoiceFromCashEntryAction(
+  orgSlug: string,
+  orgId: string,
+  entry: CashEntry,
+): Promise<{ ok: boolean; id?: string; error?: string }> {
+  // Résoudre le client si lié
+  let clientName = "";
+  let clientEmail: string | null = null;
+  let clientId: string | null = null;
+  if (entry.person_id) {
+    const persons = await getPersonsForOrg(orgId);
+    const person = persons.find((p) => p.id === entry.person_id);
+    if (person) {
+      clientName = person.name;
+      clientEmail = person.email ?? null;
+      clientId = person.id;
+    }
+  }
+
+  // Mapping mode de paiement caisse → facturation
+  const pmMap: Record<string, PaymentMethod> = {
+    especes: "cash",
+    cb: "carte",
+    cheque: "cheque",
+    virement: "virement",
+  };
+  const paymentMethod: PaymentMethod | null = pmMap[entry.payment_method] ?? null;
+
+  const input: InvoiceInput = {
+    client_id: clientId,
+    client_name: clientName,
+    client_email: clientEmail,
+    client_address: null,
+    issue_date: entry.occurred_at.slice(0, 10),
+    due_date: entry.occurred_at.slice(0, 10),
+    lines: [
+      {
+        designation: entry.label,
+        qty: 1,
+        unit_ht: Number(entry.amount_ht),
+        vat_rate: Number(entry.vat_rate),
+      },
+    ],
+    vat_applicable: Number(entry.vat_rate) > 0,
+    notes: `Généré depuis caisse — ticket ${entry.ticket_ref}`,
+    object: entry.label,
+    reference: entry.ticket_ref,
+    pole: null,
+    pole_id: entry.pole_id,
+    payment_method: paymentMethod,
+    paid_at: entry.occurred_at.slice(0, 10),
+  };
+
+  const result = await saveInvoice(orgId, orgSlug, input);
+  return result;
 }

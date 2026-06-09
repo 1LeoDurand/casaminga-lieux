@@ -4,12 +4,14 @@ import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer, FileEdit,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import {
   addCashEntryAction, voidCashEntryAction, closeCashRegisterAction, verifyCashChainAction,
+  createInvoiceFromCashEntryAction,
 } from "@/app/(admin)/dashboard/[org]/caisse/actions";
 import { pointEntry, unpointEntry } from "@/lib/cash-pointing";
 import {
@@ -343,9 +345,25 @@ export function CashRegisterView({
     [entries, closedUpTo],
   );
 
+  const router = useRouter();
   const poleById = useMemo(() => new Map(poles.map((p) => [p.id, p])), [poles]);
   const personById = useMemo(() => new Map(persons.map((p) => [p.id, p])), [persons]);
   const hasPersonLinks = entries.some((e) => e.person_id);
+  const [invoiceCreatingId, setInvoiceCreatingId] = useState<string | null>(null);
+
+  async function handleCreateInvoice(e: CashEntry) {
+    setInvoiceCreatingId(e.id);
+    start(async () => {
+      const res = await createInvoiceFromCashEntryAction(orgSlug, orgId, e);
+      if (res.ok && res.id) {
+        toast.success("Facture brouillon créée — redirigé vers l'éditeur.");
+        router.push(`/dashboard/${orgSlug}/factures/${res.id}/modifier`);
+      } else {
+        toast.error(res.error ?? "Impossible de créer la facture.");
+      }
+      setInvoiceCreatingId(null);
+    });
+  }
   const poleName = (id: string | null) => (id ? poleById.get(id)?.name ?? "Pôle inconnu" : "Sans pôle");
 
   // Écritures non clôturées (session de caisse en cours = depuis le dernier Z jour)
@@ -578,6 +596,16 @@ export function CashRegisterView({
                           >
                             <Printer className="size-4" />
                           </a>
+                          {!e.is_void && (
+                            <button
+                              onClick={() => handleCreateInvoice(e)}
+                              disabled={pending || invoiceCreatingId === e.id}
+                              title="Créer une facture depuis cette écriture"
+                              className="rounded-lg p-1.5 text-slate-300 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40"
+                            >
+                              <FileEdit className="size-4" />
+                            </button>
+                          )}
                           {!e.is_void && !closed && (
                             <button onClick={() => { setVoidTarget(e); setVoidOperator(""); setVoidReason(""); }}
                               title="Annuler par écriture de correction"
