@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { X, Plus, Pencil, Trash2, Gavel, Calendar, User, FileText, Check } from "lucide-react";
+import { X, Plus, Pencil, Trash2, Gavel, Calendar, User, FileText, Check, Users, ArrowRight, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import {
@@ -10,8 +10,9 @@ import {
 import {
   createMeetingAction, updateMeetingAction, deleteMeetingAction,
   createMandateAction, updateMandateAction, deleteMandateAction,
+  createProxyAction, deleteProxyAction, upsertAttendanceAction,
 } from "@/app/(admin)/dashboard/[org]/gouvernance/actions";
-import type { Mandate, Meeting, Person } from "@/lib/types";
+import type { Mandate, Meeting, Person, AssemblyProxy, AssemblyAttendance } from "@/lib/types";
 
 type Tab = "reunions" | "mandats";
 
@@ -121,8 +122,151 @@ function MandateModal({ open, mandate, persons, busy, onSubmit, onClose }: {
   );
 }
 
-export function GouvernanceView({ meetings, mandates, persons, orgSlug, orgId }: {
-  meetings: Meeting[]; mandates: Mandate[]; persons: Person[]; orgSlug: string; orgId: string;
+// ── Panneau AG : quorum, émargement, pouvoirs ─────────────────────────────
+function AGPanel({
+  meeting, persons, proxies, attendance, orgSlug, orgId,
+}: {
+  meeting: Meeting;
+  persons: Person[];
+  proxies: AssemblyProxy[];
+  attendance: AssemblyAttendance[];
+  orgSlug: string;
+  orgId: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [giverPersonId, setGiverPersonId] = useState("");
+  const [holderPersonId, setHolderPersonId] = useState("");
+
+  const personById = useMemo(() => new Map(persons.map((p) => [p.id, p])), [persons]);
+  const attendanceMap = useMemo(() => new Map(attendance.map((a) => [a.person_id, a])), [attendance]);
+
+  const presentCount = attendance.filter((a) => a.present).length;
+  const proxyCount   = proxies.length;
+  const quorumTotal  = presentCount + proxyCount;
+  const quorum       = meeting.quorum;
+  const quorumOk     = quorum ? quorumTotal >= quorum : null;
+
+  function togglePresent(personId: string, current: boolean) {
+    startTransition(async () => {
+      const { ok } = await upsertAttendanceAction(orgSlug, orgId, meeting.id, personId, !current);
+      if (!ok) toast.error("Erreur émargement.");
+    });
+  }
+
+  function addProxy(e: React.FormEvent) {
+    e.preventDefault();
+    if (!giverPersonId) { toast.error("Sélectionnez le donneur de pouvoir."); return; }
+    startTransition(async () => {
+      const res = await createProxyAction(orgSlug, orgId, meeting.id, giverPersonId, holderPersonId || null);
+      if (res.ok) { toast.success("Pouvoir enregistré."); setGiverPersonId(""); setHolderPersonId(""); }
+      else toast.error(res.error ?? "Erreur.");
+    });
+  }
+
+  function removeProxy(proxyId: string) {
+    startTransition(async () => {
+      const { ok } = await deleteProxyAction(orgSlug, proxyId);
+      if (!ok) toast.error("Erreur suppression pouvoir.");
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-5 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+      {/* Quorum */}
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+          <ShieldCheck className="size-3.5" /> Quorum
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-ink"><strong>{quorumTotal}</strong> représentés</span>
+          <span className="text-warmgray">({presentCount} présents + {proxyCount} pouvoirs)</span>
+          {quorum && (
+            <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-bold ${quorumOk ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+              {quorumOk ? "✓ Quorum atteint" : `✗ Quorum requis : ${quorum}`}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Émargement */}
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+          <Users className="size-3.5" /> Émargement
+        </div>
+        <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+          {persons.length === 0 ? (
+            <p className="text-[12px] text-warmgray">Aucun membre dans la base.</p>
+          ) : persons.map((p) => {
+            const att = attendanceMap.get(p.id);
+            const present = att?.present ?? false;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                disabled={pending}
+                onClick={() => togglePresent(p.id, present)}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-left text-[13px] transition-colors ${
+                  present ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" : "hover:bg-white/60 text-ink"
+                }`}
+              >
+                <span className={`flex size-4 shrink-0 items-center justify-center rounded text-[10px] ${present ? "bg-emerald-600 text-white" : "border border-warmgray/40"}`}>
+                  {present ? "✓" : ""}
+                </span>
+                {p.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Pouvoirs */}
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+          <ArrowRight className="size-3.5" /> Pouvoirs
+        </div>
+        {proxies.length > 0 && (
+          <div className="mb-2 flex flex-col gap-1">
+            {proxies.map((prx) => (
+              <div key={prx.id} className="flex items-center gap-2 rounded-lg bg-white/70 px-3 py-1.5 text-[13px]">
+                <span className="font-semibold">{personById.get(prx.giver_person_id)?.name ?? "—"}</span>
+                <span className="text-warmgray">→</span>
+                <span>{prx.holder_person_id ? personById.get(prx.holder_person_id)?.name ?? "—" : "Représentant non désigné"}</span>
+                <button type="button" disabled={pending} onClick={() => removeProxy(prx.id)} className="ml-auto rounded p-0.5 text-red-400 hover:bg-red-50">
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <form onSubmit={addProxy} className="flex items-center gap-2">
+          <select value={giverPersonId} onChange={(e) => setGiverPersonId(e.target.value)} className="flex-1 rounded-lg border border-border bg-white px-2 py-1.5 text-[12px]">
+            <option value="">Donneur de pouvoir…</option>
+            {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <ArrowRight className="size-3.5 shrink-0 text-warmgray" />
+          <select value={holderPersonId} onChange={(e) => setHolderPersonId(e.target.value)} className="flex-1 rounded-lg border border-border bg-white px-2 py-1.5 text-[12px]">
+            <option value="">Porteur (optionnel)…</option>
+            {persons.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button type="submit" disabled={pending} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+            <Plus className="size-3.5" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export function GouvernanceView({
+  meetings, mandates, persons, proxiesByMeeting, attendanceByMeeting, orgSlug, orgId,
+}: {
+  meetings: Meeting[];
+  mandates: Mandate[];
+  persons: Person[];
+  proxiesByMeeting: Record<string, AssemblyProxy[]>;
+  attendanceByMeeting: Record<string, AssemblyAttendance[]>;
+  orgSlug: string;
+  orgId: string;
 }) {
   const [tab, setTab] = useState<Tab>("reunions");
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -207,6 +351,9 @@ export function GouvernanceView({ meetings, mandates, persons, orgSlug, orgId }:
                       <span className={`mc-badge ${meetingTypeBadge(m.type)}`}>{meetingTypeShort(m.type)}</span>
                       <span className="font-semibold text-foreground">{m.title}</span>
                       <span className={`mc-badge ${meetingStatusBadge(m.status)}`}>{meetingStatusLabel(m.status)}</span>
+                      {(m.is_general_assembly || m.type === "ag") && (
+                        <span className="mc-badge bg-indigo-100 text-indigo-700">🗳 AG</span>
+                      )}
                     </div>
                     <div className="mt-1 flex items-center gap-1.5 text-[12px] text-warmgray"><Calendar className="size-3.5" /> {formatDateLong(m.date)}{m.minutes ? <><FileText className="ml-2 size-3.5" /> CR disponible</> : null}</div>
                   </div>
@@ -264,6 +411,17 @@ export function GouvernanceView({ meetings, mandates, persons, orgSlug, orgId }:
               {selectedMeeting.status === "planifiee" ? (
                 <button type="button" disabled={pending} onClick={() => { startTransition(async () => { const r = await updateMeetingAction(orgSlug, selectedMeeting.id, { status: "tenue" }); if (r.ok) toast.success("Réunion marquée tenue"); }); }} className="mc-btn mc-btn-outline mc-btn-sm self-start"><Check className="size-3.5" /> Marquer tenue</button>
               ) : null}
+              {/* Panneau AG — quorum, émargement, pouvoirs */}
+              {(selectedMeeting.is_general_assembly || selectedMeeting.type === "ag") && (
+                <AGPanel
+                  meeting={selectedMeeting}
+                  persons={persons}
+                  proxies={proxiesByMeeting[selectedMeeting.id] ?? []}
+                  attendance={attendanceByMeeting[selectedMeeting.id] ?? []}
+                  orgSlug={orgSlug}
+                  orgId={orgId}
+                />
+              )}
             </div>
             <div className="mt-auto flex gap-3 border-t border-border p-6">
               <button type="button" disabled={pending} onClick={() => { setMeetingForm({ open: true, editing: selectedMeeting }); setSelectedMeeting(null); }} className="mc-btn mc-btn-lime flex-1"><Pencil className="size-4" /> Modifier</button>

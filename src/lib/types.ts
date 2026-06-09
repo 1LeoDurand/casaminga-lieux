@@ -278,8 +278,28 @@ export interface Meeting {
   agenda: string | null;
   minutes: string | null;
   status: MeetingStatus;
+  is_general_assembly: boolean;
+  quorum: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AssemblyProxy {
+  id: string;
+  organization_id: string;
+  meeting_id: string;
+  giver_person_id: string;
+  holder_person_id: string | null;
+  created_at: string;
+}
+
+export interface AssemblyAttendance {
+  id: string;
+  organization_id: string;
+  meeting_id: string;
+  person_id: string;
+  present: boolean;
+  checked_in_at: string;
 }
 
 export type MandateStatus = "actif" | "termine";

@@ -122,6 +122,8 @@ import type {
   ArtistMilestone,
   TeamMember,
   OrgRole,
+  AssemblyProxy,
+  AssemblyAttendance,
 } from "@/lib/types";
 
 /**
@@ -935,11 +937,17 @@ export async function getMeetingsForOrg(orgId: string): Promise<Meeting[]> {
 export interface MeetingInput {
   organization_id: string; type: Meeting["type"]; title: string; date: string;
   agenda: string | null; minutes: string | null; status: Meeting["status"];
+  is_general_assembly?: boolean; quorum?: number | null;
 }
 export async function createMeeting(input: MeetingInput): Promise<boolean> {
-  if (!isSupabaseConfigured()) { addDemoMeeting(input); return true; }
+  const payload = {
+    ...input,
+    is_general_assembly: input.is_general_assembly ?? false,
+    quorum: input.quorum ?? null,
+  };
+  if (!isSupabaseConfigured()) { addDemoMeeting(payload); return true; }
   const supabase = await createClient();
-  const { error } = await supabase.from("meetings").insert(input);
+  const { error } = await supabase.from("meetings").insert(payload);
   if (error) console.error("createMeeting:", error); return !error;
 }
 export async function updateMeeting(id: string, patch: Partial<MeetingInput>): Promise<boolean> {
@@ -953,6 +961,49 @@ export async function deleteMeeting(id: string): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase.from("meetings").delete().eq("id", id);
   if (error) console.error("deleteMeeting:", error); return !error;
+}
+
+// ── Gouvernance : AG — Pouvoirs & Émargement ─────────────────
+export async function getAssemblyProxies(meetingId: string): Promise<AssemblyProxy[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("assembly_proxies").select("*").eq("meeting_id", meetingId);
+  return data ?? [];
+}
+export async function getAssemblyAttendance(meetingId: string): Promise<AssemblyAttendance[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase.from("assembly_attendance").select("*").eq("meeting_id", meetingId);
+  return data ?? [];
+}
+export async function createAssemblyProxy(
+  orgId: string, meetingId: string, giverPersonId: string, holderPersonId: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Mode démo." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("assembly_proxies").insert({
+    organization_id: orgId, meeting_id: meetingId,
+    giver_person_id: giverPersonId, holder_person_id: holderPersonId ?? null,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+export async function deleteAssemblyProxy(proxyId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("assembly_proxies").delete().eq("id", proxyId);
+  return !error;
+}
+export async function upsertAttendance(
+  orgId: string, meetingId: string, personId: string, present: boolean,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("assembly_attendance").upsert({
+    organization_id: orgId, meeting_id: meetingId, person_id: personId, present,
+    checked_in_at: new Date().toISOString(),
+  }, { onConflict: "meeting_id,person_id" });
+  return !error;
 }
 
 // ── Gouvernance : Mandats ────────────────────────────────────
