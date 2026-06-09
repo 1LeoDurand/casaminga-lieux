@@ -126,6 +126,9 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
       else if (/linux/.test(ua))   osHint = "Linux";
     }
 
+    // Compte utilisateur connecté
+    const { data: { user } } = await supabase.auth.getUser();
+
     const { error } = await supabase.from("feedback").insert({
       type,
       priority,
@@ -139,6 +142,8 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
       screen_width: screenW,
       screen_height: screenH,
       os_hint: osHint,
+      user_id: user?.id ?? null,
+      user_email: user?.email ?? null,
     });
 
     setLoading(false);

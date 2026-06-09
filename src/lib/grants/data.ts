@@ -15,6 +15,18 @@ export async function getOpportunities(): Promise<GrantOpportunity[]> {
   return (data as GrantOpportunity[]) ?? [];
 }
 
+/** Détail d'une opportunité par son ID. */
+export async function getOpportunityById(id: string): Promise<GrantOpportunity | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("grant_opportunities")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as GrantOpportunity) ?? null;
+}
+
 /** Toutes les candidatures d'une org (map opportunity_id → application). */
 export async function getApplications(orgId: string): Promise<Map<string, GrantApplication>> {
   if (!isSupabaseConfigured()) return new Map();

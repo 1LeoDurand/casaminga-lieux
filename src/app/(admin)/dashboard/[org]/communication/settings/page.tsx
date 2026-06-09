@@ -37,7 +37,7 @@ export default async function NewsletterSettingsPage({
       <PageHeader
         tag="Communication"
         title="Réglages newsletter"
-        sub="Configurez la cadence d'envoi automatique et les préférences de votre infolettre."
+        sub="Configurez la cadence d'envoi automatique et les préférences de votre newsletter."
       />
 
       <div className="max-w-2xl">

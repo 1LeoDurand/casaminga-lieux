@@ -203,6 +203,11 @@ export function FeedbackList({ items: initialItems }: { items: FeedbackRow[] }) 
 
                 {/* Méta */}
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-warmgray">
+                  {f.user_email && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
+                      👤 {f.user_email}
+                    </span>
+                  )}
                   {f.org_slug && <span>🏛 {f.org_slug}</span>}
                   {f.url && (
                     <a href={f.url} target="_blank" rel="noreferrer" className="truncate text-coral-dark hover:underline">

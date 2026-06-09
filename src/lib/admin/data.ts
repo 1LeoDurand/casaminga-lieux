@@ -39,6 +39,9 @@ export interface FeedbackRow {
   screen_width: number | null;
   screen_height: number | null;
   os_hint: string | null;
+  // Compte utilisateur (migration v5_46_feedback_user_info)
+  user_id: string | null;
+  user_email: string | null;
 }
 
 /** Statistiques globales de la plateforme. */
@@ -436,7 +439,7 @@ export async function getAllFeedback(): Promise<FeedbackRow[]> {
 
   const { data } = await admin
     .from("feedback")
-    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at, admin_note, user_agent, device_type, screen_width, screen_height, os_hint")
+    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at, admin_note, user_agent, device_type, screen_width, screen_height, os_hint, user_id, user_email")
     .order("created_at", { ascending: false });
 
   return data ?? [];

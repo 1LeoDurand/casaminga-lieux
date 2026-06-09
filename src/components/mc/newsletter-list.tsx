@@ -81,7 +81,7 @@ export function NewsletterList({
       {/* En-tête */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-heading text-lg font-bold text-ink">Infolettre</h2>
+          <h2 className="font-heading text-lg font-bold text-ink">Newsletter</h2>
           <ModeChip settings={settings} />
         </div>
         <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export function NewsletterList({
         <div className="rounded-2xl border border-dashed border-border bg-white py-14 text-center">
           <Send className="mx-auto size-8 text-warmgray/40" />
           <p className="mt-3 text-sm font-semibold text-ink">Aucune campagne pour l'instant</p>
-          <p className="mt-1 text-[13px] text-warmgray">Créez votre première infolettre.</p>
+          <p className="mt-1 text-[13px] text-warmgray">Créez votre première newsletter.</p>
           <button
             type="button"
             onClick={handleNew}

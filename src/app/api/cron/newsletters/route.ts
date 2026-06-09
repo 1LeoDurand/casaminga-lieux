@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
         results.push({ org: s.org_slug, mode: "recurrent", skipped: "pas encore le jour J" });
         continue;
       }
-      const sujet = `Infolettre — ${new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(now)}`;
+      const sujet = `Newsletter — ${new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(now)}`;
       const { sent, failed } = await sendToOrg(
         admin, s.organization_id, s.org_slug, s.org_name, s.org_accent,
         s.segment_id, s.blocs_template as never[], sujet

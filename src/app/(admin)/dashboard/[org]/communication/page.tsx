@@ -23,10 +23,10 @@ export default async function CommunicationPage({ params }: { params: Promise<{ 
       <PageHeader
         tag="Rayonnement"
         title="Communication"
-        sub="Infolettre automatique, annonces internes et messages à la communauté."
+        sub="Newsletter automatique, annonces internes et messages à la communauté."
       />
 
-      {/* Infolettre */}
+      {/* Newsletter */}
       <NewsletterList
         campaigns={campaigns}
         settings={settings}
