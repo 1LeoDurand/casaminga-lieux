@@ -99,6 +99,8 @@ export interface Person {
   notes: string | null;
   newsletter_opt_out?: boolean;
   unsubscribe_token?: string;
+  anonymized_at?: string | null;
+  anonymized_by?: string | null;
   created_at: string;
   updated_at: string;
 }

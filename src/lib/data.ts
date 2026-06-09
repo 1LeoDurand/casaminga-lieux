@@ -346,6 +346,35 @@ export async function deletePerson(id: string): Promise<boolean> {
   return !error;
 }
 
+/**
+ * RGPD — Droit à l'oubli : anonymise une personne (efface les PII).
+ * Les enregistrements financiers (factures, transactions, encaissements) sont
+ * conservés pour les obligations légales de 10 ans, mais leur liaison textuelle
+ * au nom/email disparaît. La fiche CRM reste (pour la cohérence des stats) mais
+ * sans aucun identifiant personnel.
+ */
+export async function anonymizePerson(
+  id: string,
+  operatorName: string,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("persons")
+    .update({
+      name: "Anonyme RGPD",
+      email: null,
+      phone: null,
+      notes: null,
+      tags: [],
+      anonymized_at: new Date().toISOString(),
+      anonymized_by: operatorName,
+    })
+    .eq("id", id);
+  if (error) console.error("anonymizePerson: échec maj Supabase", error);
+  return !error;
+}
+
 // ── Espaces ─────────────────────────────────────────────────
 export async function getSpacesForOrg(orgId: string): Promise<Space[]> {
   if (!isSupabaseConfigured()) return getDemoSpaces(orgId);

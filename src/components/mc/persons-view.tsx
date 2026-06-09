@@ -13,6 +13,9 @@ import {
   Trash2,
   Mail,
   Phone,
+  Download,
+  ShieldOff,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/mc/avatar";
@@ -29,6 +32,7 @@ import {
   createPersonAction,
   deletePersonAction,
   updatePersonAction,
+  anonymizePersonAction,
 } from "@/app/(admin)/dashboard/[org]/personnes/actions";
 import { PersonAccessPanel } from "@/components/mc/person-access-panel";
 import type { Person, TeamMember } from "@/lib/types";
@@ -65,6 +69,7 @@ export function PersonsView({
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Person | null>(null);
+  const [confirmAnonymize, setConfirmAnonymize] = useState<Person | null>(null);
   const [pending, startTransition] = useTransition();
 
   const selected = persons.find((p) => p.id === selectedId) ?? null;
@@ -153,6 +158,19 @@ export function PersonsView({
         setSelectedId(null);
       } else {
         toast.error("Suppression impossible. Réessayez.");
+      }
+    });
+  }
+
+  function doAnonymize(p: Person) {
+    startTransition(async () => {
+      const { ok } = await anonymizePersonAction(orgSlug, p.id, "admin");
+      if (ok) {
+        toast.success("Profil anonymisé — données personnelles effacées");
+        setConfirmAnonymize(null);
+        setSelectedId(null);
+      } else {
+        toast.error("Anonymisation impossible. Réessayez.");
       }
     });
   }
@@ -465,6 +483,41 @@ export function PersonsView({
                   orgId={orgId}
                 />
               </div>
+
+              {/* Section RGPD */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {selected.anonymized_at ? (
+                    <ShieldCheck className="size-3.5 text-emerald-500" />
+                  ) : (
+                    <ShieldOff className="size-3.5" />
+                  )}
+                  RGPD
+                </h3>
+                {selected.anonymized_at ? (
+                  <p className="text-[12px] text-emerald-700">
+                    Profil anonymisé le {new Date(selected.anonymized_at).toLocaleDateString("fr-FR")}
+                    {selected.anonymized_by ? ` par ${selected.anonymized_by}` : ""}.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href={`/dashboard/${orgSlug}/personnes/${selected.id}/export`}
+                      download
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+                    >
+                      <Download className="size-3.5" /> Exporter les données
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAnonymize(selected)}
+                      className="flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-[12px] font-medium text-orange-700 hover:bg-orange-100"
+                    >
+                      <ShieldOff className="size-3.5" /> Anonymiser (droit à l&apos;oubli)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-auto flex gap-3 border-t border-border p-6">
@@ -516,6 +569,22 @@ export function PersonsView({
         busy={pending}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={() => confirmDelete && doDelete(confirmDelete)}
+      />
+
+      {/* Confirmation anonymisation RGPD */}
+      <ConfirmDialog
+        open={confirmAnonymize !== null}
+        title="Anonymiser ce profil ?"
+        message={
+          confirmAnonymize
+            ? `Le nom, l'email, le téléphone et les notes de « ${confirmAnonymize.name} » seront effacés et remplacés par « Anonyme RGPD ». Les données financières (factures, caisse) restent conservées pour les obligations légales. Cette action est irréversible.`
+            : ""
+        }
+        confirmLabel="Anonymiser définitivement"
+        tone="danger"
+        busy={pending}
+        onCancel={() => setConfirmAnonymize(null)}
+        onConfirm={() => confirmAnonymize && doAnonymize(confirmAnonymize)}
       />
     </div>
   );

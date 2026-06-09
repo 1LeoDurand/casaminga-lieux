@@ -5,6 +5,7 @@ import {
   createPerson,
   deletePerson,
   updatePerson,
+  anonymizePerson,
   getOrganizationBySlug,
   type PersonInput,
 } from "@/lib/data";
@@ -68,6 +69,22 @@ export async function deletePersonAction(
   id: string
 ): Promise<{ ok: boolean }> {
   const ok = await deletePerson(id);
+  if (ok) refresh(orgSlug);
+  return { ok };
+}
+
+/**
+ * RGPD — Droit à l'oubli.
+ * Anonymise les données personnelles identifiables d'un profil CRM.
+ * Les liens vers les documents financiers (factures, caisse) sont conservés
+ * pour conformité comptable (obligation légale 10 ans) mais sans PII.
+ */
+export async function anonymizePersonAction(
+  orgSlug: string,
+  id: string,
+  operatorName: string,
+): Promise<{ ok: boolean }> {
+  const ok = await anonymizePerson(id, operatorName);
   if (ok) refresh(orgSlug);
   return { ok };
 }
