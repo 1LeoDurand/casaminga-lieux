@@ -57,6 +57,18 @@ export async function acceptInvitation(params: {
     userId = created.user.id;
   }
 
+  // Permissions pré-configurées selon le rôle
+  const ROLE_PERMS: Record<string, Record<string, boolean>> = {
+    admin:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: true,  perm_publication: true,  perm_systeme: true  },
+    coord:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
+    finance:     { perm_pilotage: true,  perm_gestion_lieu: false, perm_structure: true,  perm_publication: false, perm_systeme: true  },
+    comm:        { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
+    benevole:    { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
+    intervenant: { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
+    readonly:    { perm_pilotage: false, perm_gestion_lieu: false, perm_structure: false, perm_publication: false, perm_systeme: false },
+  };
+  const perms = ROLE_PERMS[inv.role as string] ?? ROLE_PERMS.readonly;
+
   // 4. Ajouter à l'org (idempotent)
   const { error: memberErr } = await admin.from("organization_members").upsert(
     {
@@ -64,6 +76,7 @@ export async function acceptInvitation(params: {
       organization_id: inv.organization_id,
       role: inv.role,
       status: "actif",
+      ...perms,
     },
     { onConflict: "user_id,organization_id" }
   );

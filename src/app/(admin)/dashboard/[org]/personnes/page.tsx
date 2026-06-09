@@ -4,7 +4,7 @@ import { Upload } from "lucide-react";
 import { PageHeader } from "@/components/mc/page-header";
 import { PersonsView } from "@/components/mc/persons-view";
 import { GroupsManager } from "@/components/mc/groups-manager";
-import { getOrganizationBySlug, getPersonsForOrg } from "@/lib/data";
+import { getOrganizationBySlug, getPersonsForOrg, getTeamMembers } from "@/lib/data";
 import { getMemberGroups } from "@/lib/member-groups";
 
 export default async function PersonnesPage({
@@ -16,9 +16,10 @@ export default async function PersonnesPage({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [persons, groups] = await Promise.all([
+  const [persons, groups, teamMembers] = await Promise.all([
     getPersonsForOrg(organization.id),
     getMemberGroups(organization.id),
+    getTeamMembers(organization.id),
   ]);
 
   return (
@@ -29,6 +30,12 @@ export default async function PersonnesPage({
         sub="Le carnet vivant du lieu — membres, coworkers, bénévoles, intervenant·es, résident·es et partenaires réuni·es au même endroit."
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard/${org}/personnes/membres`}
+              className="flex items-center gap-1.5 rounded-xl border border-peach bg-peach-pale px-3 py-2 text-[12px] font-semibold text-foreground transition hover:border-coral hover:bg-peach"
+            >
+              👥 Accès logiciel
+            </Link>
             <Link
               href={`/dashboard/${org}/personnes/importer`}
               className="flex items-center gap-1.5 rounded-xl border border-peach bg-peach-pale px-3 py-2 text-[12px] font-semibold text-foreground transition hover:border-coral hover:bg-peach"
@@ -48,6 +55,7 @@ export default async function PersonnesPage({
         persons={persons}
         orgSlug={organization.slug}
         orgId={organization.id}
+        teamMembers={teamMembers}
       />
     </div>
   );

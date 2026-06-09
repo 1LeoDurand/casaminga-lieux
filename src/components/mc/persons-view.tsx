@@ -30,7 +30,8 @@ import {
   deletePersonAction,
   updatePersonAction,
 } from "@/app/(admin)/dashboard/[org]/personnes/actions";
-import type { Person } from "@/lib/types";
+import { PersonAccessPanel } from "@/components/mc/person-access-panel";
+import type { Person, TeamMember } from "@/lib/types";
 
 type View = "cards" | "table";
 
@@ -49,10 +50,12 @@ export function PersonsView({
   persons,
   orgSlug,
   orgId,
+  teamMembers = [],
 }: {
   persons: Person[];
   orgSlug: string;
   orgId: string;
+  teamMembers?: TeamMember[];
 }) {
   const [view, setView] = useState<View>("cards");
   const [search, setSearch] = useState("");
@@ -443,6 +446,24 @@ export function PersonsView({
                 <p className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed text-foreground">
                   {selected.notes ?? "—"}
                 </p>
+              </div>
+
+              {/* Section accès au logiciel */}
+              <div>
+                <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-warmgray">Accès au logiciel</h3>
+                <PersonAccessPanel
+                  member={
+                    selected.email
+                      ? (teamMembers.find(
+                          (m) => m.email?.toLowerCase() === selected.email?.toLowerCase()
+                        ) ?? null)
+                      : null
+                  }
+                  personName={selected.name}
+                  personEmail={selected.email}
+                  orgSlug={orgSlug}
+                  orgId={orgId}
+                />
               </div>
             </div>
 

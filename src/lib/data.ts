@@ -1485,7 +1485,7 @@ export async function getTeamMembers(orgId: string): Promise<TeamMember[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("organization_members")
-    .select("user_id, organization_id, role, zones, status, created_at, profiles(full_name, email)")
+    .select("user_id, organization_id, role, zones, status, created_at, perm_pilotage, perm_gestion_lieu, perm_structure, perm_publication, perm_systeme, profiles(full_name, email)")
     .eq("organization_id", orgId)
     .order("created_at", { ascending: true });
   if (error) { console.error("getTeamMembers:", error); return []; }
@@ -1500,6 +1500,11 @@ export async function getTeamMembers(orgId: string): Promise<TeamMember[]> {
       created_at: m.created_at as string,
       full_name: profile?.full_name ?? null,
       email: profile?.email ?? null,
+      perm_pilotage:     (m.perm_pilotage as boolean) ?? false,
+      perm_gestion_lieu: (m.perm_gestion_lieu as boolean) ?? false,
+      perm_structure:    (m.perm_structure as boolean) ?? false,
+      perm_publication:  (m.perm_publication as boolean) ?? false,
+      perm_systeme:      (m.perm_systeme as boolean) ?? false,
     };
   });
 }

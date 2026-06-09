@@ -379,6 +379,12 @@ export interface TeamMember {
   created_at: string;
   full_name: string | null;
   email: string | null;
+  // Permissions granulaires
+  perm_pilotage: boolean;
+  perm_gestion_lieu: boolean;
+  perm_structure: boolean;
+  perm_publication: boolean;
+  perm_systeme: boolean;
 }
 
 export type GrantTrancheStatus = "en_attente" | "recu" | "en_retard";
