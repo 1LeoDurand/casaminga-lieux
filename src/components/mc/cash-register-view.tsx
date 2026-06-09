@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
@@ -16,7 +16,7 @@ import {
   PAYMENT_METHODS, CASH_SOURCES, VAT_RATES, CLOSURE_TYPES,
   paymentLabel, sourceLabel, closureTypeLabel, fmtEuro, fmtDateTime, fmtDate, shortHash, splitVat,
 } from "@/lib/cash-register-meta";
-import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole } from "@/lib/types";
+import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole, Person } from "@/lib/types";
 
 const inputCls = "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400";
 const selectCls = inputCls + " cursor-pointer";
@@ -35,11 +35,111 @@ interface EntryForm {
   label: string; amount_ttc: string; vat_rate: string;
   payment_method: CashPaymentMethod; source: CashSource;
   operator: string; source_ref: string; receipt_email: string; pole_id: string;
+  person_id: string;
 }
 const EMPTY: EntryForm = {
   label: "", amount_ttc: "", vat_rate: "0",
   payment_method: "especes", source: "adhesion", operator: "", source_ref: "", receipt_email: "", pole_id: "",
+  person_id: "",
 };
+
+// ── Sélecteur de personne (combobox inline) ──────────────────
+function PersonPicker({
+  persons, value, onChange,
+}: {
+  persons: Person[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selected = persons.find((p) => p.id === value);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase();
+    return q
+      ? persons.filter((p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.email ?? "").toLowerCase().includes(q)
+        ).slice(0, 8)
+      : persons.slice(0, 8);
+  }, [persons, query]);
+
+  // Fermer au clic extérieur
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  function select(id: string) {
+    onChange(id);
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      {selected ? (
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <span className="flex items-center gap-2 text-sm text-slate-800">
+            <User className="size-3.5 text-slate-400" />
+            {selected.name}
+            {selected.email && <span className="text-[11px] text-slate-400">{selected.email}</span>}
+          </span>
+          <button type="button" onClick={() => onChange("")} className="text-slate-400 hover:text-slate-600">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Rechercher un membre / client…"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            className={inputCls + " pl-8"}
+          />
+        </div>
+      )}
+      {open && !selected && (
+        <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-slate-400">Aucun résultat</div>
+          ) : (
+            filtered.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => select(p.id)}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-slate-50"
+              >
+                <User className="size-3.5 shrink-0 text-slate-400" />
+                <span className="flex-1 truncate text-slate-800">{p.name}</span>
+                {p.email && <span className="text-[11px] text-slate-400 truncate">{p.email}</span>}
+              </button>
+            ))
+          )}
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center justify-center py-2 text-[11px] text-slate-400 hover:text-slate-600"
+          >
+            Fermer
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Raccourcis rapides — pré-remplissent le formulaire en 1 clic */
 type Shortcut = Partial<Omit<EntryForm, "operator" | "receipt_email" | "pole_id" | "source_ref">>;
@@ -52,8 +152,8 @@ const QUICK_PRESETS: { label: string; emoji: string; values: Shortcut }[] = [
   { label: "Boutique",         emoji: "🛍", values: { label: "Vente boutique",    amount_ttc: "",    vat_rate: "20", payment_method: "especes", source: "boutique"    } },
 ];
 
-function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
-  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[];
+function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons }: {
+  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[]; persons: Person[];
 }) {
   const [form, setForm] = useState<EntryForm>(EMPTY);
   const [pending, start] = useTransition();
@@ -75,6 +175,7 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
       return;
     }
     start(async () => {
+      const selectedPerson = persons.find((p) => p.id === form.person_id);
       const res = await addCashEntryAction(orgSlug, {
         organization_id: orgId,
         label: form.label.trim(),
@@ -85,7 +186,10 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
         operator: form.operator.trim(),
         source_ref: form.source_ref.trim() || null,
         pole_id: form.pole_id || null,
-      }, form.receipt_email.trim() ? { email: form.receipt_email.trim() } : undefined);
+        person_id: form.person_id || null,
+      }, form.receipt_email.trim()
+        ? { email: form.receipt_email.trim(), name: selectedPerson?.name }
+        : undefined);
       if (res.ok) {
         toast.success(form.receipt_email.trim() ? "Encaissement scellé · reçu envoyé" : "Encaissement enregistré (écriture scellée)");
         setForm(EMPTY); onClose();
@@ -173,6 +277,15 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
             <Field label="Opérateur / caissier *">
               <input required value={form.operator} onChange={set("operator")} placeholder="Nom de la personne encaissant" className={inputCls} />
             </Field>
+            {persons.length > 0 && (
+              <Field label="Client / Membre (facultatif)">
+                <PersonPicker
+                  persons={persons}
+                  value={form.person_id}
+                  onChange={(id) => setForm((f) => ({ ...f, person_id: id }))}
+                />
+              </Field>
+            )}
             <Field label="Email du reçu (facultatif)">
               <input type="email" value={form.receipt_email} onChange={set("receipt_email")} placeholder="Envoyer le reçu par email à…" className={inputCls} />
             </Field>
@@ -197,10 +310,10 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
 
 // ── Vue principale ───────────────────────────────────────────
 export function CashRegisterView({
-  entries, closures, orgSlug, orgId, poles = [], pointedIds = [], postedClosureIds = [],
+  entries, closures, orgSlug, orgId, poles = [], persons = [], pointedIds = [], postedClosureIds = [],
 }: {
   entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
-  poles?: Pole[]; pointedIds?: string[]; postedClosureIds?: string[];
+  poles?: Pole[]; persons?: Person[]; pointedIds?: string[]; postedClosureIds?: string[];
 }) {
   const postedSet = new Set(postedClosureIds);
   const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures" | "statistiques">("ecritures");
@@ -231,6 +344,8 @@ export function CashRegisterView({
   );
 
   const poleById = useMemo(() => new Map(poles.map((p) => [p.id, p])), [poles]);
+  const personById = useMemo(() => new Map(persons.map((p) => [p.id, p])), [persons]);
+  const hasPersonLinks = entries.some((e) => e.person_id);
   const poleName = (id: string | null) => (id ? poleById.get(id)?.name ?? "Pôle inconnu" : "Sans pôle");
 
   // Écritures non clôturées (session de caisse en cours = depuis le dernier Z jour)
@@ -406,6 +521,7 @@ export function CashRegisterView({
                   <th className="px-3 py-2 font-medium">Libellé</th>
                   <th className="px-3 py-2 font-medium">Nature</th>
                   {poles.length > 0 && <th className="px-3 py-2 font-medium">Pôle</th>}
+                  {hasPersonLinks && <th className="px-3 py-2 font-medium">Client</th>}
                   <th className="px-3 py-2 font-medium">Paiement</th>
                   <th className="px-3 py-2 text-right font-medium">TTC</th>
                   <th className="px-3 py-2 font-medium">Sceau</th>
@@ -430,6 +546,16 @@ export function CashRegisterView({
                             <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
                               style={{ background: `${poleById.get(e.pole_id)?.color ?? "#888"}22`, color: poleById.get(e.pole_id)?.color ?? "#555" }}>
                               {poleName(e.pole_id)}
+                            </span>
+                          ) : <span className="text-slate-300">—</span>}
+                        </td>
+                      )}
+                      {hasPersonLinks && (
+                        <td className="px-3 py-2 text-xs">
+                          {e.person_id && personById.has(e.person_id) ? (
+                            <span className="inline-flex items-center gap-1 text-slate-700">
+                              <User className="size-3 text-slate-400" />
+                              {personById.get(e.person_id)!.name}
                             </span>
                           ) : <span className="text-slate-300">—</span>}
                         </td>
@@ -595,7 +721,7 @@ export function CashRegisterView({
         <StatsView entries={entries} poles={poles} />
       )}
 
-      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} />
+      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} persons={persons} />
 
       {/* Dialog annulation */}
       {voidTarget && (

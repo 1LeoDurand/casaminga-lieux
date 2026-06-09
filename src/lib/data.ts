@@ -1387,6 +1387,7 @@ export interface CashEntryInput {
   operator: string;
   source_ref?: string | null;
   pole_id?: string | null;
+  person_id?: string | null;
 }
 
 /** Ajoute une écriture immuable via la fonction atomique (seq continu + hash chaîné). */
@@ -1403,6 +1404,7 @@ export async function addCashEntry(input: CashEntryInput): Promise<{ ok: boolean
     p_operator: input.operator,
     p_source_ref: input.source_ref ?? null,
     p_pole_id: input.pole_id ?? null,
+    p_person_id: input.person_id ?? null,
   });
   if (error) { console.error("addCashEntry:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };

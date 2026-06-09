@@ -447,6 +447,7 @@ export interface CashEntry {
   prev_hash: string;
   entry_hash: string;
   pole_id: string | null;
+  person_id: string | null;
   created_at: string;
 }
 
