@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ccd_session__mark_chapter",
+      "mcp__a11adac2-f200-4283-9dd3-e47bbae4b761__get_advisors",
+      "mcp__a11adac2-f200-4283-9dd3-e47bbae4b761__list_tables",
+      "mcp__a11adac2-f200-4283-9dd3-e47bbae4b761__list_projects",
+      "mcp__a11adac2-f200-4283-9dd3-e47bbae4b761__get_logs",
+      "mcp__a11adac2-f200-4283-9dd3-e47bbae4b761__list_migrations",
+      "mcp__a11adac2-f200-4283-9dd3-e47bbae4b761__get_publishable_keys"
+    ]
+  }
+}

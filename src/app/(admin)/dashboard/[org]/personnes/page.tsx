@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Upload } from "lucide-react";
 import { PageHeader } from "@/components/mc/page-header";
 import { PersonsView } from "@/components/mc/persons-view";
 import { GroupsManager } from "@/components/mc/groups-manager";
@@ -26,12 +28,20 @@ export default async function PersonnesPage({
         title="Personnes"
         sub="Le carnet vivant du lieu — membres, coworkers, bénévoles, intervenant·es, résident·es et partenaires réuni·es au même endroit."
         actions={
-          <GroupsManager
-            groups={groups}
-            persons={persons.map((p) => ({ id: p.id, name: p.name }))}
-            orgId={organization.id}
-            orgSlug={organization.slug}
-          />
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/dashboard/${org}/personnes/importer`}
+              className="flex items-center gap-1.5 rounded-xl border border-peach bg-peach-pale px-3 py-2 text-[12px] font-semibold text-foreground transition hover:border-coral hover:bg-peach"
+            >
+              <Upload className="size-3.5" /> Importer CSV
+            </Link>
+            <GroupsManager
+              groups={groups}
+              persons={persons.map((p) => ({ id: p.id, name: p.name }))}
+              orgId={organization.id}
+              orgSlug={organization.slug}
+            />
+          </div>
         }
       />
       <PersonsView

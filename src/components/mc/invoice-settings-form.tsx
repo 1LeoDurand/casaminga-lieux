@@ -24,11 +24,13 @@ export function InvoiceSettingsForm({
   orgId,
   orgSlug,
   orgName,
+  hasEmittedInvoices = false,
 }: {
   settings: InvoiceSettings;
   orgId: string;
   orgSlug: string;
   orgName: string;
+  hasEmittedInvoices?: boolean;
 }) {
   const [s, setS] = useState<InvoiceSettings>({
     ...settings,
@@ -108,6 +110,21 @@ export function InvoiceSettingsForm({
         <div>
           <label className={labelCls}>Préfixe de numérotation</label>
           <input className={input} value={s.number_prefix} onChange={(e) => field("number_prefix", e.target.value)} placeholder="FAC-" />
+        </div>
+        <div>
+          <label className={labelCls}>Première facture n°</label>
+          <input
+            type="number" min={1} step={1}
+            className={`${input} ${hasEmittedInvoices ? "opacity-50 cursor-not-allowed" : ""}`}
+            value={s.number_start ?? 1}
+            onChange={(e) => { if (!hasEmittedInvoices) field("number_start", Number(e.target.value) || 1); }}
+            disabled={hasEmittedInvoices}
+          />
+          <p className="mt-1 text-[11px] text-warmgray">
+            {hasEmittedInvoices
+              ? "Verrouillé : une facture a déjà été émise (intégrité légale)."
+              : "Numéro de départ si vous avez déjà des factures existantes (ex. 47 → FAC-000047)."}
+          </p>
         </div>
         <div>
           <label className={labelCls}>Couleur d'accent</label>

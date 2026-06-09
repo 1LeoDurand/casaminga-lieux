@@ -107,6 +107,16 @@ function InvoiceDoc({ invoice, settings }: { invoice: Invoice; settings: Invoice
 
         {invoice.notes ? <Text style={{ marginTop: 14 }}><Text style={{ fontFamily: "Helvetica-Bold" }}>Notes : </Text>{invoice.notes}</Text> : null}
 
+        {/* Mention de paiement */}
+        {invoice.paid_at ? (
+          <View style={{ marginTop: 14, backgroundColor: "#F0FDF4", borderRadius: 5, padding: 8 }}>
+            <Text style={{ color: "#166534", fontSize: 9 }}>
+              ✓ Réglée le {fmtDate(invoice.paid_at)}
+              {invoice.payment_method ? ` · Mode : ${invoice.payment_method}` : ""}
+            </Text>
+          </View>
+        ) : null}
+
         {/* Pied */}
         <View style={styles.footer}>
           {(settings.iban || settings.bic) ? (

@@ -54,6 +54,22 @@ export default async function DashboardLayout({
   }
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Compte de notifications non lues
+  let unreadNotifCount = 0;
+  if (isSupabaseConfigured()) {
+    const supabase2 = await createClient();
+    const { data: { user: u2 } } = await supabase2.auth.getUser();
+    if (u2) {
+      const { count } = await supabase2
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", organization.id)
+        .or(`user_id.eq.${u2.id},user_id.is.null`)
+        .is("read_at", null);
+      unreadNotifCount = count ?? 0;
+    }
+  }
+
   const [requests, enabledModules, subscription, establishments] = await Promise.all([
     getRequestsForOrg(organization.id),
     getEnabledModules(organization.id),
@@ -83,7 +99,7 @@ export default async function DashboardLayout({
           orgTier={orgTier}
         />
       </div>
-      <DashboardTopbar orgSlug={organization.slug} establishments={lieuOptions} selectedLieuId={selectedLieuId} />
+      <DashboardTopbar orgSlug={organization.slug} establishments={lieuOptions} selectedLieuId={selectedLieuId} unreadNotifCount={unreadNotifCount} />
       <main className="overflow-y-auto p-7">{children}</main>
       <FeedbackWidget orgSlug={organization.slug} />
       <HelpWidget />

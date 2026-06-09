@@ -35,6 +35,18 @@ export async function getInvoiceSettings(orgId: string): Promise<InvoiceSettings
   return (data as InvoiceSettings) ?? DEFAULT_SETTINGS(orgId);
 }
 
+/** Vrai si l'org a déjà au moins une facture émise (numéro attribué). Sert à verrouiller number_start. */
+export async function hasEmittedInvoices(orgId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgId)
+    .not("number", "is", null);
+  return (count ?? 0) > 0;
+}
+
 export async function getInvoices(orgId: string): Promise<Invoice[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createClient();

@@ -38,6 +38,7 @@ export async function saveInvoiceSettings(
       accent_color: settings.accent_color ?? "#FF8A65",
       footer_mentions: settings.footer_mentions ?? null,
       number_prefix: settings.number_prefix ?? "FAC-",
+      number_start: settings.number_start ?? 1,
       logo_url: settings.logo_url ?? null,
       require_validation_above: settings.require_validation_above ?? null,
       updated_at: new Date().toISOString(),
