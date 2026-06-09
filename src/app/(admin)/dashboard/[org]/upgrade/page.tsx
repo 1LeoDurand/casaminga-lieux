@@ -19,6 +19,7 @@ const PLANS = [
       "Adhésions & campagnes en ligne",
       "Billetterie événements + QR scan",
       "Site public (vitrine + agenda)",
+      "Espace adhérent (portail self-service)",
       "CRM contacts de base",
       "Gestion d'équipe",
     ],
