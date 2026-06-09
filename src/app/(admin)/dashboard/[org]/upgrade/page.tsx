@@ -41,6 +41,7 @@ const PLANS = [
       "Documents & gouvernance",
       "Résidences d'artistes",
       "Espaces & réservations",
+      "Newsletter & communication",
       "Pôles & budget par pôle",
       "Impact & partenaires",
       "Automatisations",
