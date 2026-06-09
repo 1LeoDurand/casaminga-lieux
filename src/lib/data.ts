@@ -1357,6 +1357,14 @@ export async function getCashEntries(orgId: string, limit = 200): Promise<CashEn
   return data ?? [];
 }
 
+export async function getCashEntryById(orgId: string, id: string): Promise<CashEntry | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("cash_entries").select("*")
+    .eq("organization_id", orgId).eq("id", id).maybeSingle();
+  return (data as CashEntry) ?? null;
+}
+
 export async function getCashClosures(orgId: string): Promise<CashClosure[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createClient();

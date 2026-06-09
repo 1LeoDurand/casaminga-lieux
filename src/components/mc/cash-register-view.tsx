@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
@@ -568,14 +568,25 @@ export function CashRegisterView({
                         </span>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {!e.is_void && !closed && (
-                          <button onClick={() => { setVoidTarget(e); setVoidOperator(""); setVoidReason(""); }}
-                            title="Annuler par écriture de correction"
-                            className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-600">
-                            <Ban className="size-4" />
-                          </button>
-                        )}
-                        {closed && <Lock className="ml-auto size-3.5 text-slate-300" />}
+                        <div className="flex items-center justify-end gap-0.5">
+                          <a
+                            href={`/dashboard/${orgSlug}/caisse/${e.id}/pdf`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Ouvrir le ticket PDF"
+                            className="rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600"
+                          >
+                            <Printer className="size-4" />
+                          </a>
+                          {!e.is_void && !closed && (
+                            <button onClick={() => { setVoidTarget(e); setVoidOperator(""); setVoidReason(""); }}
+                              title="Annuler par écriture de correction"
+                              className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-600">
+                              <Ban className="size-4" />
+                            </button>
+                          )}
+                          {closed && <Lock className="size-3.5 text-slate-300" />}
+                        </div>
                       </td>
                     </tr>
                   );
