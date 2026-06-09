@@ -451,6 +451,16 @@ export interface CashEntry {
   created_at: string;
 }
 
+export interface CashShortcut {
+  label: string;        // Nom du bouton (ex. "Adhésion 20€")
+  emoji: string;        // Emoji affiché sur le bouton
+  designation: string;  // Pré-remplit le champ "Libellé"
+  amount_ttc: string;   // Montant TTC pré-rempli ("" = saisie libre)
+  vat_rate: string;     // "0" | "5.5" | "10" | "20"
+  payment_method: CashPaymentMethod;
+  source: CashSource;
+}
+
 export interface CashVatLine {
   rate: number;
   ht: number;

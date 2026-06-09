@@ -118,6 +118,7 @@ import type {
   CashSource,
   CashClosureType,
   CashVerifyResult,
+  CashShortcut,
   Artist,
   ArtistMilestone,
   TeamMember,
@@ -1409,6 +1410,31 @@ export async function getPostedClosureIds(orgId: string): Promise<Set<string>> {
     .eq("organization_id", orgId)
     .not("cash_closure_id", "is", null);
   return new Set((data ?? []).map((r) => r.cash_closure_id as string));
+}
+
+/** Raccourcis rapides de caisse configurés par l'org. */
+export async function getCashShortcuts(orgId: string): Promise<CashShortcut[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cash_register_settings")
+    .select("shortcuts")
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  return (data?.shortcuts as CashShortcut[]) ?? [];
+}
+
+export async function saveCashShortcuts(orgId: string, shortcuts: CashShortcut[]): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("cash_register_settings")
+    .upsert(
+      { organization_id: orgId, shortcuts, updated_at: new Date().toISOString() },
+      { onConflict: "organization_id" }
+    );
+  if (error) console.error("saveCashShortcuts:", error);
+  return !error;
 }
 
 export interface CashEntryInput {

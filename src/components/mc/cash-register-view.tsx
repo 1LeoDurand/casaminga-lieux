@@ -4,21 +4,21 @@ import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer, FileEdit, Download,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer, FileEdit, Download, Settings, Trash2, GripVertical,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import {
   addCashEntryAction, voidCashEntryAction, closeCashRegisterAction, verifyCashChainAction,
-  createInvoiceFromCashEntryAction,
+  createInvoiceFromCashEntryAction, saveCashShortcutsAction,
 } from "@/app/(admin)/dashboard/[org]/caisse/actions";
 import { pointEntry, unpointEntry } from "@/lib/cash-pointing";
 import {
   PAYMENT_METHODS, CASH_SOURCES, VAT_RATES, CLOSURE_TYPES,
   paymentLabel, sourceLabel, closureTypeLabel, fmtEuro, fmtDateTime, fmtDate, shortHash, splitVat,
 } from "@/lib/cash-register-meta";
-import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole, Person } from "@/lib/types";
+import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole, Person, CashShortcut } from "@/lib/types";
 
 const inputCls = "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400";
 const selectCls = inputCls + " cursor-pointer";
@@ -154,8 +154,8 @@ const QUICK_PRESETS: { label: string; emoji: string; values: Shortcut }[] = [
   { label: "Boutique",         emoji: "🛍", values: { label: "Vente boutique",    amount_ttc: "",    vat_rate: "20", payment_method: "especes", source: "boutique"    } },
 ];
 
-function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons }: {
-  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[]; persons: Person[];
+function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons, shortcuts = [] }: {
+  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[]; persons: Person[]; shortcuts?: CashShortcut[];
 }) {
   const [form, setForm] = useState<EntryForm>(EMPTY);
   const [pending, start] = useTransition();
@@ -165,6 +165,22 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons }: {
   const ttc = parseFloat(form.amount_ttc) || 0;
   const rate = parseFloat(form.vat_rate) || 0;
   const { ht, vat } = splitVat(ttc, rate);
+
+  // Raccourcis effectifs : org shortcuts s'ils existent, sinon presets par défaut
+  const effectivePresets: { label: string; emoji: string; values: Shortcut }[] =
+    shortcuts.length > 0
+      ? shortcuts.map((s) => ({
+          label: s.label,
+          emoji: s.emoji,
+          values: {
+            label: s.designation,
+            amount_ttc: s.amount_ttc,
+            vat_rate: s.vat_rate,
+            payment_method: s.payment_method,
+            source: s.source,
+          },
+        }))
+      : QUICK_PRESETS;
 
   function applyPreset(p: Shortcut) {
     setForm((f) => ({ ...f, ...p }));
@@ -218,7 +234,7 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons }: {
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Raccourcis</p>
               <div className="flex flex-wrap gap-1.5">
-                {QUICK_PRESETS.map((p) => (
+                {effectivePresets.map((p) => (
                   <button
                     key={p.label}
                     type="button"
@@ -310,18 +326,187 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons }: {
   );
 }
 
+// ── Éditeur de raccourcis ────────────────────────────────────
+const EMPTY_SHORTCUT: CashShortcut = {
+  label: "", emoji: "⚡", designation: "", amount_ttc: "", vat_rate: "0",
+  payment_method: "especes", source: "adhesion",
+};
+
+function CashShortcutsEditor({
+  open, onClose, orgId, orgSlug, initial,
+}: {
+  open: boolean; onClose: (saved: CashShortcut[] | null) => void;
+  orgId: string; orgSlug: string; initial: CashShortcut[];
+}) {
+  const [list, setList] = useState<CashShortcut[]>(initial);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [draft, setDraft] = useState<CashShortcut>(EMPTY_SHORTCUT);
+  const [pending, start] = useTransition();
+
+  if (!open) return null;
+
+  function startNew() { setDraft(EMPTY_SHORTCUT); setEditing(-1); }
+  function startEdit(i: number) { setDraft(list[i]); setEditing(i); }
+  function cancelEdit() { setEditing(null); }
+
+  function saveDraft() {
+    if (!draft.label.trim() || !draft.designation.trim()) {
+      toast.error("Nom et libellé pré-rempli sont requis.");
+      return;
+    }
+    const clean: CashShortcut = { ...draft, label: draft.label.trim(), designation: draft.designation.trim(), emoji: draft.emoji.trim() || "⚡" };
+    setList((prev) => editing === -1 ? [...prev, clean] : prev.map((s, i) => i === editing ? clean : s));
+    setEditing(null);
+  }
+
+  function remove(i: number) {
+    setList((prev) => prev.filter((_, idx) => idx !== i));
+    if (editing === i) setEditing(null);
+  }
+
+  function save() {
+    start(async () => {
+      const res = await saveCashShortcutsAction(orgId, orgSlug, list);
+      if (res.ok) { toast.success("Raccourcis sauvegardés"); onClose(list); }
+      else toast.error("Erreur lors de la sauvegarde");
+    });
+  }
+
+  const setD = (k: keyof CashShortcut) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setDraft((d) => ({ ...d, [k]: e.target.value }));
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/20" onClick={() => onClose(null)} />
+      <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Settings className="size-4" /> Raccourcis de caisse
+          </h2>
+          <button onClick={() => onClose(null)} className="text-slate-400 hover:text-slate-600"><X className="size-5" /></button>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+          <p className="text-[12px] text-slate-500">
+            Les raccourcis permettent de pré-remplir le formulaire en 1 clic. Ils remplacent les boutons par défaut pour toute l&apos;organisation.
+          </p>
+
+          {/* Liste */}
+          <div className="flex flex-col gap-2">
+            {list.map((s, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <GripVertical className="size-4 shrink-0 text-slate-300" />
+                <span className="text-lg">{s.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-slate-800">{s.label}</div>
+                  <div className="text-[11px] text-slate-400">
+                    {s.designation || "—"} · {s.amount_ttc ? `${s.amount_ttc} € TTC` : "montant libre"} · TVA {s.vat_rate}%
+                  </div>
+                </div>
+                <button type="button" onClick={() => startEdit(i)} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700">
+                  <FileEdit className="size-3.5" />
+                </button>
+                <button type="button" onClick={() => remove(i)} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+            ))}
+            {list.length === 0 && (
+              <div className="rounded-lg border border-dashed border-slate-200 py-6 text-center text-[12px] text-slate-400">
+                Aucun raccourci — les presets par défaut seront utilisés.
+              </div>
+            )}
+          </div>
+
+          {/* Formulaire d'édition */}
+          {editing !== null && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{editing === -1 ? "Nouveau raccourci" : "Modifier"}</p>
+              <div className="grid grid-cols-[56px_1fr] gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Emoji</label>
+                  <input value={draft.emoji} onChange={setD("emoji")} maxLength={4} className={inputCls + " text-center text-lg"} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Nom du bouton *</label>
+                  <input value={draft.label} onChange={setD("label")} placeholder="ex : Adhésion 20€" className={inputCls} />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] text-slate-500">Libellé pré-rempli (champ « Libellé ») *</label>
+                <input value={draft.designation} onChange={setD("designation")} placeholder="ex : Adhésion 2026 — M. Durand" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Montant TTC € (vide = libre)</label>
+                  <input type="number" min="0" step="0.01" value={draft.amount_ttc} onChange={setD("amount_ttc")} placeholder="Saisie libre" className={inputCls} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Taux TVA</label>
+                  <select value={draft.vat_rate} onChange={setD("vat_rate")} className={selectCls}>
+                    {VAT_RATES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Paiement</label>
+                  <select value={draft.payment_method} onChange={setD("payment_method")} className={selectCls}>
+                    {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Nature</label>
+                  <select value={draft.source} onChange={setD("source")} className={selectCls}>
+                    {CASH_SOURCES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={saveDraft} className="flex-1 rounded-lg bg-slate-900 py-2 text-sm font-medium text-white hover:bg-slate-700">
+                  {editing === -1 ? "Ajouter" : "Mettre à jour"}
+                </button>
+                <button type="button" onClick={cancelEdit} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-500 hover:bg-slate-50">
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button type="button" onClick={startNew}
+            className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-2.5 text-sm text-slate-500 hover:border-slate-400 hover:bg-slate-50">
+            <Plus className="size-4" /> Ajouter un raccourci
+          </button>
+        </div>
+
+        <div className="border-t border-slate-100 px-6 py-4 flex gap-3">
+          <button onClick={save} disabled={pending}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40">
+            {pending ? "Sauvegarde…" : "Sauvegarder les raccourcis"}
+          </button>
+          <button onClick={() => onClose(null)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-500 hover:bg-slate-50">
+            Annuler
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
 // ── Vue principale ───────────────────────────────────────────
 export function CashRegisterView({
-  entries, closures, orgSlug, orgId, poles = [], persons = [], pointedIds = [], postedClosureIds = [],
+  entries, closures, orgSlug, orgId, poles = [], persons = [], shortcuts: initialShortcuts = [], pointedIds = [], postedClosureIds = [],
 }: {
   entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
-  poles?: Pole[]; persons?: Person[]; pointedIds?: string[]; postedClosureIds?: string[];
+  poles?: Pole[]; persons?: Person[]; shortcuts?: CashShortcut[]; pointedIds?: string[]; postedClosureIds?: string[];
 }) {
   const postedSet = new Set(postedClosureIds);
   const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures" | "statistiques">("ecritures");
   const [pointed, setPointed] = useState<Set<string>>(new Set(pointedIds));
   const [pointOperator, setPointOperator] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [shortcutsEditorOpen, setShortcutsEditorOpen] = useState(false);
+  const [shortcuts, setShortcuts] = useState<CashShortcut[]>(initialShortcuts);
   const [voidTarget, setVoidTarget] = useState<CashEntry | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [voidOperator, setVoidOperator] = useState("");
@@ -511,6 +696,14 @@ export function CashRegisterView({
             </>
           )}
         </div>
+
+        <button
+          onClick={() => setShortcutsEditorOpen(true)}
+          title="Configurer les raccourcis de caisse"
+          className="rounded-lg border border-slate-200 bg-white p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+        >
+          <Settings className="size-4" />
+        </button>
 
         <button onClick={() => setDrawerOpen(true)}
           className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
@@ -770,7 +963,15 @@ export function CashRegisterView({
         <StatsView entries={entries} poles={poles} />
       )}
 
-      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} persons={persons} />
+      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} persons={persons} shortcuts={shortcuts} />
+
+      <CashShortcutsEditor
+        open={shortcutsEditorOpen}
+        onClose={(saved) => { if (saved) setShortcuts(saved); setShortcutsEditorOpen(false); }}
+        orgId={orgId}
+        orgSlug={orgSlug}
+        initial={shortcuts}
+      />
 
       {/* Dialog annulation */}
       {voidTarget && (

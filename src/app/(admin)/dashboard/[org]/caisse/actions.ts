@@ -3,8 +3,10 @@ import { revalidatePath } from "next/cache";
 import {
   addCashEntry, voidCashEntry, closeCashRegister, verifyCashChain,
   getCashEntries, getOrganizationBySlug, createTransaction, getPersonsForOrg,
+  saveCashShortcuts,
   type CashEntryInput,
 } from "@/lib/data";
+import type { CashShortcut } from "@/lib/types";
 import type { CashEntry, CashClosureType } from "@/lib/types";
 import { saveInvoice, type InvoiceInput } from "@/app/(admin)/dashboard/[org]/factures/actions";
 import type { PaymentMethod } from "@/lib/invoicing/types";
@@ -107,6 +109,17 @@ export async function closeCashRegisterAction(
 
 export async function verifyCashChainAction(orgId: string) {
   return verifyCashChain(orgId);
+}
+
+/** Sauvegarde les raccourcis rapides configurés pour l'org. */
+export async function saveCashShortcutsAction(
+  orgId: string,
+  orgSlug: string,
+  shortcuts: CashShortcut[],
+): Promise<{ ok: boolean }> {
+  const ok = await saveCashShortcuts(orgId, shortcuts);
+  if (ok) revalidatePath(`/dashboard/${orgSlug}/caisse`);
+  return { ok };
 }
 
 // ── Caisse → Facture brouillon ────────────────────────────────
