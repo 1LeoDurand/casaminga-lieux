@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag, BarChart2, TrendingUp,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
@@ -196,10 +196,13 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
 }
 
 // ── Vue principale ───────────────────────────────────────────
-export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = [], pointedIds = [] }: {
+export function CashRegisterView({
+  entries, closures, orgSlug, orgId, poles = [], pointedIds = [], postedClosureIds = [],
+}: {
   entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
-  poles?: Pole[]; pointedIds?: string[];
+  poles?: Pole[]; pointedIds?: string[]; postedClosureIds?: string[];
 }) {
+  const postedSet = new Set(postedClosureIds);
   const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures" | "statistiques">("ecritures");
   const [pointed, setPointed] = useState<Set<string>>(new Set(pointedIds));
   const [pointOperator, setPointOperator] = useState("");
@@ -536,6 +539,11 @@ export function CashRegisterView({ entries, closures, orgSlug, orgId, poles = []
                   <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-medium text-white">{closureTypeLabel(c.closure_type)}</span>
                   <span className="font-semibold text-slate-800">{c.period_label}</span>
                   <span className="text-xs text-slate-400">#{c.seq}</span>
+                  {c.closure_type === "jour" && postedSet.has(c.id) && (
+                    <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <CheckCircle2 className="size-3" /> Versé en trésorerie
+                    </span>
+                  )}
                   <span className="ml-auto text-lg font-bold text-slate-900">{fmtEuro(c.total_ttc)}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">

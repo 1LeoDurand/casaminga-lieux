@@ -509,6 +509,7 @@ export interface Transaction {
   label: string;
   status: TransactionStatus;
   notes: string | null;
+  cash_closure_id: string | null;
   created_at: string;
   updated_at: string;
 }

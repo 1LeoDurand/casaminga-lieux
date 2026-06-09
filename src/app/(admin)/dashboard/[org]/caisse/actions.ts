@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import {
   addCashEntry, voidCashEntry, closeCashRegister, verifyCashChain,
-  getCashEntries, getOrganizationBySlug,
+  getCashEntries, getOrganizationBySlug, createTransaction,
   type CashEntryInput,
 } from "@/lib/data";
 import type { CashEntry, CashClosureType } from "@/lib/types";
@@ -65,9 +65,39 @@ export async function voidCashEntryAction(orgSlug: string, orgId: string, target
   return res;
 }
 
-export async function closeCashRegisterAction(orgSlug: string, orgId: string, type: CashClosureType, operator: string) {
+export async function closeCashRegisterAction(
+  orgSlug: string,
+  orgId: string,
+  type: CashClosureType,
+  operator: string,
+) {
   const res = await closeCashRegister(orgId, type, operator);
-  if (res.ok) refresh(orgSlug);
+  if (!res.ok) return res;
+
+  refresh(orgSlug);
+
+  // Pont Caisse → Trésorerie : seule la clôture journalière (Z) crée une recette.
+  // Les clôtures mois/année agrègent des jours déjà comptabilisés → pas de double comptage.
+  if (type === "jour" && res.closure) {
+    const c = res.closure;
+    const net = Number(c.total_ttc);
+    if (net !== 0) {
+      await createTransaction({
+        organization_id: orgId,
+        person_id: null,
+        type: "recette",
+        category: "Encaissements caisse",
+        amount: net,
+        date: c.period_end.slice(0, 10),
+        label: `Clôture Z — ${c.period_label}`,
+        status: "validee",
+        notes: `${c.entry_count} écriture(s) · sceau ${c.closure_hash?.slice(0, 8) ?? "—"}`,
+        cash_closure_id: c.id,
+      });
+      revalidatePath(`/dashboard/${orgSlug}/finances`);
+    }
+  }
+
   return res;
 }
 

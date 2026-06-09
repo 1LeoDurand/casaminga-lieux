@@ -723,12 +723,14 @@ export interface TransactionInput {
   label: string;
   status: Transaction["status"];
   notes: string | null;
+  cash_closure_id?: string | null;
 }
 
 export async function createTransaction(input: TransactionInput): Promise<boolean> {
-  if (!isSupabaseConfigured()) { addDemoTransaction(input); return true; }
+  const payload = { ...input, cash_closure_id: input.cash_closure_id ?? null };
+  if (!isSupabaseConfigured()) { addDemoTransaction(payload); return true; }
   const supabase = await createClient();
-  const { error } = await supabase.from("transactions").insert(input);
+  const { error } = await supabase.from("transactions").insert(payload);
   if (error) console.error("createTransaction:", error);
   return !error;
 }
@@ -1312,6 +1314,18 @@ export async function getCashClosures(orgId: string): Promise<CashClosure[]> {
   return data ?? [];
 }
 
+/** IDs des clôtures Z déjà versées en trésorerie (transactions liées). */
+export async function getPostedClosureIds(orgId: string): Promise<Set<string>> {
+  if (!isSupabaseConfigured()) return new Set();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("transactions")
+    .select("cash_closure_id")
+    .eq("organization_id", orgId)
+    .not("cash_closure_id", "is", null);
+  return new Set((data ?? []).map((r) => r.cash_closure_id as string));
+}
+
 export interface CashEntryInput {
   organization_id: string;
   label: string;
@@ -1364,12 +1378,25 @@ export async function voidCashEntry(orgId: string, target: CashEntry, operator: 
   return { ok: true };
 }
 
-export async function closeCashRegister(orgId: string, type: CashClosureType, operator: string): Promise<{ ok: boolean; error?: string }> {
+export async function closeCashRegister(
+  orgId: string,
+  type: CashClosureType,
+  operator: string,
+): Promise<{ ok: boolean; error?: string; closure?: CashClosure }> {
   if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré" };
   const supabase = await createClient();
   const { error } = await supabase.rpc("cash_close", { p_org: orgId, p_type: type, p_operator: operator });
   if (error) { console.error("closeCashRegister:", error); return { ok: false, error: humanError(error) }; }
-  return { ok: true };
+  // Re-fetch de la clôture qui vient d'être créée (seq max pour cette org+type)
+  const { data: closure } = await supabase
+    .from("cash_closures")
+    .select("*")
+    .eq("organization_id", orgId)
+    .eq("closure_type", type)
+    .order("seq", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return { ok: true, closure: closure ?? undefined };
 }
 
 export async function verifyCashChain(orgId: string): Promise<CashVerifyResult | null> {
