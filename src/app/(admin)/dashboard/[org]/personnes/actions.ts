@@ -88,3 +88,53 @@ export async function anonymizePersonAction(
   if (ok) refresh(orgSlug);
   return { ok };
 }
+
+// ── Espace adhérent (portail) ─────────────────────────────────────────────────
+
+/**
+ * Envoie le lien espace adhérent à l'email de la fiche.
+ * Retourne toujours { ok: true } pour masquer les erreurs éventuelles.
+ */
+export async function sendPortalLinkAction(
+  personEmail: string,
+  personName: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const secret = process.env.PORTAL_LINK_SECRET;
+  if (!secret) return { ok: false, error: "PORTAL_LINK_SECRET non configuré" };
+
+  try {
+    const { sendMail } = await import("@/lib/mail");
+    const { tplPortalLink } = await import("@/lib/mail-templates");
+    const { portalUrlForEmail } = await import("@/lib/portal/url");
+
+    const url = portalUrlForEmail(personEmail);
+    const firstName = personName.split(" ")[0] ?? personName;
+    const sent = await sendMail({
+      to: personEmail,
+      subject: "Votre espace adhérent Casa Minga",
+      html: tplPortalLink({ firstName, portalUrl: url }),
+      category: "espace-adherent",
+    });
+    return sent ? { ok: true } : { ok: false, error: "Erreur d'envoi email" };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * Génère le lien espace adhérent sans envoyer d'email (pour copier dans le presse-papier).
+ */
+export async function getPortalLinkAction(
+  personEmail: string,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const secret = process.env.PORTAL_LINK_SECRET;
+  if (!secret) return { ok: false, error: "PORTAL_LINK_SECRET non configuré" };
+
+  try {
+    const { portalUrlForEmail } = await import("@/lib/portal/url");
+    const url = portalUrlForEmail(personEmail);
+    return { ok: true, url };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}

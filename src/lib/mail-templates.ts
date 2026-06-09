@@ -700,6 +700,27 @@ export function tplNewsletter(opts: {
   );
 }
 
+// ── 18. Lien espace adhérent (portail) ───────────────────────────────────
+
+export function tplPortalLink(opts: {
+  firstName: string;
+  portalUrl: string;
+}) {
+  return base(
+    `
+    ${h1("Votre espace adhérent ✨")}
+    ${p(`Bonjour <strong>${opts.firstName || "cher adhérent"}</strong>,`)}
+    ${p("Votre lien personnel pour accéder à votre espace adhérent est prêt. Vous y retrouvez votre statut d'adhésion, vos billets à venir et les liens de renouvellement.")}
+    ${btn("Accéder à mon espace →", opts.portalUrl)}
+    ${p(`Ce lien est strictement personnel — ne le partagez pas. Il reste valide jusqu'à ce que vous en demandiez un nouveau.`)}
+    <p style="margin:24px 0 0;font-size:12px;color:#9C9590;text-align:center;">
+      Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br/>
+      <span style="font-size:11px;word-break:break-all;">${opts.portalUrl}</span>
+    </p>
+  `
+  );
+}
+
 // ── 16. Facture / rappel de paiement (au client) ──────────────────────────
 
 export function tplFactureRappel(opts: {

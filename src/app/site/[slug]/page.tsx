@@ -102,6 +102,9 @@ export default async function PublicSitePage({
             {showAgenda ? <a href="#agenda" className="hover:opacity-70">Agenda</a> : null}
             {showAdherer ? <a href="#adherer" className="font-semibold" style={{ color: accent }}>Adhérer</a> : null}
             {showContact ? <a href="#contact" className="hover:opacity-70">Contact</a> : null}
+            <Link href="/espace" className="hidden rounded-full border border-border px-3 py-1 text-xs font-semibold hover:border-coral/40 sm:inline-flex">
+              Mon espace
+            </Link>
           </nav>
         </div>
       </header>

@@ -16,6 +16,8 @@ import {
   Download,
   ShieldOff,
   ShieldCheck,
+  Link2,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/mc/avatar";
@@ -33,6 +35,8 @@ import {
   deletePersonAction,
   updatePersonAction,
   anonymizePersonAction,
+  sendPortalLinkAction,
+  getPortalLinkAction,
 } from "@/app/(admin)/dashboard/[org]/personnes/actions";
 import { PersonAccessPanel } from "@/components/mc/person-access-panel";
 import type { Person, TeamMember } from "@/lib/types";
@@ -48,6 +52,64 @@ function toggle<T>(set: Set<T>, value: T): Set<T> {
 
 function RoleBadge({ role }: { role: string }) {
   return <span className={`mc-badge ${roleBadge(role)}`}>{roleLabel(role)}</span>;
+}
+
+// ── Espace adhérent : boutons envoi lien + copie ─────────────────────────────
+
+function PortalLinkButtons({ email, name }: { email: string; name: string }) {
+  const [sending, setSending] = useState(false);
+  const [copying, setCopying] = useState(false);
+
+  async function handleSend() {
+    setSending(true);
+    const res = await sendPortalLinkAction(email, name);
+    setSending(false);
+    if (res.ok) {
+      toast.success("Lien espace envoyé ✓");
+    } else {
+      toast.error(res.error ?? "Erreur d'envoi");
+    }
+  }
+
+  async function handleCopy() {
+    setCopying(true);
+    const res = await getPortalLinkAction(email);
+    setCopying(false);
+    if (res.ok && res.url) {
+      await navigator.clipboard.writeText(res.url);
+      toast.success("Lien copié ✓");
+    } else {
+      toast.error(res.error ?? "Erreur");
+    }
+  }
+
+  return (
+    <div>
+      <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-warmgray">
+        Espace adhérent
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={sending}
+          className="flex items-center gap-1.5 rounded-lg border border-coral/30 bg-peach-pale px-3 py-1.5 text-[12px] font-medium text-coral-dark hover:bg-coral/10 disabled:opacity-50"
+        >
+          <Send className="size-3.5" />
+          {sending ? "Envoi…" : "Envoyer le lien"}
+        </button>
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={copying}
+          className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          <Link2 className="size-3.5" />
+          {copying ? "…" : "Copier le lien"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function PersonsView({
@@ -483,6 +545,14 @@ export function PersonsView({
                   orgId={orgId}
                 />
               </div>
+
+              {/* Section Espace adhérent */}
+              {selected.email && !selected.anonymized_at && (
+                <PortalLinkButtons
+                  email={selected.email}
+                  name={selected.name}
+                />
+              )}
 
               {/* Section RGPD */}
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
