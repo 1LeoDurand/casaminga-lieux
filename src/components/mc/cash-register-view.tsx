@@ -41,6 +41,17 @@ const EMPTY: EntryForm = {
   payment_method: "especes", source: "adhesion", operator: "", source_ref: "", receipt_email: "", pole_id: "",
 };
 
+/** Raccourcis rapides — pré-remplissent le formulaire en 1 clic */
+type Shortcut = Partial<Omit<EntryForm, "operator" | "receipt_email" | "pole_id" | "source_ref">>;
+const QUICK_PRESETS: { label: string; emoji: string; values: Shortcut }[] = [
+  { label: "Adhésion 20€",     emoji: "🤝", values: { label: "Adhésion",          amount_ttc: "20",  vat_rate: "0",  payment_method: "especes", source: "adhesion"    } },
+  { label: "Adhésion 40€",     emoji: "🤝", values: { label: "Adhésion",          amount_ttc: "40",  vat_rate: "0",  payment_method: "especes", source: "adhesion"    } },
+  { label: "Billet événement", emoji: "🎟", values: { label: "Billet événement",  amount_ttc: "",    vat_rate: "0",  payment_method: "cb",       source: "billetterie" } },
+  { label: "Café 2€",          emoji: "☕", values: { label: "Café",              amount_ttc: "2",   vat_rate: "10", payment_method: "especes", source: "buvette"     } },
+  { label: "Don libre",        emoji: "💛", values: { label: "Don libre",         amount_ttc: "",    vat_rate: "0",  payment_method: "especes", source: "don"         } },
+  { label: "Boutique",         emoji: "🛍", values: { label: "Vente boutique",    amount_ttc: "",    vat_rate: "20", payment_method: "especes", source: "boutique"    } },
+];
+
 function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
   open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[];
 }) {
@@ -52,6 +63,10 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
   const ttc = parseFloat(form.amount_ttc) || 0;
   const rate = parseFloat(form.vat_rate) || 0;
   const { ht, vat } = splitVat(ttc, rate);
+
+  function applyPreset(p: Shortcut) {
+    setForm((f) => ({ ...f, ...p }));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,6 +108,23 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles }: {
 
         <form onSubmit={submit} className="flex flex-1 flex-col overflow-y-auto">
           <div className="flex flex-col gap-4 p-6">
+            {/* Raccourcis rapides */}
+            <div>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Raccourcis</p>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => applyPreset(p.values)}
+                    className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-white"
+                  >
+                    <span>{p.emoji}</span> {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Field label="Libellé *">
               <input required value={form.label} onChange={set("label")} placeholder="ex : Adhésion 2026 — M. Durand" className={inputCls} />
             </Field>
