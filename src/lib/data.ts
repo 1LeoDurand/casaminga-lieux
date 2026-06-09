@@ -1373,6 +1373,32 @@ export async function getCashClosures(orgId: string): Promise<CashClosure[]> {
   return data ?? [];
 }
 
+export async function getCashClosureById(orgId: string, id: string): Promise<CashClosure | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.from("cash_closures").select("*")
+    .eq("organization_id", orgId).eq("id", id).maybeSingle();
+  return (data as CashClosure) ?? null;
+}
+
+/** Écriture de la période d'une clôture (entre first_entry_seq et last_entry_seq). */
+export async function getCashEntriesForClosure(
+  orgId: string,
+  firstSeq: number,
+  lastSeq: number
+): Promise<CashEntry[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cash_entries")
+    .select("*")
+    .eq("organization_id", orgId)
+    .gte("seq", firstSeq)
+    .lte("seq", lastSeq)
+    .order("seq", { ascending: true });
+  return data ?? [];
+}
+
 /** IDs des clôtures Z déjà versées en trésorerie (transactions liées). */
 export async function getPostedClosureIds(orgId: string): Promise<Set<string>> {
   if (!isSupabaseConfigured()) return new Set();

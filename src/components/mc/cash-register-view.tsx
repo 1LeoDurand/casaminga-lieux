@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   Plus, X, Lock, ShieldCheck, ShieldAlert, Receipt, Ban, FileText,
   ChevronDown, AlertTriangle, Fingerprint, Calculator,
-  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer, FileEdit,
+  CheckSquare, Square, Tag, BarChart2, TrendingUp, CheckCircle2, User, Search, Printer, FileEdit, Download,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -746,8 +746,18 @@ export function CashRegisterView({
                     )}
                   </div>
                 )}
-                <div className="mt-2 flex items-center gap-1 font-mono text-[10px] text-slate-400" title={c.closure_hash}>
-                  <Fingerprint className="size-3" /> sceau {shortHash(c.closure_hash)}
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="flex items-center gap-1 font-mono text-[10px] text-slate-400" title={c.closure_hash}>
+                    <Fingerprint className="size-3" /> sceau {shortHash(c.closure_hash)}
+                  </div>
+                  <a
+                    href={`/dashboard/${orgSlug}/caisse/clotures/${c.id}/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-auto flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    <Download className="size-3.5" /> Rapport PDF
+                  </a>
                 </div>
               </div>
             ))}
