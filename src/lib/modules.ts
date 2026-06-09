@@ -40,11 +40,9 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Gestion du lieu",
     modules: [
-      { key: "espaces",      label: "Espaces",       segment: "espaces",      layer: 1, tableKey: "spaces",         description: "Catalogue des salles et ateliers réservables.",       minTier: "complete" },
-      { key: "reservations", label: "Réservations",  segment: "reservations", layer: 1, tableKey: "reservations",   description: "Planification et suivi des créneaux.",                minTier: "complete" },
-      { key: "residences",   label: "Résidences",    segment: "residences",   layer: 1, tableKey: "residences",     description: "Accueil d'artistes et de projets.",                   minTier: "complete" },
-      { key: "artistes",     label: "Artistes",      segment: "artistes",     layer: 1, tableKey: "artists",        description: "Profils et portfolios des artistes accueillis.",      minTier: "complete" },
-      { key: "evenements",   label: "Événements",    segment: "evenements",   layer: 1, tableKey: "events",         description: "Ateliers, concerts, AG — visibles sur votre site." },
+      { key: "espaces",    label: "Espaces",    segment: "espaces",    layer: 1, tableKey: "spaces",     description: "Catalogue des salles et ateliers réservables, avec planning des créneaux.", minTier: "complete" },
+      { key: "residences", label: "Résidences", segment: "residences", layer: 1, tableKey: "residences", description: "Séjours artistiques et annuaire des artistes accueillis.",               minTier: "complete" },
+      { key: "evenements", label: "Événements", segment: "evenements", layer: 1, tableKey: "events",     description: "Ateliers, concerts, AG — visibles sur votre site." },
     ],
   },
   {
@@ -100,14 +98,14 @@ export const ORG_ARCHETYPES: OrgArchetype[] = [
     emoji: "🏠",
     label: "Tiers-lieu / lieu hybride",
     description: "Espace de vie collective, polyvalent, ouvert au quartier.",
-    modules: ["espaces", "reservations", "evenements", "adhesions", "taches"],
+    modules: ["espaces", "evenements", "adhesions", "taches"],
   },
   {
     key: "coworking",
     emoji: "💻",
     label: "Espace de coworking",
     description: "Location de bureaux, postes nomades, salles de réunion.",
-    modules: ["espaces", "reservations", "factures", "finances", "taches"],
+    modules: ["espaces", "factures", "finances", "taches"],
   },
   {
     key: "culturel",
@@ -121,7 +119,7 @@ export const ORG_ARCHETYPES: OrgArchetype[] = [
     emoji: "🎨",
     label: "Résidence / fabrique artistique",
     description: "Accueil d'artistes en résidence, studios, espaces de création.",
-    modules: ["residences", "artistes", "espaces", "evenements", "taches"],
+    modules: ["residences", "espaces", "evenements", "taches"],
   },
   {
     key: "association",

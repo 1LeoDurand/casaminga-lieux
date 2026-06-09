@@ -20,7 +20,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
 
 function refresh(orgSlug: string) {
-  revalidatePath(`/dashboard/${orgSlug}/reservations`);
+  revalidatePath(`/dashboard/${orgSlug}/espaces`);
   revalidatePath(`/dashboard/${orgSlug}`);
 }
 
@@ -154,8 +154,8 @@ export async function sendReservationPaymentLinkAction(
     label,
     reservationId: resa.id,
     customerEmail: person?.email ?? null,
-    successUrl: `${base}/dashboard/${orgSlug}/reservations?paid=1`,
-    cancelUrl: `${base}/dashboard/${orgSlug}/reservations?paycancel=1`,
+    successUrl: `${base}/dashboard/${orgSlug}/espaces?vue=planning&paid=1`,
+    cancelUrl: `${base}/dashboard/${orgSlug}/espaces?vue=planning&paycancel=1`,
   });
   if (!session) return { ok: false, error: "Impossible de créer la session de paiement." };
 

@@ -1480,6 +1480,8 @@ export async function getTeamMembers(orgId: string): Promise<TeamMember[]> {
       user_id: "demo-user", organization_id: orgId, role: "admin",
       zones: [], status: "actif", created_at: new Date().toISOString(),
       full_name: "Léo Durand", email: "leo@example.org",
+      perm_pilotage: true, perm_gestion_lieu: true, perm_structure: true,
+      perm_publication: true, perm_systeme: true,
     }];
   }
   const supabase = await createClient();

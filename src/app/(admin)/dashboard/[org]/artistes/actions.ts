@@ -7,7 +7,6 @@ import {
 } from "@/lib/data";
 
 function refresh(orgSlug: string) {
-  revalidatePath(`/dashboard/${orgSlug}/artistes`);
   revalidatePath(`/dashboard/${orgSlug}/residences`);
   revalidatePath(`/dashboard/${orgSlug}`);
 }

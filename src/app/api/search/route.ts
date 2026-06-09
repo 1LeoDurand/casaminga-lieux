@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     hits.push({ type: "document", id: doc.id, label: doc.file_name ?? "Document", sublabel: "", href: `/dashboard/${org}/documents` });
   }
   for (const res of reservations.data ?? []) {
-    hits.push({ type: "reservation", id: res.id, label: res.title ?? "Réservation", sublabel: res.status, href: `/dashboard/${org}/reservations` });
+    hits.push({ type: "reservation", id: res.id, label: res.title ?? "Réservation", sublabel: res.status, href: `/dashboard/${org}/espaces?vue=planning` });
   }
 
   return NextResponse.json({ hits: hits.slice(0, 20) });
