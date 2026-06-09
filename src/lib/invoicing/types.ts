@@ -99,8 +99,42 @@ export interface InvoiceSettings {
   number_start: number;
   logo_url: string | null;
   require_validation_above: number | null;
+  /** Cerfa 11580*04 — qualité de l'association (ex. "association d'intérêt général") */
+  tax_receipt_quality: string | null;
+  /** Cerfa 11580*04 — nom + qualité du signataire */
+  tax_receipt_signatory: string | null;
   updated_at: string;
 }
+
+// ── Reçus fiscaux ──────────────────────────────────────────────────────────
+
+export type DonationType = "numeraire" | "cheque" | "virement" | "titres" | "bien";
+
+export interface TaxReceipt {
+  id: string;
+  organization_id: string;
+  number: string | null;
+  donor_person_id: string | null;
+  donor_name: string;
+  donor_address: string | null;
+  amount: number;
+  donation_date: string;
+  donation_type: DonationType;
+  fiscal_year: number;
+  transaction_id: string | null;
+  pdf_url: string | null;
+  created_at: string;
+}
+
+export type TaxReceiptInput = Omit<TaxReceipt, "id" | "number" | "pdf_url" | "created_at">;
+
+export const DONATION_TYPES: { value: DonationType; label: string }[] = [
+  { value: "numeraire",  label: "Numéraire (espèces)" },
+  { value: "cheque",     label: "Chèque" },
+  { value: "virement",   label: "Virement" },
+  { value: "titres",     label: "Titres / valeurs mobilières" },
+  { value: "bien",       label: "Don en nature (bien)" },
+];
 
 export const STATUS_META: Record<InvoiceStatus, { label: string; cls: string }> = {
   brouillon: { label: "Brouillon", cls: "bg-slate-100 text-slate-600" },

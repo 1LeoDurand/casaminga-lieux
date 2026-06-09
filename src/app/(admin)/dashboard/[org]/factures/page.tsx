@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Plus, Settings2, Users, Download } from "lucide-react";
+import { Plus, Settings2, Users, Download, Gift } from "lucide-react";
 import { PageHeader } from "@/components/mc/page-header";
 import { InvoicesView } from "@/components/mc/invoices-view";
 import { getOrganizationBySlug } from "@/lib/data";
@@ -36,6 +36,9 @@ export default async function FacturesPage({ params }: { params: Promise<{ org: 
           <>
             <Link href={`/dashboard/${org}/factures/coworking`} className="mc-dq-btn">
               <Users className="mc-dq-ic size-4" /> Coworking
+            </Link>
+            <Link href={`/dashboard/${org}/factures/recus`} className="mc-dq-btn">
+              <Gift className="mc-dq-ic size-4" /> Reçus fiscaux
             </Link>
             <a href={`/dashboard/${org}/factures/export`} className="mc-dq-btn">
               <Download className="mc-dq-ic size-4" /> Export CSV
