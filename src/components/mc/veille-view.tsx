@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight } from "lucide-react";
+import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight, FolderOpen } from "lucide-react";
 import {
   type GrantOpportunity,
   type OrgGrantProfile,
@@ -284,6 +285,14 @@ export function VeilleView({
                       <ArrowRight className="size-3.5" /> Voir la convention
                     </a>
                   )}
+
+                  {/* Lien vers le dossier guidé */}
+                  <Link
+                    href={`/dashboard/${orgSlug}/subventions/veille/${opp.id}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40"
+                  >
+                    <FolderOpen className="size-3.5" /> Préparer le dossier
+                  </Link>
 
                   {opp.application_url && (
                     <a href={opp.application_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40">
