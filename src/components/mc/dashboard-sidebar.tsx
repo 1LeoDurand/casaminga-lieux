@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { signOutAction } from "@/app/(admin)/actions";
 import type { OrgTier } from "@/lib/modules";
 import {
   LayoutDashboard,
@@ -35,6 +36,7 @@ import {
   Plus,
   TrendingDown,
   Sparkles,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { MODULE_SECTIONS, type ModuleDef, type ModuleSection } from "@/lib/modules";
@@ -209,6 +211,76 @@ function SectionGroup({
   );
 }
 
+// ── UserMenu : avatar + dropdown déconnexion ─────────────────────────────────
+function UserMenu({
+  orgSlug,
+  userName,
+  userRole,
+  initials,
+}: {
+  orgSlug: string;
+  userName: string;
+  userRole: string;
+  initials: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative mt-auto shrink-0 border-t border-white/[0.07] px-3 py-4">
+      {/* Dropdown — s'ouvre vers le haut */}
+      {open && (
+        <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#1e1e22] shadow-xl">
+          <Link
+            href={`/dashboard/${orgSlug}/parametres`}
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
+          >
+            <Settings className="size-4 shrink-0" />
+            Paramètres du lieu
+          </Link>
+          <div className="mx-3 border-t border-white/[0.07]" />
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-[13px] text-red-400 transition-colors hover:bg-white/[0.07] hover:text-red-300"
+            >
+              <LogOut className="size-4 shrink-0" />
+              Se déconnecter
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.07]"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[14px] bg-coral text-[12px] font-bold text-white">
+          {initials}
+        </span>
+        <div className="min-w-0 flex-1 text-left">
+          <div className="truncate text-[13px] font-semibold text-white">{userName}</div>
+          <div className="text-[11px] text-white/35">{userRole}</div>
+        </div>
+        <ChevronDown
+          className={`size-3.5 shrink-0 text-white/30 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function DashboardSidebar({
   orgSlug,
   orgName,
@@ -335,17 +407,12 @@ export function DashboardSidebar({
       )}
 
       {/* Pied : utilisateur */}
-      <div className="mt-auto shrink-0 border-t border-white/[0.07] px-3 py-4">
-        <div className="flex cursor-pointer items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.07]">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-[14px] bg-coral text-[12px] font-bold text-white">
-            {initials}
-          </span>
-          <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold text-white">{userName}</div>
-            <div className="text-[11px] text-white/35">{userRole}</div>
-          </div>
-        </div>
-      </div>
+      <UserMenu
+        orgSlug={orgSlug}
+        userName={userName}
+        userRole={userRole}
+        initials={initials}
+      />
     </aside>
   );
 }
