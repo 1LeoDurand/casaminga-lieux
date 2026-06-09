@@ -40,7 +40,6 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Gestion du lieu",
     modules: [
-      { key: "communaute",   label: "Communauté",    segment: "communaute",   layer: 1, tableKey: "announcements", description: "Annonces et vie collective.",                          minTier: "complete" },
       { key: "espaces",      label: "Espaces",       segment: "espaces",      layer: 1, tableKey: "spaces",         description: "Catalogue des salles et ateliers réservables.",       minTier: "complete" },
       { key: "reservations", label: "Réservations",  segment: "reservations", layer: 1, tableKey: "reservations",   description: "Planification et suivi des créneaux.",                minTier: "complete" },
       { key: "residences",   label: "Résidences",    segment: "residences",   layer: 1, tableKey: "residences",     description: "Accueil d'artistes et de projets.",                   minTier: "complete" },
@@ -101,7 +100,7 @@ export const ORG_ARCHETYPES: OrgArchetype[] = [
     emoji: "🏠",
     label: "Tiers-lieu / lieu hybride",
     description: "Espace de vie collective, polyvalent, ouvert au quartier.",
-    modules: ["espaces", "reservations", "evenements", "adhesions", "communaute", "taches"],
+    modules: ["espaces", "reservations", "evenements", "adhesions", "taches"],
   },
   {
     key: "coworking",
@@ -115,7 +114,7 @@ export const ORG_ARCHETYPES: OrgArchetype[] = [
     emoji: "🎭",
     label: "Lieu culturel / MJC",
     description: "Programmation artistique, ateliers, animations de quartier.",
-    modules: ["evenements", "adhesions", "communaute", "communication", "taches"],
+    modules: ["evenements", "adhesions", "communication", "taches"],
   },
   {
     key: "residence",
@@ -129,14 +128,14 @@ export const ORG_ARCHETYPES: OrgArchetype[] = [
     emoji: "🤝",
     label: "Association (sans lieu fixe)",
     description: "Gestion de membres, adhésions, finances et communication.",
-    modules: ["adhesions", "communaute", "finances", "communication", "taches"],
+    modules: ["adhesions", "finances", "communication", "taches"],
   },
   {
     key: "autre",
     emoji: "➕",
     label: "Autre",
     description: "Je définirai mes besoins après l'inscription.",
-    modules: ["adhesions", "communaute", "evenements"],
+    modules: ["adhesions", "evenements"],
   },
 ];
 

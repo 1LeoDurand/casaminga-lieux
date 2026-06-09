@@ -41,7 +41,6 @@ const PLANS = [
       "Documents & gouvernance",
       "Résidences d'artistes",
       "Espaces & réservations",
-      "Communauté & newsletter",
       "Pôles & budget par pôle",
       "Impact & partenaires",
       "Automatisations",
@@ -158,6 +157,30 @@ export default async function UpgradePage({ params }: { params: Promise<{ org: s
             </div>
           );
         })}
+      </div>
+
+      {/* Améliorations à venir */}
+      <div className="mt-8 rounded-2xl border border-border bg-white p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Sparkles className="size-4 text-amber-500" />
+          <h2 className="font-heading text-base font-bold text-ink">Améliorations à venir</h2>
+        </div>
+        <p className="mb-4 text-[13px] text-warmgray">
+          Ces fonctionnalités sont en cours de conception — elles seront intégrées dans les prochaines versions.
+        </p>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { icon: "🤝", label: "Communauté", desc: "Annonces internes, tableau d'affichage et vie collective du lieu." },
+          ].map((item) => (
+            <li key={item.label} className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-[#FAFAF7] p-3.5">
+              <span className="text-lg">{item.icon}</span>
+              <div>
+                <p className="text-[13px] font-semibold text-ink">{item.label}</p>
+                <p className="text-[12px] text-warmgray">{item.desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Philosophie + soutien */}
