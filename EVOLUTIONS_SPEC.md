@@ -429,8 +429,26 @@ Aujourd'hui : page pricing existe, mais **aucun encaissement d'abonnement**. Cha
 ### 10.1-bis — Paiement des réservations par lieu (Stripe Connect) — ✅ Lot A FAIT
 Décisions Léo : **Stripe Connect** (compte par lieu), **0 % de commission**, périmètre **lien de paiement sur réservation confirmée** (pas de tunnel public self-service).
 Livré : connexion Stripe dans Paramètres, bouton « Envoyer le lien de paiement » dans le tiroir réservation, webhook `checkout.session.completed` → réservation payée, email `tplLienPaiement`.
-- **Lot B (à faire)** : tunnel public self-service « réserver + payer » depuis le site public.
 - **Lot C (à faire)** : acompte %, remboursement, reçu PDF.
+
+#### 🔼 Upgrade potentiel — Lot B : tunnel public « réserver + payer » (~3-4 j)
+Aujourd'hui le paiement part **après** qu'un admin a confirmé une réservation (lien envoyé à la main). Lot B = laisser un **visiteur du site public** réserver un créneau et payer **sans intervention humaine**. C'est le pas qui rapproche vraiment du positionnement Cosoft (réservation d'espaces en self-service).
+
+**Périmètre proposé (à valider avec Léo avant de coder) :**
+- Page publique `/[lieu]/reserver` (ou bloc sur la vitrine établissement) : choix de l'espace, du créneau (créneaux libres calculés depuis `reservations` existantes pour éviter les chevauchements), saisie nom/email/tél.
+- À la soumission : création d'une `reservation` en statut `demande` + `payment_status='pending'`, puis Checkout Stripe Connect (réutilise `createCheckoutSession` de `src/lib/stripe.ts`, déjà en place).
+- Webhook `checkout.session.completed` (déjà construit) → réservation `confirmee` + `paid`. **Rien à recoder côté webhook.**
+- Email de confirmation au visiteur + notification à l'admin du lieu.
+
+**Décisions ouvertes :**
+- Confirmation **automatique** au paiement, ou réservation en **attente de validation** admin même après paiement (anti-litige sur dispo) ?
+- Tarification : prix fixe par espace, ou grille horaire/journée ? (champ `price` à ajouter sur `spaces` si tarif par espace.)
+- Gestion des créneaux : pas de temps (heure / demi-journée / journée), plages d'ouverture.
+- Anti-abus : réservation expirée si non payée sous X min (libère le créneau) — sinon un visiteur bloque un créneau sans payer.
+
+**Réutilisable tel quel :** `createCheckoutSession`, le webhook `/api/orgs/[slug]/stripe/webhook`, les colonnes `payment_status`/`stripe_session_id`/`amount_paid`/`paid_at` sur `reservations`. **À construire :** la page publique + le calcul de disponibilité + le champ tarif + l'expiration des créneaux non payés.
+
+> ⚠️ Ne PAS coder sans cadrage Léo (Opus) : confirmation auto vs validation, et modèle de tarif, changent toute l'UX.
 
 ### 10.2 — RGPD opérationnel
 Droit à l'oubli (export + suppression d'un membre sur demande), registre des traitements, anonymisation. Risque légal réel (centaines d'adhérents).
