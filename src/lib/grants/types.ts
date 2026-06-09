@@ -42,6 +42,7 @@ export interface GrantApplication {
   amount_requested: number | null;
   applied_at: string | null;
   result_at: string | null;
+  linked_grant_id: string | null;
   created_at: string;
   updated_at: string;
 }

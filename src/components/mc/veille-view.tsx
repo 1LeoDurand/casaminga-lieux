@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown } from "lucide-react";
+import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight } from "lucide-react";
 import {
   type GrantOpportunity,
   type OrgGrantProfile,
@@ -15,7 +15,11 @@ import {
   APPLICATION_STATUS_META,
   eligibilityScore,
 } from "@/lib/grants/types";
-import { saveGrantProfile, upsertApplicationAction } from "@/app/(admin)/dashboard/[org]/subventions/veille/actions";
+import {
+  saveGrantProfile,
+  upsertApplicationAction,
+  deleteApplicationAction,
+} from "@/app/(admin)/dashboard/[org]/subventions/veille/actions";
 
 const inputCls = "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none focus:border-coral";
 const labelCls = "mb-1 block text-[12px] font-semibold text-ink";
@@ -43,7 +47,7 @@ function ApplicationStatusPicker({
   busy,
 }: {
   current: ApplicationStatus | null;
-  onChange: (s: ApplicationStatus) => void;
+  onChange: (s: ApplicationStatus | "") => void;
   busy: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -95,7 +99,7 @@ function ApplicationStatusPicker({
               <div className="mx-3 border-t border-border" />
               <button
                 type="button"
-                onClick={() => { /* handled by parent */ onChange("" as ApplicationStatus); setOpen(false); }}
+                onClick={() => { onChange(""); setOpen(false); }}
                 className="flex w-full items-center gap-2 px-3.5 py-2 text-[12px] text-warmgray transition hover:bg-cream"
               >
                 <X className="size-3.5" /> Retirer du suivi
@@ -122,8 +126,9 @@ export function VeilleView({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  // Optimistic local state for applications map
-  const [localApps, setLocalApps] = useState<Map<string, ApplicationStatus | null>>(new Map());
+  // Optimistic local state: opportunity_id → { status, linked_grant_id }
+  type LocalApp = { status: ApplicationStatus | null; linked_grant_id?: string | null };
+  const [localApps, setLocalApps] = useState<Map<string, LocalApp>>(new Map());
 
   const scored = useMemo(() => {
     return opportunities
@@ -134,32 +139,61 @@ export function VeilleView({
   const visible = onlyEligible ? scored.filter((s) => s.score >= 50) : scored;
   const hasProfile = Boolean(profile?.region || profile?.structure_type || (profile?.themes.length ?? 0) > 0);
 
-  function getStatus(oppId: string): ApplicationStatus | null {
-    if (localApps.has(oppId)) return localApps.get(oppId) ?? null;
-    return initialApplications.get(oppId)?.status ?? null;
+  function getApp(oppId: string): { status: ApplicationStatus | null; linked_grant_id: string | null } {
+    if (localApps.has(oppId)) {
+      const l = localApps.get(oppId)!;
+      return { status: l.status, linked_grant_id: l.linked_grant_id ?? null };
+    }
+    const app = initialApplications.get(oppId);
+    return { status: app?.status ?? null, linked_grant_id: app?.linked_grant_id ?? null };
   }
 
-  function handleStatusChange(oppId: string, status: ApplicationStatus | "") {
-    const newStatus = status === "" ? null : status;
+  function handleStatusChange(opp: GrantOpportunity, statusOrEmpty: ApplicationStatus | "") {
+    const newStatus = statusOrEmpty === "" ? null : statusOrEmpty;
+
     // Optimistic update
-    setLocalApps((prev) => new Map(prev).set(oppId, newStatus));
-    setBusyId(oppId);
+    setLocalApps((prev) => new Map(prev).set(opp.id, {
+      status: newStatus,
+      linked_grant_id: getApp(opp.id).linked_grant_id,
+    }));
+    setBusyId(opp.id);
 
     startTransition(async () => {
       if (newStatus === null) {
-        // TODO: deleteApplication — for now just revert with no server call, show info
-        toast.info("Retrait du suivi disponible prochainement.");
-        setLocalApps((prev) => { const m = new Map(prev); m.delete(oppId); return m; });
+        // Delete
+        const res = await deleteApplicationAction(orgId, orgSlug, opp.id);
+        if (res.ok) {
+          toast.success("Dossier retiré du suivi.");
+          setLocalApps((prev) => { const m = new Map(prev); m.delete(opp.id); return m; });
+        } else {
+          toast.error(res.error ?? "Erreur lors de la suppression.");
+          setLocalApps((prev) => { const m = new Map(prev); m.delete(opp.id); return m; });
+        }
         setBusyId(null);
         return;
       }
-      const res = await upsertApplicationAction(orgId, orgSlug, oppId, newStatus);
+
+      const res = await upsertApplicationAction(orgId, orgSlug, opp.id, newStatus, {
+        opportunityTitle: opp.title,
+        opportunityFunder: opp.funder,
+        opportunityFunderType: opp.funder_type ?? undefined,
+        opportunityAmountMax: opp.amount_max,
+      });
+
       if (res.ok) {
-        toast.success(`Statut mis à jour : ${APPLICATION_STATUS_META[newStatus].label}`);
+        // Update local with potential linked_grant_id from response
+        setLocalApps((prev) => new Map(prev).set(opp.id, {
+          status: newStatus,
+          linked_grant_id: res.linked_grant_id ?? getApp(opp.id).linked_grant_id,
+        }));
+        if (newStatus === "obtenu" && res.linked_grant_id) {
+          toast.success("Félicitations ! Une convention de subvention a été créée automatiquement. 🎉");
+        } else {
+          toast.success(`Statut mis à jour : ${APPLICATION_STATUS_META[newStatus].label}`);
+        }
       } else {
         toast.error(res.error ?? "Erreur");
-        // Revert
-        setLocalApps((prev) => { const m = new Map(prev); m.delete(oppId); return m; });
+        setLocalApps((prev) => { const m = new Map(prev); m.delete(opp.id); return m; });
       }
       setBusyId(null);
     });
@@ -199,7 +233,7 @@ export function VeilleView({
       ) : (
         <ul className="flex flex-col gap-3">
           {visible.map(({ opp, score }) => {
-            const currentStatus = getStatus(opp.id);
+            const { status: currentStatus, linked_grant_id } = getApp(opp.id);
             const isBusy = busyId === opp.id;
             return (
               <li key={opp.id} className="rounded-2xl border border-border bg-white p-5">
@@ -237,9 +271,19 @@ export function VeilleView({
                   {/* Statut candidature */}
                   <ApplicationStatusPicker
                     current={currentStatus}
-                    onChange={(s) => handleStatusChange(opp.id, s)}
+                    onChange={(s) => handleStatusChange(opp, s)}
                     busy={isBusy}
                   />
+
+                  {/* Lien vers la convention si "obtenu" */}
+                  {linked_grant_id && (
+                    <a
+                      href={`/dashboard/${orgSlug}/subventions`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-[12.5px] font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      <ArrowRight className="size-3.5" /> Voir la convention
+                    </a>
+                  )}
 
                   {opp.application_url && (
                     <a href={opp.application_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-[13px] font-semibold text-ink hover:border-coral/40">
@@ -299,7 +343,7 @@ function ProfileModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-6 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-heading text-lg font-bold text-ink">Profil d'éligibilité</h3>
+          <h3 className="font-heading text-lg font-bold text-ink">Profil d&apos;éligibilité</h3>
           <button onClick={onClose} className="rounded-lg p-1.5 text-warmgray hover:bg-cream"><X className="size-5" /></button>
         </div>
         <p className="mb-4 text-[13px] text-warmgray">Sert à classer les opportunités par pertinence et à pré-remplir vos dossiers.</p>
