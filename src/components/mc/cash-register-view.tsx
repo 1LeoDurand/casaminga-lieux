@@ -212,6 +212,8 @@ export function CashRegisterView({
   const [voidOperator, setVoidOperator] = useState("");
   const [closeType, setCloseType] = useState<CashClosureType | null>(null);
   const [closeOperator, setCloseOperator] = useState("");
+  const [openingFloat, setOpeningFloat] = useState("");
+  const [countedCash, setCountedCash] = useState("");
   const [closeMenu, setCloseMenu] = useState(false);
   const [verify, setVerify] = useState<CashVerifyResult | null>(null);
   const [pending, start] = useTransition();
@@ -296,10 +298,14 @@ export function CashRegisterView({
 
   async function handleClose() {
     if (!closeType || !closeOperator.trim()) { toast.error("Opérateur requis."); return; }
+    const floatVal = openingFloat.trim() ? parseFloat(openingFloat.replace(",", ".")) : null;
+    const countedVal = countedCash.trim() ? parseFloat(countedCash.replace(",", ".")) : null;
     start(async () => {
-      const res = await closeCashRegisterAction(orgSlug, orgId, closeType, closeOperator.trim());
-      if (res.ok) { toast.success(`${closureTypeLabel(closeType)} effectuée`); setCloseType(null); setCloseOperator(""); }
-      else toast.error(res.error ?? "Erreur");
+      const res = await closeCashRegisterAction(orgSlug, orgId, closeType, closeOperator.trim(), floatVal, countedVal);
+      if (res.ok) {
+        toast.success(`${closureTypeLabel(closeType)} effectuée`);
+        setCloseType(null); setCloseOperator(""); setOpeningFloat(""); setCountedCash("");
+      } else toast.error(res.error ?? "Erreur");
     });
   }
 
@@ -562,6 +568,19 @@ export function CashRegisterView({
                     ))}
                   </div>
                 )}
+                {/* Fond de caisse */}
+                {c.closure_type === "jour" && c.opening_float !== null && (
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-[11px]">
+                    <span className="text-slate-500">Fond ouvert. <b className="text-slate-700">{fmtEuro(c.opening_float ?? 0)}</b></span>
+                    {c.counted_cash !== null && <span className="text-slate-500">Compté <b className="text-slate-700">{fmtEuro(c.counted_cash)}</b></span>}
+                    {c.expected_cash !== null && <span className="text-slate-500">Théorique <b className="text-slate-700">{fmtEuro(c.expected_cash)}</b></span>}
+                    {c.variance !== null && (
+                      <span className={`font-bold ${c.variance === 0 ? "text-emerald-700" : Math.abs(c.variance) < 1 ? "text-amber-700" : "text-red-700"}`}>
+                        Écart {c.variance >= 0 ? "+" : ""}{fmtEuro(c.variance)}{c.variance !== 0 ? " ⚠" : " ✓"}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="mt-2 flex items-center gap-1 font-mono text-[10px] text-slate-400" title={c.closure_hash}>
                   <Fingerprint className="size-3" /> sceau {shortHash(c.closure_hash)}
                 </div>
@@ -600,28 +619,84 @@ export function CashRegisterView({
       )}
 
       {/* Dialog clôture */}
-      {closeType && (
-        <ConfirmDialog
-          open
-          title={closureTypeLabel(closeType)}
-          message={
-            <>
-              Cette clôture scelle définitivement toutes les écritures depuis le dernier arrêté de même type et fige les totaux. Action irréversible.
-              <span className="mt-3 flex flex-col gap-2">
-                <span className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                  <span className="text-slate-500">Montant à clôturer</span>
-                  <b className="text-slate-800">{fmtEuro(nonClotured)}</b>
+      {closeType && (() => {
+        const floatNum = openingFloat.trim() ? parseFloat(openingFloat.replace(",", ".")) : null;
+        const countedNum = countedCash.trim() ? parseFloat(countedCash.replace(",", ".")) : null;
+        // Espèces dans les écritures non clôturées
+        const espSum = openEntries
+          .filter((e) => e.payment_method === "especes" && !e.is_void)
+          .reduce((s, e) => s + Number(e.amount_ttc), 0);
+        const expectedNum = floatNum !== null ? floatNum + espSum : null;
+        const varianceNum = expectedNum !== null && countedNum !== null ? countedNum - expectedNum : null;
+        return (
+          <ConfirmDialog
+            open
+            title={closureTypeLabel(closeType)}
+            message={
+              <>
+                Cette clôture scelle définitivement toutes les écritures depuis le dernier arrêté de même type et fige les totaux. Action irréversible.
+                <span className="mt-3 flex flex-col gap-2">
+                  <span className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                    <span className="text-slate-500">Montant à clôturer</span>
+                    <b className="text-slate-800">{fmtEuro(nonClotured)}</b>
+                  </span>
+                  {closeType === "jour" && (
+                    <>
+                      <div className="border-t border-slate-100 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        Fond de caisse (espèces uniquement — optionnel)
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] text-slate-500">Fond d&apos;ouverture</label>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={openingFloat}
+                            onChange={(e) => setOpeningFloat(e.target.value)}
+                            placeholder="ex : 50,00 €"
+                            className={inputCls}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] text-slate-500">Espèces comptées</label>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={countedCash}
+                            onChange={(e) => setCountedCash(e.target.value)}
+                            placeholder="Comptage tiroir"
+                            className={inputCls}
+                          />
+                        </div>
+                      </div>
+                      {expectedNum !== null && (
+                        <div className="flex flex-col gap-1 rounded-lg bg-slate-50 px-3 py-2 text-[12px]">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Espèces théoriques</span>
+                            <span className="font-medium text-slate-700">{fmtEuro(expectedNum)}</span>
+                          </div>
+                          {varianceNum !== null && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Écart</span>
+                              <span className={`font-bold ${varianceNum === 0 ? "text-emerald-700" : Math.abs(varianceNum) < 1 ? "text-amber-700" : "text-red-700"}`}>
+                                {varianceNum >= 0 ? "+" : ""}{fmtEuro(varianceNum)}
+                                {varianceNum !== 0 && " ⚠"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <input value={closeOperator} onChange={(e) => setCloseOperator(e.target.value)} placeholder="Opérateur responsable *" className={inputCls} />
                 </span>
-                <input value={closeOperator} onChange={(e) => setCloseOperator(e.target.value)} placeholder="Opérateur responsable *" className={inputCls} />
-              </span>
-            </>
-          }
-          tone="default" busy={pending}
-          confirmLabel="Confirmer la clôture"
-          onConfirm={handleClose}
-          onCancel={() => setCloseType(null)}
-        />
-      )}
+              </>
+            }
+            tone="default" busy={pending}
+            confirmLabel="Confirmer la clôture"
+            onConfirm={handleClose}
+            onCancel={() => setCloseType(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

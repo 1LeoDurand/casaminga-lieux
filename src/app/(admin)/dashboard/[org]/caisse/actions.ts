@@ -70,8 +70,10 @@ export async function closeCashRegisterAction(
   orgId: string,
   type: CashClosureType,
   operator: string,
+  openingFloat?: number | null,
+  countedCash?: number | null,
 ) {
-  const res = await closeCashRegister(orgId, type, operator);
+  const res = await closeCashRegister(orgId, type, operator, openingFloat, countedCash);
   if (!res.ok) return res;
 
   refresh(orgSlug);

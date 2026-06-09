@@ -1382,12 +1382,20 @@ export async function closeCashRegister(
   orgId: string,
   type: CashClosureType,
   operator: string,
+  openingFloat?: number | null,
+  countedCash?: number | null,
 ): Promise<{ ok: boolean; error?: string; closure?: CashClosure }> {
   if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré" };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("cash_close", { p_org: orgId, p_type: type, p_operator: operator });
+  const { error } = await supabase.rpc("cash_close", {
+    p_org: orgId,
+    p_type: type,
+    p_operator: operator,
+    p_opening_float: openingFloat ?? null,
+    p_counted_cash: countedCash ?? null,
+  });
   if (error) { console.error("closeCashRegister:", error); return { ok: false, error: humanError(error) }; }
-  // Re-fetch de la clôture qui vient d'être créée (seq max pour cette org+type)
+  // Re-fetch de la clôture créée (seq max pour cette org+type)
   const { data: closure } = await supabase
     .from("cash_closures")
     .select("*")

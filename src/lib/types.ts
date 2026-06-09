@@ -457,6 +457,11 @@ export interface CashClosure {
   closed_at: string;
   prev_hash: string;
   closure_hash: string;
+  // Fond de caisse (Lot B)
+  opening_float: number | null;
+  counted_cash: number | null;
+  expected_cash: number | null;
+  variance: number | null;
 }
 
 export interface CashVerifyResult {
