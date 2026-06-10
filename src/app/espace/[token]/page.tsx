@@ -20,5 +20,5 @@ export default async function EspaceTokenPage({
   const data = await getPortalDataByEmail(email);
   if (!data) notFound(); // Supabase non configuré (mode démo)
 
-  return <PortalDashboard data={data} />;
+  return <PortalDashboard data={data} token={token} />;
 }

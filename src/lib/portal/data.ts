@@ -29,6 +29,14 @@ export interface PortalBillet {
   eventSlug: string | null;
 }
 
+export interface PortalRecu {
+  id: string;
+  number: string | null;
+  year: number;
+  amount: number;
+  donationDate: string;
+}
+
 export interface PortalOrgData {
   orgId: string;
   orgSlug: string;
@@ -36,6 +44,7 @@ export interface PortalOrgData {
   displayName: string;        // nom de la fiche persons si disponible, sinon orgName
   adhesion: PortalAdhesion | null;
   billets: PortalBillet[];
+  recus: PortalRecu[];
   activeCampaignSlug: string | null;  // slug pour le lien renouvellement
 }
 
@@ -79,7 +88,7 @@ export async function getPortalDataByEmail(
   const [personsRes, adhesionsRes, billetsRes] = await Promise.all([
     admin
       .from("persons")
-      .select("organization_id, name")
+      .select("id, organization_id, name")
       .ilike("email", email)
       .is("anonymized_at", null),
     admin
@@ -102,8 +111,17 @@ export async function getPortalDataByEmail(
 
   const orgIds = Array.from(allOrgIds);
 
+  // Index persons IDs par org (pour la jointure tax_receipts via donor_person_id)
+  const personIdsByOrg = new Map<string, string[]>();
+  const allPersonIds: string[] = [];
+  for (const p of personsRes.data ?? []) {
+    if (!personIdsByOrg.has(p.organization_id)) personIdsByOrg.set(p.organization_id, []);
+    personIdsByOrg.get(p.organization_id)!.push(p.id);
+    allPersonIds.push(p.id);
+  }
+
   // ── 2. Infos orgs ─────────────────────────────────────────────────────────
-  const [orgsRes, tiersRes, campaignsRes, eventsRes] = await Promise.all([
+  const [orgsRes, tiersRes, campaignsRes, eventsRes, taxReceiptsRes] = await Promise.all([
     admin
       .from("organizations")
       .select("id, slug, name")
@@ -128,6 +146,15 @@ export async function getPortalDataByEmail(
         .select("id, title, start_at, slug")
         .in("id", eventIds)
         .gte("start_at", new Date().toISOString());
+    })(),
+    // Reçus fiscaux via donor_person_id (tax_receipts n'a pas de colonne email)
+    (() => {
+      if (!allPersonIds.length) return Promise.resolve({ data: [] });
+      return admin
+        .from("tax_receipts")
+        .select("id, number, fiscal_year, amount, donation_date, donor_person_id, organization_id")
+        .in("donor_person_id", allPersonIds)
+        .order("donation_date", { ascending: false });
     })(),
   ]);
 
@@ -199,6 +226,18 @@ export async function getPortalDataByEmail(
       (a, b) => new Date(a.eventStartAt).getTime() - new Date(b.eventStartAt).getTime()
     );
 
+    // Reçus fiscaux pour cette org (via donor_person_id → person.email)
+    const orgPersonIds = new Set(personIdsByOrg.get(orgId) ?? []);
+    const recus: PortalRecu[] = (taxReceiptsRes.data ?? [])
+      .filter((r) => r.donor_person_id && orgPersonIds.has(r.donor_person_id))
+      .map((r) => ({
+        id: r.id,
+        number: r.number,
+        year: r.fiscal_year,
+        amount: Number(r.amount),
+        donationDate: r.donation_date,
+      }));
+
     result.push({
       orgId,
       orgSlug: org.slug,
@@ -206,6 +245,7 @@ export async function getPortalDataByEmail(
       displayName: displayNameByOrg.get(orgId) ?? org.name,
       adhesion,
       billets,
+      recus,
       activeCampaignSlug: campaignByOrg.get(orgId) ?? null,
     });
   }

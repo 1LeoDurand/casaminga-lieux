@@ -721,6 +721,31 @@ export function tplPortalLink(opts: {
   );
 }
 
+// ── Reçu fiscal par email (pièce jointe PDF) ─────────────────────────────
+
+export function tplReceiptEmail(opts: {
+  orgName: string;
+  donorName: string;
+  year: number;
+  amount: number;
+}) {
+  return base(
+    `
+    ${h1("Votre reçu fiscal")}
+    ${p(`Bonjour <strong>${opts.donorName}</strong>,`)}
+    ${p(`Veuillez trouver en pièce jointe votre reçu fiscal ${opts.year} émis par <strong>${opts.orgName}</strong>.`)}
+    ${card([
+      { label: "Organisme",       value: opts.orgName },
+      { label: "Exercice fiscal", value: String(opts.year) },
+      { label: "Montant",         value: new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(opts.amount) },
+    ])}
+    ${p("Ce reçu vous permet de bénéficier de la réduction d'impôt prévue à l'article 200 du Code général des impôts (CGI). Conservez-le pour votre déclaration de revenus.")}
+    ${p("Pour toute question, répondez directement à cet email.")}
+  `,
+    opts.orgName
+  );
+}
+
 // ── 16. Facture / rappel de paiement (au client) ──────────────────────────
 
 export function tplFactureRappel(opts: {

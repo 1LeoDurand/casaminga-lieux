@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { Plus, Download, FileText, Gift, ChevronDown, Loader2 } from "lucide-react";
+import { Plus, Download, FileText, Gift, ChevronDown, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
-import { createTaxReceiptAction } from "@/app/(admin)/dashboard/[org]/factures/recus/actions";
+import { createTaxReceiptAction, sendTaxReceiptAction } from "@/app/(admin)/dashboard/[org]/factures/recus/actions";
 import { DONATION_TYPES } from "@/lib/invoicing/types";
 import type { TaxReceipt, DonationType } from "@/lib/invoicing/types";
 import type { Person } from "@/lib/types";
@@ -20,6 +20,43 @@ function fmtDate(iso: string) {
 }
 function currentYear() { return new Date().getFullYear(); }
 function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+// ── Bouton envoi email ────────────────────────────────────────────────────────
+function SendButton({ orgSlug, receiptId, hasEmail }: { orgSlug: string; receiptId: string; hasEmail: boolean }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleSend() {
+    startTransition(async () => {
+      const res = await sendTaxReceiptAction(orgSlug, receiptId);
+      if (res.ok) toast.success("Reçu envoyé par email.");
+      else toast.error(res.error ?? "Erreur lors de l'envoi.");
+    });
+  }
+
+  if (!hasEmail) {
+    return (
+      <span
+        title="Lier ce reçu à un membre (fiche avec email) pour activer l'envoi"
+        className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-warmgray/40"
+      >
+        <Send className="size-3.5" /> Envoyer
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleSend}
+      disabled={pending}
+      title="Envoyer le reçu par email au donateur"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-peach-pale transition-colors disabled:opacity-60"
+    >
+      {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+      Envoyer
+    </button>
+  );
+}
 
 // ── Formulaire nouveau reçu ───────────────────────────────────────────────────
 function ReceiptForm({
@@ -251,15 +288,18 @@ export function TaxReceiptsView({
                   </td>
                   <td className="px-5 py-3 text-right font-bold text-ink">{euros(Number(r.amount))}</td>
                   <td className="px-5 py-3 text-right">
-                    <a
-                      href={`/dashboard/${orgSlug}/factures/recus/${r.id}/pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Télécharger le PDF Cerfa"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-peach-pale transition-colors"
-                    >
-                      <Download className="size-3.5" /> PDF
-                    </a>
+                    <div className="flex items-center justify-end gap-2">
+                      <SendButton orgSlug={orgSlug} receiptId={r.id} hasEmail={!!r.donor_person_id} />
+                      <a
+                        href={`/dashboard/${orgSlug}/factures/recus/${r.id}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Télécharger le PDF Cerfa"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-peach-pale transition-colors"
+                      >
+                        <Download className="size-3.5" /> PDF
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -5,7 +5,7 @@
  */
 
 import Link from "next/link";
-import type { PortalData, PortalOrgData, AdhesionStatus } from "@/lib/portal/data";
+import type { PortalData, PortalOrgData, PortalRecu, AdhesionStatus } from "@/lib/portal/data";
 import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
 
 // ── Helpers visuels ───────────────────────────────────────────────────────────
@@ -170,12 +170,58 @@ function BilletsSection({ billets }: { billets: PortalOrgData["billets"] }) {
   );
 }
 
-function OrgSection({ org }: { org: PortalOrgData }) {
+function RecusSection({ recus, token }: { recus: PortalRecu[]; token: string }) {
+  if (!recus.length) return null;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: "#6B6460", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        Mes reçus fiscaux
+      </h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {recus.map((r) => (
+          <a
+            key={r.id}
+            href={`/espace/${token}/recu/${r.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "#fff",
+              border: "1px solid #E5DDD6",
+              borderRadius: 12,
+              padding: "12px 16px",
+              textDecoration: "none",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: "#2C2C2C" }}>
+                Reçu n° {r.number ?? r.id.slice(0, 8)} — {r.year}
+              </div>
+              <div style={{ fontSize: 12, color: "#9C9590", marginTop: 2 }}>
+                {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(r.amount)}
+                {" · "}
+                {fmtDateShort(r.donationDate)}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: "#FF8A65", fontWeight: 600, flexShrink: 0, marginLeft: 12 }}>
+              PDF →
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OrgSection({ org, token }: { org: PortalOrgData; token: string }) {
   const renewUrl = org.activeCampaignSlug
     ? `${PUBLIC_SITE_BASE}/${org.orgSlug}/adhesion/${org.activeCampaignSlug}`
     : null;
 
-  const isEmpty = !org.adhesion && org.billets.length === 0;
+  const isEmpty = !org.adhesion && org.billets.length === 0 && org.recus.length === 0;
 
   return (
     <div
@@ -219,6 +265,7 @@ function OrgSection({ org }: { org: PortalOrgData }) {
         <>
           <AdhesionCard adhesion={org.adhesion} renewUrl={renewUrl} />
           <BilletsSection billets={org.billets} />
+          <RecusSection recus={org.recus} token={token} />
         </>
       )}
     </div>
@@ -227,7 +274,7 @@ function OrgSection({ org }: { org: PortalOrgData }) {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
-export function PortalDashboard({ data }: { data: PortalData }) {
+export function PortalDashboard({ data, token }: { data: PortalData; token: string }) {
   const hasMultiOrg = data.orgs.length > 1;
 
   return (
@@ -317,7 +364,7 @@ export function PortalDashboard({ data }: { data: PortalData }) {
             </a>
           </div>
         ) : (
-          data.orgs.map((org) => <OrgSection key={org.orgId} org={org} />)
+          data.orgs.map((org) => <OrgSection key={org.orgId} org={org} token={token} />)
         )}
 
         {/* Nouveau lien */}

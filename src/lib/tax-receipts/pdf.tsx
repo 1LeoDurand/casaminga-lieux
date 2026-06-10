@@ -8,6 +8,7 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { TaxReceipt, InvoiceSettings, DonationType } from "@/lib/invoicing/types";
+import { amountToFrenchWords } from "@/lib/tax-receipts/amount-words";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function euros(n: number): string {
@@ -15,10 +16,6 @@ function euros(n: number): string {
 }
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-}
-function amountWords(n: number): string {
-  // Approximation simple — suffisant pour un reçu Cerfa (mention obligatoire)
-  return `${n.toFixed(2).replace(".", ",")} euros`;
 }
 const DONATION_LABELS: Record<DonationType, string> = {
   numeraire: "Numéraire (espèces)",
@@ -93,7 +90,7 @@ function CerfaDoc({ receipt, settings }: { receipt: TaxReceipt; settings: Invoic
           <Text style={S.label}>Montant du don</Text>
           <View style={S.amtBox}>
             <Text style={[S.bold, { fontSize: 13 }]}>{euros(receipt.amount)}</Text>
-            <Text style={S.muted}>En lettres : {amountWords(receipt.amount)}</Text>
+            <Text style={S.muted}>En lettres : {amountToFrenchWords(receipt.amount)}</Text>
           </View>
         </View>
 
