@@ -4,7 +4,7 @@
 
 ⚠️ **La route publique locale n'est pas la cible produit.**
 
-- **Local (dev)** : le site public est servi sur `/site/[slug]`, ex. `/site/bernard-kohn`.
+- **Local (dev)** : le site public est servi sur `/site/[slug]`, ex. `/site/demo-tiers-lieu` (org démo locale).
   C'est un **alias pratique** pour développer sans configuration de hosts.
 - **Cible produit** : `casaminga.com/[organizationSlug]`, ex. `casaminga.com/bernard-kohn`
   (slug à la racine du host public, **sans** préfixe `/site`).
