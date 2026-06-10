@@ -1,6 +1,17 @@
 /** Structure du contenu éditable du site vitrine (stocké dans public_sites.content_blocks). */
 
-export type SiteTheme = "chaleureux" | "galerie" | "editorial" | "brut";
+export type SiteTheme =
+  | "chaleureux"
+  | "galerie"
+  | "editorial"
+  | "brut"
+  | "botanique"
+  | "nuit"
+  | "pastel"
+  | "minimal"
+  | "terre"
+  | "ocean"
+  | "affiche";
 
 export interface SiteContent {
   hero_tagline: string;        // accroche sous le nom du lieu
@@ -48,7 +59,10 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   soutenir_text: "",
 };
 
-const THEME_KEYS: SiteTheme[] = ["chaleureux", "galerie", "editorial", "brut"];
+const THEME_KEYS: SiteTheme[] = [
+  "chaleureux", "galerie", "editorial", "brut",
+  "botanique", "nuit", "pastel", "minimal", "terre", "ocean", "affiche",
+];
 
 /** Fusionne le contenu stocké (potentiellement partiel) avec les valeurs par défaut. */
 export function mergeSiteContent(raw: unknown): SiteContent {

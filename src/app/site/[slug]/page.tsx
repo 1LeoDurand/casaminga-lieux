@@ -43,7 +43,10 @@ function fmt(n: number) {
   return Number.isInteger(n) ? `${n} €` : `${n.toFixed(2)} €`;
 }
 
-const THEME_KEYS = ["chaleureux", "galerie", "editorial", "brut"] as const;
+const THEME_KEYS = [
+  "chaleureux", "galerie", "editorial", "brut",
+  "botanique", "nuit", "pastel", "minimal", "terre", "ocean", "affiche",
+] as const;
 
 export default async function PublicSitePage({
   params,

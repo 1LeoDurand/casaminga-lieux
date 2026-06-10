@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Syne, DM_Sans, Geist_Mono, Fraunces } from "next/font/google";
+import { Poppins, Syne, DM_Sans, Geist_Mono, Fraunces, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import { CookieBanner } from "@/components/mc/cookie-banner";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
@@ -33,6 +33,12 @@ const fraunces = Fraunces({
   weight: ["400", "600", "700"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Casa Minga Lieux",
   description:
@@ -47,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${poppins.variable} ${syne.variable} ${dmSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${poppins.variable} ${syne.variable} ${dmSans.variable} ${geistMono.variable} ${fraunces.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
