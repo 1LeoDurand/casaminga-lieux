@@ -11,6 +11,11 @@ import type { Document, Person } from "@/lib/types";
 function toggle<T>(set: Set<T>, v: T): Set<T> {
   const n = new Set(set); if (n.has(v)) { n.delete(v); } else { n.add(v); } return n;
 }
+/** N'autorise que les URL http(s) — bloque javascript:, data:, etc. (XSS). */
+function safeFileUrl(url: string | null): string | null {
+  if (!url) return null;
+  return /^https?:\/\//i.test(url.trim()) ? url.trim() : null;
+}
 function TypeBadge({ t }: { t: string }) { return <span className={`mc-badge ${docTypeBadge(t)}`}>{docTypeLabel(t)}</span>; }
 function StatBadge({ s }: { s: string }) { return <span className={`mc-badge ${docStatusBadge(s)}`}>{docStatusLabel(s)}</span>; }
 
@@ -175,8 +180,8 @@ export function DocumentsView({ documents, persons, orgSlug, orgId }: {
               <dl className="grid grid-cols-1 gap-2.5 rounded-xl bg-white p-4 text-sm">
                 {personName(selected.person_id) ? <div className="flex items-center gap-2"><User className="size-4 text-warmgray" /><span>{personName(selected.person_id)}</span></div> : null}
                 <div className="text-warmgray">Créé le {formatDate(selected.created_at)}</div>
-                {selected.file_url ? (
-                  <a href={selected.file_url} target="_blank" rel="noopener noreferrer"
+                {safeFileUrl(selected.file_url) ? (
+                  <a href={safeFileUrl(selected.file_url)!} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 font-medium text-coral-dark hover:underline" onClick={(e) => e.stopPropagation()}>
                     <ExternalLink className="size-4" /> {selected.file_name ?? "Ouvrir le fichier"}
                   </a>
