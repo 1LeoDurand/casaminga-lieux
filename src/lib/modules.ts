@@ -57,7 +57,6 @@ export const MODULE_SECTIONS: ModuleSection[] = [
       { key: "documents",   label: "Documents",        segment: "documents",   layer: 1, tableKey: "documents",              description: "Stockage et signatures en ligne.",         minTier: "complete" },
       { key: "gouvernance", label: "Gouvernance",      segment: "gouvernance", layer: 2, tableKey: "governance_meetings",    description: "CA, AG, mandats, votes.",                 minTier: "complete" },
       { key: "impact",      label: "Impact",           segment: "impact",      layer: 2, tableKey: "impact_indicators",      description: "Indicateurs et tableaux de bord.",        minTier: "complete" },
-      { key: "partenaires", label: "Partenaires",      segment: "partenaires", layer: 2, tableKey: "partners",               description: "Réseau et conventions partenaires.",      minTier: "complete" },
     ],
   },
   {
@@ -65,7 +64,6 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     modules: [
       { key: "site-public",   label: "Site public",   segment: "site-public",   layer: 0, description: "Votre vitrine publique." },
       { key: "communication", label: "Communication", segment: "communication", layer: 1, tableKey: "newsletters",  description: "Newsletter et bulletins de l'équipe.", minTier: "complete" },
-      { key: "mediatheque",   label: "Médiathèque",   segment: "mediatheque",   layer: 1, tableKey: "media_files", description: "Photos, vidéos, ressources.",          minTier: "complete" },
     ],
   },
   {

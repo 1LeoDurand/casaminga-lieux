@@ -1,33 +1,15 @@
-import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/mc/page-header";
-import { CommunauteView } from "@/components/mc/communaute-view";
-import { NewsletterComposer } from "@/components/mc/newsletter-composer";
-import { getOrganizationBySlug, getCommunityPostsForOrg, getPersonsForOrg } from "@/lib/data";
-import { getMemberGroups } from "@/lib/member-groups";
-import { getActiveEstablishments } from "@/lib/establishments";
+import { redirect } from "next/navigation";
 
-export default async function CommunautePage({ params }: { params: Promise<{ org: string }> }) {
+/**
+ * Module Communauté retiré du périmètre (sprint finition 10/06/2026).
+ * Les vues restent en git ; les actions newsletter de ce dossier sont
+ * toujours utilisées par le module Communication.
+ */
+export default async function CommunautePage({
+  params,
+}: {
+  params: Promise<{ org: string }>;
+}) {
   const { org } = await params;
-  const organization = await getOrganizationBySlug(org);
-  if (!organization) notFound();
-  const [posts, persons, groups, establishments] = await Promise.all([
-    getCommunityPostsForOrg(organization.id),
-    getPersonsForOrg(organization.id),
-    getMemberGroups(organization.id),
-    getActiveEstablishments(organization.id),
-  ]);
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader tag="Vie du collectif" title="Communauté"
-        sub="Le fil d'entraide entre membres — offres, demandes, covoiturage, prêts de matériel et infos."
-        actions={
-          <NewsletterComposer
-            groups={groups.map((g) => ({ id: g.id, name: g.name, memberCount: g.memberCount }))}
-            orgId={organization.id}
-            orgSlug={organization.slug}
-          />
-        } />
-      <CommunauteView posts={posts} persons={persons} establishments={establishments} orgSlug={organization.slug} orgId={organization.id} />
-    </div>
-  );
+  redirect(`/dashboard/${org}/personnes`);
 }

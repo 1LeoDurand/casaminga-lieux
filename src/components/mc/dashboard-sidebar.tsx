@@ -100,7 +100,7 @@ function NavItem({
   locked?: boolean;
 }) {
   const pathname = usePathname();
-  const href = locked ? `/dashboard/${orgSlug}/upgrade` : hrefFor(orgSlug, m);
+  const href = locked ? `/dashboard/${orgSlug}/modules` : hrefFor(orgSlug, m);
   const active = !locked && pathname === hrefFor(orgSlug, m);
   const Icon = ICONS[m.key] ?? LayoutDashboard;
 
@@ -392,19 +392,8 @@ export function DashboardSidebar({
         </div>
       </nav>
 
-      {/* Encart upgrade — visible uniquement pour les comptes free */}
-      {orgTier === "free" && !isDemo && (
-        <Link
-          href={`/dashboard/${orgSlug}/upgrade`}
-          className="mx-3 mb-3 flex items-center gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2.5 transition-colors hover:bg-amber-400/20"
-        >
-          <Sparkles className="size-4 shrink-0 text-amber-400" />
-          <div className="min-w-0">
-            <div className="text-[12px] font-bold text-amber-300">Passer à l&apos;Asso complète</div>
-            <div className="text-[10px] text-amber-300/60">Tous les modules débloqués</div>
-          </div>
-        </Link>
-      )}
+      {/* Encart upgrade masqué tant que la facturation Stripe n'est pas en place
+          (décision sprint finition 10/06/2026 — réactiver avec Lot 10.1) */}
 
       {/* Pied : utilisateur */}
       <UserMenu
