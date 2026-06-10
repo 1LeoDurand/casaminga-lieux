@@ -41,6 +41,10 @@ export async function saveInvoiceSettings(
       number_start: settings.number_start ?? 1,
       logo_url: settings.logo_url ?? null,
       require_validation_above: settings.require_validation_above ?? null,
+      tax_receipt_quality: settings.tax_receipt_quality ?? null,
+      tax_receipt_signatory: settings.tax_receipt_signatory ?? null,
+      tax_receipt_eligible: settings.tax_receipt_eligible ?? false,
+      tax_receipt_rescrit_ref: settings.tax_receipt_rescrit_ref ?? null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "organization_id" }

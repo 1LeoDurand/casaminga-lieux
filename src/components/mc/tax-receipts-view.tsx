@@ -172,10 +172,14 @@ export function TaxReceiptsView({
   receipts,
   persons,
   orgSlug,
+  eligible = false,
+  rescritRef = null,
 }: {
   receipts: TaxReceipt[];
   persons: Person[];
   orgSlug: string;
+  eligible?: boolean;
+  rescritRef?: string | null;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [filterYear, setFilterYear] = useState<string>(String(currentYear()));
@@ -223,6 +227,26 @@ export function TaxReceiptsView({
         </div>
       </div>
 
+      {/* Garde-fou éligibilité (art. 200 CGI / amende 1740 A) */}
+      {!eligible && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="text-[18px]">⛔</span>
+            <div className="text-[13px] leading-relaxed text-red-900">
+              <strong>Éligibilité non confirmée.</strong>{" "}
+              Toutes les associations ne peuvent pas émettre
+              de reçus fiscaux : il faut être d&apos;intérêt général (art. 200 CGI), à gestion désintéressée,
+              et ne pas servir un cercle restreint de personnes. Un reçu émis à tort expose l&apos;association
+              à une amende de <strong>60 à 75 % des montants</strong> (art. 1740 A CGI).
+              <br />
+              <a href={`/dashboard/${orgSlug}/factures/parametres`} className="font-semibold text-red-700 underline">
+                Confirmer l&apos;éligibilité dans Paramètres → Facturation
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Formulaire */}
       {showForm && (
         <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
@@ -236,15 +260,27 @@ export function TaxReceiptsView({
         </div>
       )}
 
-      {/* KPI total */}
+      {/* Déclaration annuelle (obligation loi du 24/08/2021) */}
       {filtered.length > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-          <Gift className="size-5 text-emerald-600" />
-          <div>
-            <span className="text-[13px] text-emerald-700">Total des dons {filterYear || "tous exercices"}</span>
-            <span className="ml-3 text-[15px] font-bold text-emerald-800">{euros(totalFiltered)}</span>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <Gift className="size-5 text-emerald-600" />
+            <div>
+              <span className="text-[13px] font-semibold text-emerald-800">
+                Déclaration annuelle {filterYear || "(filtrez par année)"}
+              </span>
+              <span className="ml-3 text-[15px] font-bold text-emerald-800">{euros(totalFiltered)}</span>
+              <span className="ml-2 text-[13px] text-emerald-700">
+                · {filtered.length} reçu{filtered.length > 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
-          <span className="ml-auto text-[12px] text-emerald-600">{filtered.length} reçu{filtered.length > 1 ? "s" : ""}</span>
+          <p className="mt-2 text-[12px] leading-relaxed text-emerald-700">
+            Depuis la loi du 24 août 2021, toute association qui émet des reçus fiscaux doit déclarer
+            chaque année à l&apos;administration le <strong>montant global des dons</strong> et le{" "}
+            <strong>nombre de reçus émis</strong>. Reportez les deux chiffres ci-dessus dans votre
+            déclaration (formulaire n° 2070, ou en ligne sur demarches-simplifiees.fr selon votre cas).
+          </p>
         </div>
       )}
 
@@ -315,9 +351,10 @@ export function TaxReceiptsView({
 
       {/* Note conformité */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-800">
-        ⚠️ <strong>Conformité :</strong> Avant mise en production, faites valider le gabarit Cerfa
-        (mentions exactes articles 200/238bis CGI) et complétez la qualité de l&apos;association
-        et le nom du signataire dans <strong>Paramètres → Facturation</strong>.
+        💡 <strong>Rappel :</strong> seul un <strong>don sans contrepartie</strong> ouvre droit au reçu —
+        jamais une cotisation avec avantages, ni une billetterie. La qualité de l&apos;association et le
+        signataire portés sur le Cerfa se règlent dans <strong>Paramètres → Facturation</strong>
+        {rescritRef ? <> · Rescrit : <strong>{rescritRef}</strong></> : null}.
       </div>
     </div>
   );

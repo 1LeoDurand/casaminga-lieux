@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/mc/page-header";
 import { TaxReceiptsView } from "@/components/mc/tax-receipts-view";
 import { getOrganizationBySlug, getPersonsForOrg } from "@/lib/data";
 import { getTaxReceipts } from "@/lib/tax-receipts/data";
+import { getInvoiceSettings } from "@/lib/invoicing/data";
 
 export default async function TaxReceiptsPage({
   params,
@@ -13,9 +14,10 @@ export default async function TaxReceiptsPage({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [receipts, persons] = await Promise.all([
+  const [receipts, persons, settings] = await Promise.all([
     getTaxReceipts(organization.id),
     getPersonsForOrg(organization.id),
+    getInvoiceSettings(organization.id),
   ]);
 
   return (
@@ -29,6 +31,8 @@ export default async function TaxReceiptsPage({
         receipts={receipts}
         persons={persons}
         orgSlug={organization.slug}
+        eligible={settings.tax_receipt_eligible === true}
+        rescritRef={settings.tax_receipt_rescrit_ref ?? null}
       />
     </div>
   );

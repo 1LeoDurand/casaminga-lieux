@@ -139,6 +139,46 @@ export function InvoiceSettingsForm({
         </div>
       </Section>
 
+      <Section title="Reçus fiscaux (dons)">
+        <div>
+          <label className={labelCls}>Qualité de l&apos;association</label>
+          <input className={input} value={s.tax_receipt_quality ?? ""} onChange={(e) => field("tax_receipt_quality", e.target.value)} placeholder="association d'intérêt général à caractère culturel" />
+          <p className="mt-1 text-[11px] text-warmgray">Mention portée sur le reçu Cerfa.</p>
+        </div>
+        <div>
+          <label className={labelCls}>Signataire des reçus</label>
+          <input className={input} value={s.tax_receipt_signatory ?? ""} onChange={(e) => field("tax_receipt_signatory", e.target.value)} placeholder="Jeanne Dupont, présidente" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={labelCls}>Référence du rescrit fiscal (recommandé)</label>
+          <input className={input} value={s.tax_receipt_rescrit_ref ?? ""} onChange={(e) => field("tax_receipt_rescrit_ref", e.target.value)} placeholder="Rescrit DGFiP du 12/03/2025, réf. 2025-XXX (facultatif)" />
+          <p className="mt-1 text-[11px] text-warmgray">
+            Le rescrit (art. L.80 C LPF) est la confirmation écrite de l&apos;administration fiscale que votre
+            association peut émettre des reçus. Facultatif, mais il vous protège en cas de contrôle.
+          </p>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <input
+              type="checkbox"
+              checked={s.tax_receipt_eligible}
+              onChange={(e) => field("tax_receipt_eligible", e.target.checked)}
+              className="mt-0.5 size-4 accent-coral"
+            />
+            <span className="text-[13px] leading-relaxed text-amber-900">
+              <strong>Déclaration sur l&apos;honneur</strong> — Je confirme que l&apos;association est
+              d&apos;intérêt général au sens de l&apos;article 200 du CGI : gestion désintéressée, activité
+              non lucrative, et qu&apos;elle ne fonctionne pas au profit d&apos;un cercle restreint de personnes.
+              <br />
+              <span className="text-[11px] text-amber-700">
+                Émettre un reçu sans y être éligible expose l&apos;association à une amende de 60 à 75 % des
+                montants mentionnés (art. 1740 A CGI). En cas de doute, demandez un rescrit fiscal.
+              </span>
+            </span>
+          </label>
+        </div>
+      </Section>
+
       <div className="flex justify-end">
         <button
           onClick={submit}

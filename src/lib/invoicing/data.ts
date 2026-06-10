@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS = (orgId: string): InvoiceSettings => ({
   require_validation_above: null,
   tax_receipt_quality: null,
   tax_receipt_signatory: null,
+  tax_receipt_eligible: false,
+  tax_receipt_rescrit_ref: null,
   updated_at: new Date().toISOString(),
 });
 

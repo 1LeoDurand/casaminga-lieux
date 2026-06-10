@@ -103,6 +103,10 @@ export interface InvoiceSettings {
   tax_receipt_quality: string | null;
   /** Cerfa 11580*04 — nom + qualité du signataire */
   tax_receipt_signatory: string | null;
+  /** Déclaration sur l'honneur : intérêt général (art. 200 CGI), gestion désintéressée, pas de cercle restreint */
+  tax_receipt_eligible: boolean;
+  /** Référence + date du rescrit fiscal (L.80 C LPF), si obtenu */
+  tax_receipt_rescrit_ref: string | null;
   updated_at: string;
 }
 
