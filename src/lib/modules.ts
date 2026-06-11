@@ -62,8 +62,9 @@ export const MODULE_SECTIONS: ModuleSection[] = [
   {
     title: "Communication",
     modules: [
-      { key: "site-public",   label: "Site public",   segment: "site-public",   layer: 0, description: "Votre vitrine publique." },
-      { key: "communication", label: "Communication", segment: "communication", layer: 1, tableKey: "newsletters",  description: "Newsletter et bulletins de l'équipe.", minTier: "complete" },
+      { key: "site-public",   label: "Site public",    segment: "site-public",   layer: 0, description: "Votre vitrine publique." },
+      { key: "domaine",       label: "Nom de domaine", segment: "upgrade",       layer: 0, description: "Connectez votre propre adresse web." },
+      { key: "communication", label: "Communication",  segment: "communication", layer: 1, tableKey: "newsletters",  description: "Newsletter et bulletins de l'équipe.", minTier: "complete" },
     ],
   },
   {
