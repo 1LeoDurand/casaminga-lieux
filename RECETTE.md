@@ -7,7 +7,10 @@
 ## 1. Connexion & navigation (2 min)
 - [ ] Login → tu atterris sur le dashboard de TON org (pas un slug en dur)
 - [ ] La sidebar n'affiche plus : Partenaires, Médiathèque, encart « Passer à l'Asso complète »
-- [ ] `/dashboard/<ton-org>/upgrade` redirige vers le dashboard
+- [ ] `/dashboard/<ton-org>/upgrade` ouvre la page **Nom de domaine** (plus de redirect)
+- [ ] Dashboard : les KPIs héros correspondent à ton archétype (tiers-lieu →
+      résas du jour en 1er), blocs modules en bas (gouvernance, adhésions…),
+      suggestion de module dismissable
 
 ## 2. Reçus fiscaux — le point légal (5 min)
 - [ ] Paramètres → Facturation : nouvelle section **Reçus fiscaux (dons)** :
