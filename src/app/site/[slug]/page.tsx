@@ -10,6 +10,7 @@ import {
 } from "@/lib/data";
 import { getPublishedSiteContent } from "@/lib/site-public/data";
 import { mergeSiteContent } from "@/lib/site-public/types";
+import { applyHostTheme } from "@/lib/site-public/page-data";
 import { getTheme } from "@/lib/site-public/themes";
 import { PublicSiteShell, buildNav } from "@/components/mc/public-site-shell";
 import { eventTypeLabel, eventRange, isFuture } from "@/lib/events-meta";
@@ -78,7 +79,7 @@ export default async function PublicSitePage({
     getMembershipCampaignsForOrg(org.id),
     getEvenementsForOrg(org.id),
   ]);
-  const c = mergeSiteContent(content);
+  const c = await applyHostTheme(mergeSiteContent(content));
   // Aperçu de thème via ?theme=… (utilisé par l'éditeur, sans modifier le site)
   if (themePreview && (THEME_KEYS as readonly string[]).includes(themePreview)) {
     c.theme = themePreview as typeof THEME_KEYS[number];
