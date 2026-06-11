@@ -15,7 +15,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ org:
     <div className="flex flex-col gap-6">
       <PageHeader tag="Administration" title="Documents"
         sub="Contrats, devis, factures, conventions — les documents du lieu centralisés et suivis." />
-      <DocumentsView documents={documents} persons={persons} orgSlug={organization.slug} orgId={organization.id} />
+      <DocumentsView documents={documents} persons={persons} orgSlug={organization.slug} orgId={organization.id} orgName={organization.name} />
     </div>
   );
 }

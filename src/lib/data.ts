@@ -125,6 +125,7 @@ import type {
   OrgRole,
   AssemblyProxy,
   AssemblyAttendance,
+  MeetingResolution,
 } from "@/lib/types";
 
 /**
@@ -713,7 +714,7 @@ export interface DocumentInput {
 }
 
 export async function createDocument(input: DocumentInput): Promise<boolean> {
-  if (!isSupabaseConfigured()) { addDemoDocument(input); return true; }
+  if (!isSupabaseConfigured()) { addDemoDocument({ ...input, signing_token: null, signed_at: null, signer_ip: null }); return true; }
   const supabase = await createClient();
   const { error } = await supabase.from("documents").insert(input);
   if (error) console.error("createDocument:", error);
@@ -1711,5 +1712,87 @@ export async function removeTeamMember(orgId: string, userId: string): Promise<b
     .eq("organization_id", orgId)
     .eq("user_id", userId);
   if (error) console.error("removeTeamMember:", error);
+  return !error;
+}
+
+// ── Gouvernance : Résolutions (Lot 8) ────────────────────────
+export async function getResolutionsForMeeting(meetingId: string): Promise<MeetingResolution[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("meeting_resolutions")
+    .select("*")
+    .eq("meeting_id", meetingId)
+    .order("sort_order", { ascending: true });
+  return (data ?? []) as MeetingResolution[];
+}
+
+export interface MeetingResolutionInput {
+  meeting_id: string;
+  organization_id: string;
+  title: string;
+  description: string | null;
+  result: MeetingResolution["result"];
+  votes_pour: number;
+  votes_contre: number;
+  votes_abstention: number;
+  sort_order: number;
+}
+
+export async function createMeetingResolution(input: MeetingResolutionInput): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("meeting_resolutions").insert(input);
+  if (error) console.error("createMeetingResolution:", error);
+  return !error;
+}
+
+export async function updateMeetingResolution(
+  id: string, patch: Partial<MeetingResolutionInput>,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("meeting_resolutions")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) console.error("updateMeetingResolution:", error);
+  return !error;
+}
+
+export async function deleteMeetingResolution(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("meeting_resolutions").delete().eq("id", id);
+  if (error) console.error("deleteMeetingResolution:", error);
+  return !error;
+}
+
+// ── Documents : Signature électronique (Lot 9) ───────────────
+export async function getDocumentBySigningToken(token: string): Promise<Document | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("signing_token", token)
+    .is("signed_at", null)
+    .single();
+  return data ?? null;
+}
+
+export async function markDocumentSignedInDB(
+  id: string, signerIp: string | null,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createClient();
+  const { error } = await supabase.from("documents").update({
+    status: "signe",
+    signed_at: new Date().toISOString(),
+    signer_ip: signerIp,
+    signing_token: null,
+    updated_at: new Date().toISOString(),
+  }).eq("id", id);
+  if (error) console.error("markDocumentSignedInDB:", error);
   return !error;
 }

@@ -565,6 +565,27 @@ export interface Document {
   file_url: string | null;
   file_name: string | null;
   notes: string | null;
+  signing_token: string | null;
+  signed_at: string | null;
+  signer_ip: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Gouvernance — résolutions ─────────────────────────────────
+export type ResolutionResult = "adopte" | "rejete" | "ajourne";
+
+export interface MeetingResolution {
+  id: string;
+  meeting_id: string;
+  organization_id: string;
+  title: string;
+  description: string | null;
+  result: ResolutionResult;
+  votes_pour: number;
+  votes_contre: number;
+  votes_abstention: number;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }

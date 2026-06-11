@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { DocumentForm, type DocumentFormValues } from "@/components/mc/document-form";
 import { DOCUMENT_TYPES, DOCUMENT_STATUSES, docTypeLabel, docTypeBadge, docStatusLabel, docStatusBadge, formatDate } from "@/lib/documents-meta";
-import { createDocumentAction, deleteDocumentAction, updateDocumentAction } from "@/app/(admin)/dashboard/[org]/documents/actions";
+import { createDocumentAction, deleteDocumentAction, updateDocumentAction, sendSignatureRequestAction } from "@/app/(admin)/dashboard/[org]/documents/actions";
 import type { Document, Person } from "@/lib/types";
 
 function toggle<T>(set: Set<T>, v: T): Set<T> {
@@ -19,8 +19,8 @@ function safeFileUrl(url: string | null): string | null {
 function TypeBadge({ t }: { t: string }) { return <span className={`mc-badge ${docTypeBadge(t)}`}>{docTypeLabel(t)}</span>; }
 function StatBadge({ s }: { s: string }) { return <span className={`mc-badge ${docStatusBadge(s)}`}>{docStatusLabel(s)}</span>; }
 
-export function DocumentsView({ documents, persons, orgSlug, orgId }: {
-  documents: Document[]; persons: Person[]; orgSlug: string; orgId: string;
+export function DocumentsView({ documents, persons, orgSlug, orgId, orgName }: {
+  documents: Document[]; persons: Person[]; orgSlug: string; orgId: string; orgName: string;
 }) {
   const [search, setSearch] = useState("");
   const [typeF, setTypeF] = useState<Set<string>>(new Set());
@@ -194,7 +194,23 @@ export function DocumentsView({ documents, persons, orgSlug, orgId }: {
               ) : null}
               <div className="flex flex-wrap gap-2">
                 {selected.status === "brouillon" ? <button type="button" disabled={pending} onClick={() => quickStatus(selected, "envoye")} className="mc-btn mc-btn-outline mc-btn-sm"><Send className="size-3.5" /> Marquer envoyé</button> : null}
+                {(selected.status === "brouillon" || selected.status === "envoye") && selected.person_id ? (
+                  <button type="button" disabled={pending} onClick={() => {
+                    startTransition(async () => {
+                      const res = await sendSignatureRequestAction(orgSlug, orgId, orgName, selected.id);
+                      if (res.ok) toast.success("Email de signature envoyé");
+                      else toast.error(res.error ?? "Impossible d'envoyer la demande.");
+                    });
+                  }} className="mc-btn mc-btn-outline mc-btn-sm" style={{ color: "#6366f1", borderColor: "#6366f1" }}>
+                    <CheckCircle2 className="size-3.5" /> Demander signature
+                  </button>
+                ) : null}
                 {selected.status === "envoye" ? <button type="button" disabled={pending} onClick={() => quickStatus(selected, "signe")} className="mc-btn mc-btn-outline mc-btn-sm"><CheckCircle2 className="size-3.5" /> Marquer signé</button> : null}
+                {selected.status === "signe" && selected.signed_at ? (
+                  <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-[12px] text-emerald-700">
+                    <CheckCircle2 className="size-3.5" /> Signé le {new Date(selected.signed_at).toLocaleDateString("fr-FR")}
+                  </div>
+                ) : null}
                 {selected.status !== "archive" ? <button type="button" disabled={pending} onClick={() => quickStatus(selected, "archive")} className="mc-btn mc-btn-outline mc-btn-sm">Archiver</button> : null}
               </div>
             </div>

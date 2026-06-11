@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { X, Plus, Pencil, Trash2, Gavel, Calendar, User, FileText, Check, Users, ArrowRight, ShieldCheck } from "lucide-react";
+import { X, Plus, Pencil, Trash2, Gavel, Calendar, User, FileText, Check, Users, ArrowRight, ShieldCheck, Mail, Download, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import {
@@ -11,8 +11,10 @@ import {
   createMeetingAction, updateMeetingAction, deleteMeetingAction,
   createMandateAction, updateMandateAction, deleteMandateAction,
   createProxyAction, deleteProxyAction, upsertAttendanceAction,
+  createResolutionAction, updateResolutionAction, deleteResolutionAction,
+  sendConvocationAction,
 } from "@/app/(admin)/dashboard/[org]/gouvernance/actions";
-import type { Mandate, Meeting, Person, AssemblyProxy, AssemblyAttendance } from "@/lib/types";
+import type { Mandate, Meeting, Person, AssemblyProxy, AssemblyAttendance, MeetingResolution } from "@/lib/types";
 
 type Tab = "reunions" | "mandats";
 
@@ -122,14 +124,170 @@ function MandateModal({ open, mandate, persons, busy, onSubmit, onClose }: {
   );
 }
 
+// ── Résolutions inline ────────────────────────────────────────
+const RESULT_LABELS: Record<string, { label: string; cls: string }> = {
+  adopte:  { label: "Adopté",   cls: "bg-emerald-100 text-emerald-700" },
+  rejete:  { label: "Rejeté",   cls: "bg-red-100 text-red-700" },
+  ajourne: { label: "Ajourné",  cls: "bg-amber-100 text-amber-700" },
+};
+
+interface ResFV {
+  title: string; description: string; result: MeetingResolution["result"];
+  votes_pour: number; votes_contre: number; votes_abstention: number;
+}
+const RES_EMPTY: ResFV = { title: "", description: "", result: "adopte", votes_pour: 0, votes_contre: 0, votes_abstention: 0 };
+
+function ResolutionsPanel({
+  meeting, resolutions, orgSlug, orgId,
+}: {
+  meeting: Meeting;
+  resolutions: MeetingResolution[];
+  orgSlug: string;
+  orgId: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState<ResFV>(RES_EMPTY);
+
+  function setF<K extends keyof ResFV>(k: K, v: ResFV[K]) { setForm((s) => ({ ...s, [k]: v })); }
+
+  function startEdit(r: MeetingResolution) {
+    setEditing(r.id);
+    setAdding(false);
+    setForm({ title: r.title, description: r.description ?? "", result: r.result, votes_pour: r.votes_pour, votes_contre: r.votes_contre, votes_abstention: r.votes_abstention });
+  }
+
+  function submitAdd() {
+    if (!form.title.trim()) { toast.error("Le titre est obligatoire."); return; }
+    startTransition(async () => {
+      const res = await createResolutionAction(orgSlug, {
+        meeting_id: meeting.id, organization_id: orgId,
+        title: form.title.trim(), description: form.description.trim() || null,
+        result: form.result, votes_pour: form.votes_pour,
+        votes_contre: form.votes_contre, votes_abstention: form.votes_abstention,
+        sort_order: resolutions.length,
+      });
+      if (res.ok) { toast.success("Résolution ajoutée"); setAdding(false); setForm(RES_EMPTY); }
+      else toast.error("Impossible d'ajouter la résolution.");
+    });
+  }
+
+  function submitEdit(id: string) {
+    if (!form.title.trim()) { toast.error("Le titre est obligatoire."); return; }
+    startTransition(async () => {
+      const res = await updateResolutionAction(orgSlug, id, {
+        title: form.title.trim(), description: form.description.trim() || null,
+        result: form.result, votes_pour: form.votes_pour,
+        votes_contre: form.votes_contre, votes_abstention: form.votes_abstention,
+      });
+      if (res.ok) { toast.success("Résolution mise à jour"); setEditing(null); }
+      else toast.error("Impossible de modifier.");
+    });
+  }
+
+  function doDelete(id: string) {
+    startTransition(async () => {
+      const res = await deleteResolutionAction(orgSlug, id);
+      if (res.ok) toast.success("Résolution supprimée");
+      else toast.error("Impossible de supprimer.");
+    });
+  }
+
+  function ResForm({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-indigo-200 bg-white p-3">
+        <input className="mc-input text-[13px]" placeholder="Titre de la résolution *" value={form.title} onChange={(e) => setF("title", e.target.value)} />
+        <textarea className="mc-textarea text-[13px]" placeholder="Description (optionnel)" rows={2} value={form.description} onChange={(e) => setF("description", e.target.value)} />
+        <div className="grid grid-cols-4 gap-2">
+          <div>
+            <label className="text-[10px] font-semibold uppercase text-warmgray">Résultat</label>
+            <select className="mc-input text-[12px]" value={form.result} onChange={(e) => setF("result", e.target.value as ResFV["result"])}>
+              <option value="adopte">Adopté</option>
+              <option value="rejete">Rejeté</option>
+              <option value="ajourne">Ajourné</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase text-warmgray">Pour</label>
+            <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_pour} onChange={(e) => setF("votes_pour", Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase text-warmgray">Contre</label>
+            <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_contre} onChange={(e) => setF("votes_contre", Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase text-warmgray">Abstention</label>
+            <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_abstention} onChange={(e) => setF("votes_abstention", Number(e.target.value))} />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" disabled={pending} onClick={onSave} className="mc-btn mc-btn-lime mc-btn-sm flex-1">{pending ? "…" : "Enregistrer"}</button>
+          <button type="button" onClick={onCancel} className="mc-btn mc-btn-outline mc-btn-sm">Annuler</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-indigo-700">
+          <Gavel className="size-3.5" /> Résolutions ({resolutions.length})
+        </div>
+        {!adding && !editing && (
+          <button type="button" onClick={() => { setAdding(true); setForm(RES_EMPTY); }} className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100">
+            <Plus className="size-3" /> Ajouter
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        {resolutions.map((r, i) => {
+          const badge = RESULT_LABELS[r.result] ?? { label: r.result, cls: "bg-gray-100 text-gray-700" };
+          if (editing === r.id) {
+            return <ResForm key={r.id} onSave={() => submitEdit(r.id)} onCancel={() => setEditing(null)} />;
+          }
+          return (
+            <div key={r.id} className="group flex items-start gap-2 rounded-lg bg-white/70 px-3 py-2 text-[13px]">
+              <span className="mt-0.5 text-[11px] font-bold text-indigo-400">{i + 1}.</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-semibold">{r.title}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.label}</span>
+                </div>
+                {r.description ? <p className="mt-0.5 text-[12px] text-warmgray">{r.description}</p> : null}
+                <p className="mt-0.5 text-[11px] text-warmgray">Pour : {r.votes_pour} · Contre : {r.votes_contre} · Abstention : {r.votes_abstention}</p>
+              </div>
+              <div className="hidden shrink-0 gap-0.5 group-hover:flex">
+                <button type="button" disabled={pending} onClick={() => startEdit(r)} className="rounded p-1 text-warmgray hover:bg-indigo-100"><Pencil className="size-3.5" /></button>
+                <button type="button" disabled={pending} onClick={() => doDelete(r.id)} className="rounded p-1 text-red-400 hover:bg-red-50"><Trash2 className="size-3.5" /></button>
+              </div>
+            </div>
+          );
+        })}
+
+        {adding && (
+          <ResForm onSave={submitAdd} onCancel={() => { setAdding(false); setForm(RES_EMPTY); }} />
+        )}
+
+        {resolutions.length === 0 && !adding && (
+          <p className="text-[12px] italic text-warmgray">Aucune résolution enregistrée.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Panneau AG : quorum, émargement, pouvoirs ─────────────────────────────
 function AGPanel({
-  meeting, persons, proxies, attendance, orgSlug, orgId,
+  meeting, persons, proxies, attendance, resolutions, orgSlug, orgId,
 }: {
   meeting: Meeting;
   persons: Person[];
   proxies: AssemblyProxy[];
   attendance: AssemblyAttendance[];
+  resolutions: MeetingResolution[];
   orgSlug: string;
   orgId: string;
 }) {
@@ -253,20 +411,26 @@ function AGPanel({
           </button>
         </form>
       </div>
+
+      {/* Résolutions */}
+      <ResolutionsPanel meeting={meeting} resolutions={resolutions} orgSlug={orgSlug} orgId={orgId} />
     </div>
   );
 }
 
 export function GouvernanceView({
-  meetings, mandates, persons, proxiesByMeeting, attendanceByMeeting, orgSlug, orgId,
+  meetings, mandates, persons, proxiesByMeeting, attendanceByMeeting, resolutionsByMeeting,
+  orgSlug, orgId, orgName,
 }: {
   meetings: Meeting[];
   mandates: Mandate[];
   persons: Person[];
   proxiesByMeeting: Record<string, AssemblyProxy[]>;
   attendanceByMeeting: Record<string, AssemblyAttendance[]>;
+  resolutionsByMeeting: Record<string, MeetingResolution[]>;
   orgSlug: string;
   orgId: string;
+  orgName: string;
 }) {
   const [tab, setTab] = useState<Tab>("reunions");
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -318,6 +482,16 @@ export function GouvernanceView({
     });
   }
 
+  function sendConvocation(m: Meeting) {
+    startTransition(async () => {
+      const res = await sendConvocationAction(orgSlug, orgId, m.id, orgName);
+      if (res.ok) toast.success(`Convocation envoyée à ${res.sent} membre${res.sent > 1 ? "s" : ""}${res.skipped > 0 ? ` (${res.skipped} sans email)` : ""}`);
+      else toast.error("Erreur envoi convocation.");
+    });
+  }
+
+  const pvUrl = (m: Meeting) => `/dashboard/${orgSlug}/gouvernance/meetings/${m.id}/pv`;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="mc-kpi-grid">
@@ -355,7 +529,11 @@ export function GouvernanceView({
                         <span className="mc-badge bg-indigo-100 text-indigo-700">🗳 AG</span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-[12px] text-warmgray"><Calendar className="size-3.5" /> {formatDateLong(m.date)}{m.minutes ? <><FileText className="ml-2 size-3.5" /> CR disponible</> : null}</div>
+                    <div className="mt-1 flex items-center gap-1.5 text-[12px] text-warmgray">
+                      <Calendar className="size-3.5" /> {formatDateLong(m.date)}
+                      {m.minutes ? <><FileText className="ml-2 size-3.5" /> CR disponible</> : null}
+                      {(resolutionsByMeeting[m.id]?.length ?? 0) > 0 ? <><Gavel className="ml-2 size-3.5" /> {resolutionsByMeeting[m.id].length} résolution{resolutionsByMeeting[m.id].length > 1 ? "s" : ""}</> : null}
+                    </div>
                   </div>
                 </div>
               </button>
@@ -408,19 +586,45 @@ export function GouvernanceView({
               <div className="flex items-center gap-2 text-sm font-medium"><Calendar className="size-4 text-warmgray" /> {formatDateLong(selectedMeeting.date)}</div>
               {selectedMeeting.agenda ? <div><h3 className="text-xs font-semibold uppercase tracking-wide text-warmgray">Ordre du jour</h3><p className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed">{selectedMeeting.agenda}</p></div> : null}
               {selectedMeeting.minutes ? <div><h3 className="text-xs font-semibold uppercase tracking-wide text-warmgray">Compte-rendu</h3><p className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed">{selectedMeeting.minutes}</p></div> : null}
-              {selectedMeeting.status === "planifiee" ? (
-                <button type="button" disabled={pending} onClick={() => { startTransition(async () => { const r = await updateMeetingAction(orgSlug, selectedMeeting.id, { status: "tenue" }); if (r.ok) toast.success("Réunion marquée tenue"); }); }} className="mc-btn mc-btn-outline mc-btn-sm self-start"><Check className="size-3.5" /> Marquer tenue</button>
-              ) : null}
-              {/* Panneau AG — quorum, émargement, pouvoirs */}
+
+              {/* Actions sur la réunion */}
+              <div className="flex flex-wrap gap-2">
+                {selectedMeeting.status === "planifiee" ? (
+                  <>
+                    <button type="button" disabled={pending} onClick={() => { startTransition(async () => { const r = await updateMeetingAction(orgSlug, selectedMeeting.id, { status: "tenue" }); if (r.ok) toast.success("Réunion marquée tenue"); }); }} className="mc-btn mc-btn-outline mc-btn-sm"><Check className="size-3.5" /> Marquer tenue</button>
+                    <button type="button" disabled={pending} onClick={() => sendConvocation(selectedMeeting)} className="mc-btn mc-btn-outline mc-btn-sm"><Mail className="size-3.5" /> Convoquer les membres</button>
+                  </>
+                ) : null}
+                {selectedMeeting.status === "tenue" ? (
+                  <a href={pvUrl(selectedMeeting)} target="_blank" rel="noopener noreferrer" className="mc-btn mc-btn-outline mc-btn-sm">
+                    <Download className="size-3.5" /> Télécharger le PV
+                  </a>
+                ) : null}
+              </div>
+
+              {/* Panneau AG — quorum, émargement, pouvoirs, résolutions */}
               {(selectedMeeting.is_general_assembly || selectedMeeting.type === "ag") && (
                 <AGPanel
                   meeting={selectedMeeting}
                   persons={persons}
                   proxies={proxiesByMeeting[selectedMeeting.id] ?? []}
                   attendance={attendanceByMeeting[selectedMeeting.id] ?? []}
+                  resolutions={resolutionsByMeeting[selectedMeeting.id] ?? []}
                   orgSlug={orgSlug}
                   orgId={orgId}
                 />
+              )}
+
+              {/* Résolutions pour réunions non-AG */}
+              {!(selectedMeeting.is_general_assembly || selectedMeeting.type === "ag") && (
+                <div className="rounded-xl border border-border bg-peach-pale/30 p-4">
+                  <ResolutionsPanel
+                    meeting={selectedMeeting}
+                    resolutions={resolutionsByMeeting[selectedMeeting.id] ?? []}
+                    orgSlug={orgSlug}
+                    orgId={orgId}
+                  />
+                </div>
               )}
             </div>
             <div className="mt-auto flex gap-3 border-t border-border p-6">

@@ -721,6 +721,92 @@ export function tplPortalLink(opts: {
   );
 }
 
+// ── 19. Convocation assemblée générale (aux membres) ─────────────────────
+
+export function tplConvocation(opts: {
+  orgName: string;
+  meetingTitle: string;
+  meetingDate: string;
+  meetingType: string;
+  agenda: string | null;
+  firstName: string;
+}) {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+  return base(
+    `
+    ${badge("Convocation officielle", "#6366f1")}
+    <div style="height:12px;"></div>
+    ${h1(`${opts.meetingTitle}`)}
+    ${p(`Bonjour <strong>${opts.firstName || "Madame, Monsieur"}</strong>,`)}
+    ${p(`Vous êtes convoqué(e) à la <strong>${opts.meetingType}</strong> organisée par <strong>${opts.orgName}</strong>.`)}
+    ${card([
+      { label: "Instance", value: opts.meetingType },
+      { label: "Titre", value: opts.meetingTitle },
+      { label: "Date", value: fmt(opts.meetingDate) },
+    ])}
+    ${opts.agenda ? `<div style="margin:16px 0;"><p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#2C2C2C;">Ordre du jour</p><div style="background:#FAFAF7;border:1px solid #E5DDD6;border-radius:10px;padding:14px 16px;font-size:13px;color:#4A4540;line-height:1.7;white-space:pre-wrap;">${opts.agenda.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div></div>` : ""}
+    ${p("En cas d'empêchement, vous pouvez donner pouvoir à un·e autre membre. Contactez directement l'équipe pour plus d'informations.")}
+    ${p("Cordialement,")}
+  `,
+    opts.orgName
+  );
+}
+
+// ── 20. Demande de signature électronique ─────────────────────────────────
+
+export function tplSignatureRequest(opts: {
+  orgName: string;
+  recipientName: string;
+  documentTitle: string;
+  documentType: string;
+  signUrl: string;
+}) {
+  return base(
+    `
+    ${badge("Signature requise", "#6366f1")}
+    <div style="height:12px;"></div>
+    ${h1(`Document à signer : ${opts.documentTitle}`)}
+    ${p(`Bonjour <strong>${opts.recipientName || "Madame, Monsieur"}</strong>,`)}
+    ${p(`<strong>${opts.orgName}</strong> vous demande de signer électroniquement le document suivant.`)}
+    ${card([
+      { label: "Document", value: opts.documentTitle },
+      { label: "Type", value: opts.documentType },
+    ])}
+    ${btn("Signer le document →", opts.signUrl)}
+    ${p(`Ce lien est strictement personnel — ne le partagez pas. Une fois signé, votre signature sera enregistrée avec la date et l'heure.`)}
+    ${p(`Si vous ne vous attendiez pas à recevoir ce message, ignorez simplement cet email.`)}
+  `,
+    opts.orgName
+  );
+}
+
+// ── 21. Confirmation de signature (au coordinateur) ──────────────────────
+
+export function tplDocumentSigned(opts: {
+  orgName: string;
+  documentTitle: string;
+  signerName: string;
+  signedAt: string;
+  dashboardUrl: string;
+}) {
+  return base(
+    `
+    ${badge("Document signé ✓", "#22C55E")}
+    <div style="height:12px;"></div>
+    ${h1("Un document vient d'être signé")}
+    ${p(`<strong>${opts.signerName}</strong> a signé le document <strong>« ${opts.documentTitle} »</strong>.`)}
+    ${card([
+      { label: "Document", value: opts.documentTitle },
+      { label: "Signataire", value: opts.signerName },
+      { label: "Date", value: new Date(opts.signedAt).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }) },
+    ])}
+    ${btn("Voir le document →", opts.dashboardUrl)}
+  `,
+    opts.orgName
+  );
+}
+
 // ── Reçu fiscal par email (pièce jointe PDF) ─────────────────────────────
 
 export function tplReceiptEmail(opts: {

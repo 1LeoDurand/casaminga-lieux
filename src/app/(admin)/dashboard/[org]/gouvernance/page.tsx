@@ -3,9 +3,9 @@ import { PageHeader } from "@/components/mc/page-header";
 import { GouvernanceView } from "@/components/mc/gouvernance-view";
 import {
   getOrganizationBySlug, getMeetingsForOrg, getMandatesForOrg, getPersonsForOrg,
-  getAssemblyProxies, getAssemblyAttendance,
+  getAssemblyProxies, getAssemblyAttendance, getResolutionsForMeeting,
 } from "@/lib/data";
-import type { AssemblyProxy, AssemblyAttendance } from "@/lib/types";
+import type { AssemblyProxy, AssemblyAttendance, MeetingResolution } from "@/lib/types";
 
 export default async function GouvernancePage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
@@ -18,7 +18,7 @@ export default async function GouvernancePage({ params }: { params: Promise<{ or
     getPersonsForOrg(organization.id),
   ]);
 
-  // Charger proxies + émargement pour chaque AG
+  // Charger proxies + émargement + résolutions pour chaque AG
   const agMeetings = meetings.filter((m) => m.is_general_assembly || m.type === "ag");
   const [proxiesArrays, attendanceArrays] = await Promise.all([
     Promise.all(agMeetings.map((m) => getAssemblyProxies(m.id))),
@@ -31,6 +31,11 @@ export default async function GouvernancePage({ params }: { params: Promise<{ or
     attendanceByMeeting[m.id] = attendanceArrays[i];
   });
 
+  // Résolutions pour toutes les réunions (pas seulement les AG)
+  const resolutionsArrays = await Promise.all(meetings.map((m) => getResolutionsForMeeting(m.id)));
+  const resolutionsByMeeting: Record<string, MeetingResolution[]> = {};
+  meetings.forEach((m, i) => { resolutionsByMeeting[m.id] = resolutionsArrays[i]; });
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader tag="Vie associative" title="Gouvernance"
@@ -41,8 +46,10 @@ export default async function GouvernancePage({ params }: { params: Promise<{ or
         persons={persons}
         proxiesByMeeting={proxiesByMeeting}
         attendanceByMeeting={attendanceByMeeting}
+        resolutionsByMeeting={resolutionsByMeeting}
         orgSlug={organization.slug}
         orgId={organization.id}
+        orgName={organization.name}
       />
     </div>
   );
