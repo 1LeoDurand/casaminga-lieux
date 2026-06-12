@@ -27,8 +27,15 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: "service role manquant" }, { status: 500 });
 
   const now = new Date();
+  const days90 = new Date(now); days90.setDate(days90.getDate() - 90);
   const months12 = new Date(now); months12.setMonth(months12.getMonth() - 12);
   const months24 = new Date(now); months24.setMonth(months24.getMonth() - 24);
+
+  // 0. Logs webhooks HelloAsso > 90 jours (contiennent noms/emails/montants)
+  const { count: helloassoPurged } = await admin
+    .from("helloasso_sync_log")
+    .delete({ count: "exact" })
+    .lt("created_at", days90.toISOString());
 
   // 1. Journal email > 12 mois
   const { count: emailLogPurged } = await admin
@@ -77,10 +84,11 @@ export async function POST(req: Request) {
     }
   }
 
-  const total = (emailLogPurged ?? 0) + (requestsAnonymized ?? 0) + regsAnonymized;
+  const total = (helloassoPurged ?? 0) + (emailLogPurged ?? 0) + (requestsAnonymized ?? 0) + regsAnonymized;
   await logCronRun("rgpd-purge", "ok", { rowsAffected: total });
   return NextResponse.json({
     ok: true,
+    helloassoLogPurged: helloassoPurged ?? 0,
     emailLogPurged: emailLogPurged ?? 0,
     requestsAnonymized: requestsAnonymized ?? 0,
     eventRegistrationsAnonymized: regsAnonymized,

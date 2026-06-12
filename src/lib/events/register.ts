@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/admin/guard";
 import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * Moteur d'inscription unique aux événements (Lot 5).
@@ -100,6 +101,11 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
   const email = input.email.trim().toLowerCase();
   if (!fullName || !email || !email.includes("@")) {
     return { ok: false, error: "Nom et email obligatoires." };
+  }
+
+  // Anti-spam : 3 inscriptions max / email / événement / heure (surface publique)
+  if (input.source === "public" && !rateLimit(`evreg:${input.eventId}:${email}`, 3, 3_600_000)) {
+    return { ok: false, error: "Trop de tentatives. Réessayez dans une heure." };
   }
 
   const holders = (input.participants ?? []).map((p) => (p ?? "").trim()).filter(Boolean);

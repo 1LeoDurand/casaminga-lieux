@@ -17,16 +17,26 @@ export async function acceptInvitation(params: {
     auth: { persistSession: false },
   });
 
-  // 1. Vérifier l'invitation
-  const { data: inv, error: invErr } = await admin
+  // 1. Revendiquer l'invitation ATOMIQUEMENT (un seul UPDATE conditionnel) :
+  //    deux requêtes simultanées avec le même token ne peuvent pas passer
+  //    toutes les deux. En cas d'échec plus loin, on restitue le token.
+  const { data: claimed } = await admin
     .from("invitations")
-    .select("id, organization_id, email, role, expires_at, used_at")
+    .update({ used_at: new Date().toISOString() })
     .eq("token", params.token)
+    .is("used_at", null)
+    .select("id, organization_id, email, role, expires_at")
     .maybeSingle();
 
-  if (invErr || !inv) return { orgSlug: null, error: "Lien d'invitation invalide." };
-  if (inv.used_at) return { orgSlug: null, error: "Ce lien a déjà été utilisé." };
-  if (new Date(inv.expires_at) < new Date()) return { orgSlug: null, error: "Ce lien a expiré." };
+  if (!claimed) return { orgSlug: null, error: "Lien d'invitation invalide ou déjà utilisé." };
+  const inv = claimed;
+  const releaseInvitation = () =>
+    admin.from("invitations").update({ used_at: null }).eq("id", inv.id);
+
+  if (new Date(inv.expires_at) < new Date()) {
+    await releaseInvitation();
+    return { orgSlug: null, error: "Ce lien a expiré." };
+  }
 
   // 2. Récupérer le slug de l'org
   const { data: org } = await admin
@@ -35,7 +45,10 @@ export async function acceptInvitation(params: {
     .eq("id", inv.organization_id)
     .single();
 
-  if (!org) return { orgSlug: null, error: "Organisation introuvable." };
+  if (!org) {
+    await releaseInvitation();
+    return { orgSlug: null, error: "Organisation introuvable." };
+  }
 
   // 3. Créer le compte Supabase Auth (ou récupérer l'existant)
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
@@ -51,7 +64,10 @@ export async function acceptInvitation(params: {
     // Peut-être que l'utilisateur existe déjà — on le cherche
     const { data: existing } = await admin.auth.admin.listUsers();
     const found = existing?.users?.find((u) => u.email === inv.email);
-    if (!found) return { orgSlug: null, error: "Impossible de créer le compte : " + authErr.message };
+    if (!found) {
+      await releaseInvitation();
+      return { orgSlug: null, error: "Impossible de créer le compte : " + authErr.message };
+    }
     userId = found.id;
   } else {
     userId = created.user.id;
@@ -81,10 +97,11 @@ export async function acceptInvitation(params: {
     { onConflict: "user_id,organization_id" }
   );
 
-  if (memberErr) return { orgSlug: null, error: "Erreur lors de l'ajout à l'organisation." };
+  if (memberErr) {
+    await releaseInvitation();
+    return { orgSlug: null, error: "Erreur lors de l'ajout à l'organisation." };
+  }
 
-  // 5. Marquer l'invitation comme utilisée
-  await admin.from("invitations").update({ used_at: new Date().toISOString() }).eq("token", params.token);
-
+  // L'invitation a été marquée utilisée dès l'étape 1 (revendication atomique).
   return { orgSlug: org.slug, error: null };
 }

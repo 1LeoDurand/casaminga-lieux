@@ -26,6 +26,11 @@ export async function requestPortalLinkAction(
 
   try {
     const email = normalizeEmail(rawEmail);
+
+    // Anti-spam : 3 envois de lien max / email / heure (réponse neutre identique)
+    const { rateLimit } = await import("@/lib/rate-limit");
+    if (!rateLimit(`portal-link:${email}`, 3, 3_600_000)) return { ok: true };
+
     const hasContent = await emailHasPortalContent(email);
     if (!hasContent) return { ok: true };
 
