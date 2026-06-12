@@ -2,6 +2,24 @@
 
 export type FunderType = "etat" | "region" | "departement" | "europe" | "fondation" | "autre";
 
+// ── Assistance rédaction IA (Lot 12 P4) ─────────────────────
+export type DraftSection = "presentation" | "projet" | "adequation";
+
+export const DRAFT_SECTIONS: Record<DraftSection, { label: string; hint: string }> = {
+  presentation: {
+    label: "Présentation de la structure",
+    hint: "Qui vous êtes, votre histoire, vos activités, votre ancrage territorial.",
+  },
+  projet: {
+    label: "Description du projet",
+    hint: "Le projet financé : objectifs, publics, actions, calendrier.",
+  },
+  adequation: {
+    label: "Adéquation au dispositif",
+    hint: "Pourquoi votre projet répond aux critères de cet appel précis.",
+  },
+};
+
 export interface GrantOpportunity {
   id: string;
   title: string;

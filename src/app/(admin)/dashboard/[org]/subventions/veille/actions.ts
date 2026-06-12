@@ -7,6 +7,10 @@ import { humanError } from "@/lib/errors";
 import { createGrant } from "@/lib/data";
 import type { ApplicationStatus } from "@/lib/grants/types";
 import type { GrantFunderType } from "@/lib/types";
+import { draftGrantSection, type DraftResult } from "@/lib/grants/ai-draft";
+import type { DraftSection } from "@/lib/grants/types";
+import { getOpportunityById, getOrgGrantProfile } from "@/lib/grants/data";
+import { rateLimit } from "@/lib/rate-limit";
 
 type Result = { ok: boolean; error?: string };
 
@@ -121,6 +125,38 @@ export async function upsertApplicationAction(
 
   revalidatePath(`/dashboard/${orgSlug}/subventions/veille`);
   return { ok: true, linked_grant_id: linkedGrantId };
+}
+
+/**
+ * Assistance rédaction IA (Lot 12 P4) — génère un brouillon de section
+ * narrative. Réservé aux membres connectés ; 10 générations / org / heure
+ * (chaque appel consomme des crédits API Claude).
+ */
+export async function draftNarrativeAction(
+  orgId: string,
+  opportunityId: string,
+  section: DraftSection,
+  orgName: string,
+  annualRevenue: number | null,
+): Promise<DraftResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Disponible une fois Supabase configuré." };
+
+  // Garde : utilisateur authentifié uniquement (l'action consomme des crédits)
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Connexion requise." };
+
+  if (!rateLimit(`ai-draft:${orgId}`, 10, 3_600_000)) {
+    return { ok: false, error: "Limite atteinte (10 générations/heure). Réessayez plus tard." };
+  }
+
+  const [opportunity, profile] = await Promise.all([
+    getOpportunityById(opportunityId),
+    getOrgGrantProfile(orgId),
+  ]);
+  if (!opportunity) return { ok: false, error: "Appel à projets introuvable." };
+
+  return draftGrantSection({ section, opportunity, profile, orgName, annualRevenue });
 }
 
 /** Retire une candidature du suivi. */

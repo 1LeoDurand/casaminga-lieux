@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, DownloadCloud } from "lucide-react";
 import {
   type GrantOpportunity,
   type FunderType,
@@ -11,7 +11,7 @@ import {
   GRANT_THEMES,
   FRENCH_REGIONS,
 } from "@/lib/grants/types";
-import { saveOpportunity, deleteOpportunity, type OpportunityInput } from "@/app/admin/subventions-veille/actions";
+import { saveOpportunity, deleteOpportunity, importAidesTerritoires, type OpportunityInput } from "@/app/admin/subventions-veille/actions";
 
 const input = "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none focus:border-coral";
 const labelCls = "mb-1 block text-[12px] font-semibold text-ink";
@@ -31,6 +31,8 @@ export function OpportunityEditor({ opportunities }: { opportunities: GrantOppor
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<GrantOpportunity | "new" | null>(null);
 
+  const [importing, startImport] = useTransition();
+
   function remove(o: GrantOpportunity) {
     if (!confirm(`Supprimer « ${o.title} » ?`)) return;
     startTransition(async () => {
@@ -40,13 +42,35 @@ export function OpportunityEditor({ opportunities }: { opportunities: GrantOppor
     });
   }
 
+  function runImport() {
+    startImport(async () => {
+      const res = await importAidesTerritoires();
+      if (res.ok) {
+        toast.success(`Import terminé : ${res.imported ?? 0} nouvelle(s), ${res.updated ?? 0} mise(s) à jour. Les nouveautés sont en brouillon.`);
+        router.refresh();
+      } else {
+        toast.error(res.error ?? "Erreur d'import");
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm text-warmgray">{opportunities.length} opportunité(s)</span>
-        <button onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 rounded-full bg-coral px-4 py-2 text-[13px] font-bold text-white hover:bg-coral-dark">
-          <Plus className="size-4" /> Nouvelle opportunité
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={runImport}
+            disabled={importing}
+            title="Récupère les aides associatives ouvertes depuis Aides-Territoires (arrivent en brouillon)"
+            className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-blue-50 px-4 py-2 text-[13px] font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+          >
+            <DownloadCloud className="size-4" /> {importing ? "Import…" : "Importer Aides-Territoires"}
+          </button>
+          <button onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5 rounded-full bg-coral px-4 py-2 text-[13px] font-bold text-white hover:bg-coral-dark">
+            <Plus className="size-4" /> Nouvelle opportunité
+          </button>
+        </div>
       </div>
 
       {opportunities.length === 0 ? (

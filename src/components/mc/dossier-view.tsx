@@ -3,7 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import {
   CheckSquare, Square, ChevronRight, ExternalLink, CalendarClock,
-  FileText, MapPin, Building2, Target, Euro, Info,
+  FileText, MapPin, Building2, Target, Euro, Info, Sparkles, Copy, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -11,6 +11,8 @@ import {
   type OrgGrantProfile,
   type GrantApplication,
   type ApplicationStatus,
+  type DraftSection,
+  DRAFT_SECTIONS,
   APPLICATION_STATUS_META,
   FUNDER_TYPE_LABELS,
   eligibilityScore,
@@ -18,6 +20,7 @@ import {
 import {
   upsertApplicationAction,
   deleteApplicationAction,
+  draftNarrativeAction,
 } from "@/app/(admin)/dashboard/[org]/subventions/veille/actions";
 
 const fmtEuro = (n: number) =>
@@ -66,6 +69,28 @@ export function DossierView({
   const score = eligibilityScore(opp, profile);
   const [application, setApplication] = useState<GrantApplication | null>(initialApplication);
   const [, startTransition] = useTransition();
+
+  // Assistant rédaction IA (P4)
+  const [aiSection, setAiSection] = useState<DraftSection>("presentation");
+  const [aiText, setAiText] = useState("");
+  const [aiPending, startAi] = useTransition();
+  const [aiCopied, setAiCopied] = useState(false);
+
+  function generateDraft() {
+    startAi(async () => {
+      const res = await draftNarrativeAction(orgId, opp.id, aiSection, orgName, annualRevenue);
+      if (res.ok) { setAiText(res.text); setAiCopied(false); }
+      else toast.error(res.error);
+    });
+  }
+
+  function copyDraft() {
+    navigator.clipboard.writeText(aiText).then(() => {
+      setAiCopied(true);
+      toast.success("Brouillon copié");
+      setTimeout(() => setAiCopied(false), 2000);
+    });
+  }
 
   // Checklist des pièces — persistée en localStorage
   const storageKey = `dossier-checklist-${opp.id}`;
@@ -281,6 +306,64 @@ export function DossierView({
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-cream p-4 text-[13px] text-warmgray">
               <p>Renseignez votre profil (bouton &quot;Mon profil&quot; sur la page Veille) pour pré-remplir automatiquement vos informations.</p>
+            </div>
+          )}
+        </Section>
+
+        {/* Assistant rédaction IA (P4) */}
+        <Section title="Brouillon assisté par IA" icon={<Sparkles className="size-4" />}>
+          <p className="mb-3 text-[13px] text-warmgray">
+            Générez un premier jet d&apos;une partie narrative du dossier, à partir de votre profil et de cet appel.
+            <strong className="text-ink"> Relisez et personnalisez toujours</strong> avant de déposer — l&apos;IA peut se tromper.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(DRAFT_SECTIONS) as DraftSection[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setAiSection(s)}
+                className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition ${
+                  aiSection === s ? "border-coral bg-peach-pale text-coral-dark" : "border-border text-warmgray hover:border-coral/40"
+                }`}
+              >
+                {DRAFT_SECTIONS[s].label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[12px] text-warmgray">{DRAFT_SECTIONS[aiSection].hint}</p>
+
+          <button
+            type="button"
+            onClick={generateDraft}
+            disabled={aiPending}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-coral px-4 py-2.5 text-[13px] font-bold text-white transition hover:bg-coral-dark disabled:opacity-50"
+          >
+            <Sparkles className="size-4" />
+            {aiPending ? "Rédaction en cours…" : aiText ? "Régénérer" : "Générer un brouillon"}
+          </button>
+
+          {aiText && (
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-warmgray">Brouillon — à relire</span>
+                <button
+                  type="button"
+                  onClick={copyDraft}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[12px] font-semibold text-ink hover:border-coral/40"
+                >
+                  {aiCopied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                  {aiCopied ? "Copié" : "Copier"}
+                </button>
+              </div>
+              <textarea
+                value={aiText}
+                onChange={(e) => setAiText(e.target.value)}
+                rows={12}
+                className="w-full resize-y rounded-xl border border-border bg-cream p-4 text-[13px] leading-relaxed text-ink outline-none focus:border-coral focus:ring-2 focus:ring-coral/15"
+              />
+              <p className="mt-2 text-[11px] text-warmgray">
+                <Info className="inline size-3 mr-0.5" /> Texte généré localement, non sauvegardé. Modifiez-le ici puis copiez-le dans votre dossier.
+              </p>
             </div>
           )}
         </Section>
