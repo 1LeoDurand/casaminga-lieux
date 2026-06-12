@@ -54,50 +54,11 @@ export async function importAidesTerritoires(): Promise<
   Result & { imported?: number; updated?: number }
 > {
   await requireSuperAdmin();
-  const admin = createAdminClient();
-  if (!admin) return { ok: false, error: "service role manquant" };
-
-  const { fetchAidesTerritoires } = await import("@/lib/grants/aides-territoires");
-  const res = await fetchAidesTerritoires(50);
-  if (!res.ok) return { ok: false, error: res.error };
-
-  // Ce qui existe déjà (par external_id) pour distinguer insert / update
-  const externalIds = res.opportunities.map((o) => o.external_id);
-  const { data: existing } = await admin
-    .from("grant_opportunities")
-    .select("id, external_id")
-    .eq("source", "aides-territoires")
-    .in("external_id", externalIds);
-  const byExtId = new Map((existing ?? []).map((r) => [r.external_id as string, r.id as string]));
-
-  let imported = 0;
-  let updated = 0;
-  for (const o of res.opportunities) {
-    const existingId = byExtId.get(o.external_id);
-    if (existingId) {
-      // Rafraîchit les champs volatils sans toucher published
-      const { error } = await admin
-        .from("grant_opportunities")
-        .update({
-          title: o.title, funder: o.funder, funder_type: o.funder_type,
-          themes: o.themes, regions: o.regions, amount_min: o.amount_min,
-          amount_max: o.amount_max, deadline: o.deadline, recurring: o.recurring,
-          application_url: o.application_url, description: o.description,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingId);
-      if (!error) updated++;
-    } else {
-      const { error } = await admin.from("grant_opportunities").insert({
-        ...o, source: "aides-territoires", published: false,
-        updated_at: new Date().toISOString(),
-      });
-      if (!error) imported++;
-    }
-  }
-
+  const { syncAidesTerritoires } = await import("@/lib/grants/aides-territoires");
+  const res = await syncAidesTerritoires(50);
+  if (!res.ok) return res;
   revalidatePath("/admin/subventions-veille");
-  return { ok: true, imported, updated };
+  return res;
 }
 
 export async function deleteOpportunity(id: string): Promise<Result> {

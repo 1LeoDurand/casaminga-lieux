@@ -1,4 +1,5 @@
 import "server-only";
+import { createAdminClient } from "@/lib/admin/guard";
 import type { FunderType } from "./types";
 
 /**
@@ -145,4 +146,57 @@ export async function fetchAidesTerritoires(maxAids = 50): Promise<FetchResult> 
   }
 
   return { ok: true, opportunities: collected };
+}
+
+export type SyncResult =
+  | { ok: true; imported: number; updated: number }
+  | { ok: false; error: string };
+
+/**
+ * Fetch + upsert dans grant_opportunities (logique partagée bouton admin /
+ * cron). Anti-doublon par external_id : les nouvelles aides arrivent en
+ * `published: false` (relecture super-admin avant publication), les
+ * existantes voient leurs champs volatils rafraîchis sans toucher published.
+ */
+export async function syncAidesTerritoires(maxAids = 50): Promise<SyncResult> {
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "service role manquant" };
+
+  const res = await fetchAidesTerritoires(maxAids);
+  if (!res.ok) return { ok: false, error: res.error };
+
+  const externalIds = res.opportunities.map((o) => o.external_id);
+  const { data: existing } = await admin
+    .from("grant_opportunities")
+    .select("id, external_id")
+    .eq("source", "aides-territoires")
+    .in("external_id", externalIds);
+  const byExtId = new Map((existing ?? []).map((r) => [r.external_id as string, r.id as string]));
+
+  let imported = 0;
+  let updated = 0;
+  for (const o of res.opportunities) {
+    const existingId = byExtId.get(o.external_id);
+    if (existingId) {
+      const { error } = await admin
+        .from("grant_opportunities")
+        .update({
+          title: o.title, funder: o.funder, funder_type: o.funder_type,
+          themes: o.themes, regions: o.regions, amount_min: o.amount_min,
+          amount_max: o.amount_max, deadline: o.deadline, recurring: o.recurring,
+          application_url: o.application_url, description: o.description,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingId);
+      if (!error) updated++;
+    } else {
+      const { error } = await admin.from("grant_opportunities").insert({
+        ...o, source: "aides-territoires", published: false,
+        updated_at: new Date().toISOString(),
+      });
+      if (!error) imported++;
+    }
+  }
+
+  return { ok: true, imported, updated };
 }
