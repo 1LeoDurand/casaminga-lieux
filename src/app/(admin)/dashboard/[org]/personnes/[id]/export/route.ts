@@ -74,6 +74,22 @@ export async function GET(
       .eq("client_id", id),
   ]);
 
+  // Inscriptions aux événements (clé email) + documents liés (clé person_id)
+  const [{ data: eventRegs }, { data: documents }] = await Promise.all([
+    person.email
+      ? supabase
+          .from("event_registrations")
+          .select("id, full_name, email, phone, seats, status, amount_ttc, created_at, evenements(title, start_at)")
+          .eq("organization_id", organization.id)
+          .eq("email", person.email)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("documents")
+      .select("id, title, type, status, signed_at, created_at")
+      .eq("organization_id", organization.id)
+      .eq("person_id", id),
+  ]);
+
   const exportPayload = {
     _meta: {
       export_type: "RGPD — Portabilité des données (art. 15 & 20)",
@@ -145,6 +161,29 @@ export async function GET(
       fin: r.end_at,
       statut: r.status,
       cree_le: r.created_at,
+    })),
+    inscriptions_evenements: (eventRegs ?? []).map((r: Record<string, unknown>) => {
+      const ev = r.evenements as { title: string; start_at: string } | null;
+      return {
+        id: r.id,
+        evenement: ev?.title ?? null,
+        date_evenement: ev?.start_at ?? null,
+        nom: r.full_name,
+        email: r.email,
+        telephone: r.phone,
+        places: r.seats,
+        statut: r.status,
+        montant_ttc: r.amount_ttc,
+        cree_le: r.created_at,
+      };
+    }),
+    documents: (documents ?? []).map((d) => ({
+      id: d.id,
+      titre: d.title,
+      type: d.type,
+      statut: d.status,
+      signe_le: d.signed_at,
+      cree_le: d.created_at,
     })),
   };
 

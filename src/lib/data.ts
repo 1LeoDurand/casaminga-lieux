@@ -360,6 +360,14 @@ export async function anonymizePerson(
 ): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
   const supabase = await createClient();
+
+  // Email AVANT effacement — il sert de clé pour anonymiser les tables liées
+  const { data: person } = await supabase
+    .from("persons")
+    .select("email, organization_id")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("persons")
     .update({
@@ -372,8 +380,50 @@ export async function anonymizePerson(
       anonymized_by: operatorName,
     })
     .eq("id", id);
-  if (error) console.error("anonymizePerson: échec maj Supabase", error);
-  return !error;
+  if (error) {
+    console.error("anonymizePerson: échec maj Supabase", error);
+    return false;
+  }
+
+  // Tables liées — identité effacée, montants/dates conservés (stats + compta).
+  // Les factures ne sont PAS touchées : conservation légale 10 ans (L123-22).
+  if (person?.email) {
+    const email = person.email;
+    const orgId = person.organization_id;
+
+    const { data: apps } = await supabase
+      .from("membership_applications")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("email", email);
+    if (apps?.length) {
+      await supabase.from("membership_applications").update({
+        first_name: "Anonyme", last_name: "RGPD",
+        email: null, phone: null, payer_name: null, payer_email: null, notes: null,
+      }).in("id", apps.map((a) => a.id));
+    }
+
+    const { data: regs } = await supabase
+      .from("event_registrations")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("email", email);
+    if (regs?.length) {
+      const regIds = regs.map((r) => r.id);
+      await supabase.from("event_registrations").update({
+        full_name: "Anonyme RGPD", email: "anonyme@rgpd.invalid", phone: null, notes: null,
+      }).in("id", regIds);
+      await supabase.from("event_tickets").update({ holder_name: "Anonyme RGPD" })
+        .in("registration_id", regIds);
+    }
+
+    await supabase.from("incoming_requests").update({
+      name: "Anonyme RGPD", email: null, phone: null,
+      organization_ext: null, summary: null, message: null,
+    }).eq("organization_id", orgId).eq("email", email);
+  }
+
+  return true;
 }
 
 // ── Espaces ─────────────────────────────────────────────────
