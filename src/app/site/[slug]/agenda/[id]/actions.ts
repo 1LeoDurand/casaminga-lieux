@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { registerForEvent } from "@/lib/events/register";
 
 export interface RegistrationPayload {
   eventId: string;
@@ -15,51 +15,37 @@ export interface RegistrationPayload {
   montantTotal: number;
 }
 
+export type RegistrationActionResult =
+  | { ok: true; id: string; status: "inscrit" | "liste_attente" }
+  | { ok: false; error: string };
+
+/**
+ * Inscription depuis le tunnel public du site.
+ * Délègue au moteur unique (capacité, liste d'attente, billets, email) —
+ * plus aucune insertion directe ici.
+ */
 export async function createEventRegistration(
   payload: RegistrationPayload
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+): Promise<RegistrationActionResult> {
   if (!isSupabaseConfigured()) {
     // Mode démo : on simule un succès
-    return { ok: true, id: crypto.randomUUID() };
+    return { ok: true, id: crypto.randomUUID(), status: "inscrit" };
   }
 
-  const supabase = await createClient();
-  // Réservation (acheteur) sur le schéma unifié.
-  const { data, error } = await supabase
-    .from("event_registrations")
-    .insert({
-      event_id: payload.eventId,
-      organization_id: payload.organizationId,
-      full_name: `${payload.prenom} ${payload.nom}`.trim(),
-      email: payload.email,
-      phone: payload.telephone ?? null,
-      seats: payload.nbPlaces,
-      amount_ttc: payload.montantTotal,
-      status: "inscrit",
-      source: "public",
-    })
-    .select("id")
-    .single();
+  const participants = (payload.participants ?? [])
+    .map((p) => `${p.prenom} ${p.nom}`.trim())
+    .filter(Boolean);
 
-  if (error) {
-    console.error("[createEventRegistration]", error);
-    return { ok: false, error: "Une erreur est survenue. Réessayez dans un instant." };
-  }
+  const res = await registerForEvent({
+    eventId: payload.eventId,
+    fullName: `${payload.prenom} ${payload.nom}`.trim(),
+    email: payload.email,
+    phone: payload.telephone,
+    participants,
+    source: "public",
+    amountTtc: payload.montantTotal,
+  });
 
-  // Un billet nominatif par participant (chacun son QR).
-  const holders = (payload.participants?.length
-    ? payload.participants.map((p) => `${p.prenom} ${p.nom}`.trim()).filter(Boolean)
-    : [`${payload.prenom} ${payload.nom}`.trim()]);
-  if (holders.length) {
-    await supabase.from("event_tickets").insert(
-      holders.map((name) => ({
-        organization_id: payload.organizationId,
-        event_id: payload.eventId,
-        registration_id: data.id,
-        holder_name: name,
-      }))
-    );
-  }
-
-  return { ok: true, id: data.id };
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, id: res.registrationId, status: res.status };
 }

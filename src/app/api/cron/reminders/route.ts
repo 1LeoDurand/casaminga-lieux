@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "service role manquant" }, { status: 500 });
 
-  const [{ sendMail }, { tplReservationRappel, tplAdhesionRappelRenouvellement }] = await Promise.all([
+  const [{ sendMail }, { tplReservationRappel, tplAdhesionRappelRenouvellement, tplEvenementRappel }] = await Promise.all([
     import("@/lib/mail"),
     import("@/lib/mail-templates"),
   ]);
@@ -89,6 +89,40 @@ export async function POST(req: Request) {
     if (ok) adhSent++;
   }
 
-  await logCronRun("reminders", "ok", { rowsAffected: resaSent + adhSent });
-  return NextResponse.json({ ok: true, reservationsReminded: resaSent, adhesionsReminded: adhSent });
+  // ── Billetterie J-1 : inscrits aux événements qui commencent demain ──
+  let eventSent = 0;
+  const { data: tomorrowEvents } = await admin
+    .from("evenements")
+    .select("id, title, start_at, organizations(name)")
+    .eq("status", "publie")
+    .gte("start_at", dayStart.toISOString())
+    .lte("start_at", dayEnd.toISOString());
+
+  for (const ev of (tomorrowEvents ?? []) as unknown as Array<{
+    id: string; title: string; start_at: string;
+    organizations: { name: string } | null;
+  }>) {
+    const { data: regs } = await admin
+      .from("event_registrations")
+      .select("full_name, email")
+      .eq("event_id", ev.id)
+      .eq("status", "inscrit");
+    for (const r of regs ?? []) {
+      if (!r.email) continue;
+      const ok = await sendMail({
+        to: r.email,
+        subject: `C'est demain ! ${ev.title} · ${ev.organizations?.name ?? "Casa Minga"}`,
+        html: tplEvenementRappel({
+          orgName: ev.organizations?.name ?? "Casa Minga Lieux",
+          firstName: r.full_name?.split(" ")[0] ?? "",
+          eventTitle: ev.title,
+          startAt: ev.start_at,
+        }),
+      });
+      if (ok) eventSent++;
+    }
+  }
+
+  await logCronRun("reminders", "ok", { rowsAffected: resaSent + adhSent + eventSent });
+  return NextResponse.json({ ok: true, reservationsReminded: resaSent, adhesionsReminded: adhSent, eventsReminded: eventSent });
 }

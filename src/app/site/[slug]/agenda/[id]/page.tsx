@@ -4,6 +4,7 @@ import { getOrganizationBySlug, getEvenementById } from "@/lib/data";
 import { getPublishedSiteContent } from "@/lib/site-public/data";
 import { mergeSiteContent } from "@/lib/site-public/types";
 import { PublicEventPage } from "@/components/mc/public-event-page";
+import { remainingSeats } from "@/lib/events/register";
 
 export async function generateMetadata({
   params,
@@ -39,7 +40,10 @@ export default async function PublicEventDetailPage({
   // L'événement doit être publié et appartenir à cet org
   if (event.organization_id !== org.id || event.status !== "publie") notFound();
 
-  const rawContent = await getPublishedSiteContent(org.id);
+  const [rawContent, remaining] = await Promise.all([
+    getPublishedSiteContent(org.id),
+    event.capacity ? remainingSeats(event.id) : Promise.resolve(null),
+  ]);
   const c = mergeSiteContent(rawContent);
   const accent = c.accent_color || org.primary_color || "#FF8A65";
 
@@ -49,6 +53,7 @@ export default async function PublicEventDetailPage({
       org={org}
       accent={accent}
       orgSlug={slug}
+      remaining={remaining}
     />
   );
 }

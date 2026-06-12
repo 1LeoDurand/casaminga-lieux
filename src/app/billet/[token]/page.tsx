@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/admin/guard";
 import { ticketQrDataUrl } from "@/lib/tickets";
+import { CancelTicketButton } from "./cancel-button";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,10 @@ export default async function BilletPage({ params }: { params: Promise<{ token: 
             <div style={{ marginBottom: 6 }}><strong>{reg.holder_name}</strong></div>
             {ev && <div style={{ color: "#6B6460" }}>📅 {dateStr} · {timeStr}</div>}
           </div>
+          {/* Annulation par le porteur — seulement si pas encore scanné ni passé */}
+          {!used && ev && new Date(ev.start_at) > new Date() && (
+            <CancelTicketButton token={token} />
+          )}
         </div>
       </div>
     </main>

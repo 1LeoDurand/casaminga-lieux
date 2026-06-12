@@ -82,19 +82,30 @@ function StepBillets({
   nbPlaces,
   setNbPlaces,
   onNext,
+  remaining,
 }: {
   event: Evenement;
   accent: string;
   nbPlaces: number;
   setNbPlaces: (n: number) => void;
   onNext: () => void;
+  remaining: number | null;
 }) {
   const price = event.price ?? 0;
-  const maxCap = event.capacity ?? 20;
+  const isFull = remaining !== null && remaining <= 0;
+  // Complet → on laisse choisir jusqu'à 5 places en liste d'attente
+  const maxCap = isFull ? 5 : remaining ?? event.capacity ?? 20;
   const total = price * nbPlaces;
 
   return (
     <div className="flex flex-col gap-6">
+      {isFull && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+          Cet événement est <strong>complet</strong>. Vous pouvez rejoindre la
+          liste d&apos;attente : si une place se libère, vos billets vous seront
+          envoyés automatiquement par email.
+        </div>
+      )}
       {/* Billet */}
       <div className="rounded-2xl border border-border bg-white p-5">
         <div className="flex items-center justify-between gap-4">
@@ -107,7 +118,11 @@ function StepBillets({
               <div className="mt-1 text-[12px] text-warmgray">
                 <span className="inline-flex items-center gap-1">
                   <Users className="size-3" />
-                  {event.capacity} places max
+                  {isFull
+                    ? "Complet — liste d'attente"
+                    : remaining !== null
+                    ? `${remaining} place${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""}`
+                    : `${event.capacity} places max`}
                 </span>
               </div>
             )}
@@ -424,22 +439,28 @@ function NavButtons({ onBack, onNext }: { onBack: () => void; onNext: () => void
 }
 
 // ─── Écran succès ──────────────────────────────────────────────────────────────
-function SuccessScreen({ event, contact, accent, orgSlug }: { event: Evenement; contact: Contact; accent: string; orgSlug: string }) {
+function SuccessScreen({ event, contact, accent, orgSlug, waiting }: { event: Evenement; contact: Contact; accent: string; orgSlug: string; waiting: boolean }) {
   return (
     <div className="flex flex-col items-center gap-6 py-10 text-center">
       <div
         className="flex size-16 items-center justify-center rounded-full"
-        style={{ background: `${accent}1a` }}
+        style={{ background: waiting ? "#FEF3C7" : `${accent}1a` }}
       >
-        <Check className="size-8" style={{ color: accent }} />
+        {waiting ? <Clock className="size-8 text-amber-600" /> : <Check className="size-8" style={{ color: accent }} />}
       </div>
       <div>
-        <h2 className="font-heading text-2xl font-extrabold text-ink">Inscription confirmée !</h2>
+        <h2 className="font-heading text-2xl font-extrabold text-ink">
+          {waiting ? "Vous êtes sur liste d'attente" : "Inscription confirmée !"}
+        </h2>
         <p className="mt-2 text-muted-foreground">
-          Merci {contact.prenom}. Votre inscription à <strong>{event.title}</strong> a bien été enregistrée.
+          {waiting ? (
+            <>Merci {contact.prenom}. <strong>{event.title}</strong> est complet — si une place se libère, vos billets vous seront envoyés automatiquement.</>
+          ) : (
+            <>Merci {contact.prenom}. Votre inscription à <strong>{event.title}</strong> a bien été enregistrée.</>
+          )}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Un récapitulatif a été envoyé à <strong>{contact.email}</strong>.
+          {waiting ? "Une confirmation a été envoyée à" : "Vos billets ont été envoyés à"} <strong>{contact.email}</strong>.
         </p>
       </div>
       <Link
@@ -458,21 +479,25 @@ export function PublicEventPage({
   org,
   accent,
   orgSlug,
+  remaining = null,
 }: {
   event: Evenement;
   org: Organization;
   accent: string;
   orgSlug: string;
+  remaining?: number | null;
 }) {
   const [mode, setMode] = useState<Mode>("view");
   const [step, setStep] = useState<TunnelStep>(0);
   const [nbPlaces, setNbPlaces] = useState(1);
   const [participants, setParticipants] = useState<Participant[]>([{ prenom: "", nom: "" }]);
   const [contact, setContact] = useState<Contact>({ prenom: "", nom: "", email: "", telephone: "" });
+  const [waiting, setWaiting] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const price = event.price ?? 0;
   const heroPhoto = event.photos?.[0] ?? null;
+  const isFull = remaining !== null && remaining <= 0;
 
   // Sync participants array length with nbPlaces
   function updateNbPlaces(n: number) {
@@ -497,6 +522,7 @@ export function PublicEventPage({
         montantTotal: price * nbPlaces,
       });
       if (res.ok) {
+        setWaiting(res.status === "liste_attente");
         setMode("done");
       } else {
         alert(res.error);
@@ -528,7 +554,7 @@ export function PublicEventPage({
 
         <div className="mx-auto max-w-2xl px-6 py-8">
           {mode === "done" ? (
-            <SuccessScreen event={event} contact={contact} accent={accent} orgSlug={orgSlug} />
+            <SuccessScreen event={event} contact={contact} accent={accent} orgSlug={orgSlug} waiting={waiting} />
           ) : (
             <>
               {/* Récap événement en haut */}
@@ -568,6 +594,7 @@ export function PublicEventPage({
                   nbPlaces={nbPlaces}
                   setNbPlaces={updateNbPlaces}
                   onNext={() => setStep(1)}
+                  remaining={remaining}
                 />
               )}
               {step === 1 && (
@@ -716,7 +743,11 @@ export function PublicEventPage({
                   {event.capacity && (
                     <div className="text-[12px] text-warmgray">
                       <Users className="mr-1 inline size-3" />
-                      {event.capacity} places maximum
+                      {isFull
+                        ? <span className="font-bold text-amber-600">Complet — liste d&apos;attente ouverte</span>
+                        : remaining !== null && remaining <= 10
+                        ? <span className="font-bold text-coral-dark">Plus que {remaining} place{remaining > 1 ? "s" : ""} !</span>
+                        : `${event.capacity} places maximum`}
                     </div>
                   )}
                 </div>
@@ -745,13 +776,17 @@ export function PublicEventPage({
                 type="button"
                 onClick={() => setMode("tunnel")}
                 className="w-full rounded-full py-3 text-sm font-bold text-white shadow transition hover:opacity-90"
-                style={{ background: accent }}
+                style={{ background: isFull ? "#d97706" : accent }}
               >
-                {price === 0 ? "S'inscrire gratuitement" : "Réserver ma place"}
+                {isFull
+                  ? "Rejoindre la liste d'attente"
+                  : price === 0 ? "S'inscrire gratuitement" : "Réserver ma place"}
               </button>
 
               <p className="mt-3 text-center text-[11px] text-warmgray">
-                Inscription sécurisée · Confirmation immédiate
+                {isFull
+                  ? "Billets envoyés automatiquement si une place se libère"
+                  : "Inscription sécurisée · Confirmation immédiate"}
               </p>
             </div>
 

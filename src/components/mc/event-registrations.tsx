@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import {
   getTicketsForEvent, addRegistrationManual,
   checkInTicket, removeTicket,
-  type EventTicket,
+  getWaitlistForEvent, promoteWaitlistEntry,
+  type EventTicket, type WaitlistEntry,
 } from "@/lib/registrations";
 import { getOrCreateScanLink } from "@/lib/tickets";
 import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
@@ -20,6 +21,7 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
   event: Evenement; orgSlug: string; orgId: string;
 }) {
   const [tickets, setTickets] = useState<EventTicket[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -28,8 +30,12 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
   const [, startTransition] = useTransition();
 
   async function refresh() {
-    const data = await getTicketsForEvent(event.id);
+    const [data, wl] = await Promise.all([
+      getTicketsForEvent(event.id),
+      getWaitlistForEvent(event.id),
+    ]);
     setTickets(data);
+    setWaitlist(wl);
   }
   async function load() {
     if (loaded) return;
@@ -76,11 +82,21 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
     });
   }
   function remove(t: EventTicket) {
-    if (!confirm(`Supprimer le billet de ${t.holder_name} ?`)) return;
+    if (!confirm(`Supprimer le billet de ${t.holder_name} ? Si quelqu'un est en liste d'attente, la place lui sera proposée automatiquement.`)) return;
     startTransition(async () => {
       const res = await removeTicket(orgSlug, t.id);
-      if (res.ok) setTickets((prev) => prev.filter((x) => x.id !== t.id));
+      if (res.ok) await refresh();
       else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  function promote(w: WaitlistEntry) {
+    startTransition(async () => {
+      const res = await promoteWaitlistEntry(orgSlug, w.id);
+      if (res.ok) {
+        toast.success(`${w.full_name} inscrit·e — billets envoyés par email ✓`);
+        await refresh();
+      } else toast.error(res.error ?? "Erreur");
     });
   }
 
@@ -107,7 +123,8 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
           {/* Stats */}
           <div className="flex flex-wrap items-center gap-3 text-[12px]">
             <span className="font-semibold text-emerald-700">{tickets.length} billets</span>
-            {event.capacity && <span className="text-warmgray">{event.capacity - tickets.length} places restantes</span>}
+            {event.capacity && <span className="text-warmgray">{Math.max(0, event.capacity - tickets.length)} places restantes</span>}
+            {waitlist.length > 0 && <span className="font-semibold text-amber-600">🕐 {waitlist.length} en attente</span>}
             <span className="text-warmgray">✅ {presents} présents</span>
             <button onClick={exportCsv} className="ml-auto flex items-center gap-1 text-warmgray hover:text-ink">
               <Download className="size-3.5" /> CSV
@@ -160,6 +177,36 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
                     </button>
                     <button onClick={() => remove(t)} className="rounded-lg p-1.5 text-warmgray hover:text-red-600" title="Supprimer">
                       <Trash2 className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Liste d'attente */}
+          {waitlist.length > 0 && (
+            <div className="overflow-hidden rounded-xl border border-amber-200">
+              <div className="bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
+                🕐 Liste d&apos;attente ({waitlist.length}) — promue automatiquement quand une place se libère
+              </div>
+              <ul className="divide-y divide-amber-100">
+                {waitlist.map((w, i) => (
+                  <li key={w.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <span className="text-[11px] font-bold text-amber-500">{i + 1}.</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold text-ink">
+                        {w.full_name}
+                        {w.seats > 1 && <span className="ml-1.5 font-normal text-warmgray">× {w.seats} places</span>}
+                      </div>
+                      <div className="text-[11px] text-warmgray">{w.email}</div>
+                    </div>
+                    <button
+                      onClick={() => promote(w)}
+                      className="rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[12px] font-semibold text-amber-700 hover:bg-amber-50"
+                      title="Inscrire maintenant (même si l'événement est complet) — billets envoyés par email"
+                    >
+                      Promouvoir
                     </button>
                   </li>
                 ))}
