@@ -39,9 +39,13 @@ export default async function DashboardLayout({
     // Vérifie que l'user est membre de cet org OU super-admin
     const isSuperAdmin = isSuperAdminEmail(user.email);
     if (!isSuperAdmin) {
+      // NB : organization_members a une clé composite (organization_id, user_id)
+      // et AUCUNE colonne `id`. Sélectionner "id" faisait échouer la requête
+      // (erreur PostgREST 42703) → membership null → tout membre légitime était
+      // rejeté avec ?error=unauthorized. On sélectionne une colonne réelle.
       const { data: membership } = await supabase
         .from("organization_members")
-        .select("id")
+        .select("user_id")
         .eq("organization_id", organization.id)
         .eq("user_id", user.id)
         .eq("status", "actif")
