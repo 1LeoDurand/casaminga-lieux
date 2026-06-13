@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { DashboardSidebar } from "@/components/mc/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
+import { DashboardShell } from "@/components/mc/dashboard-shell";
 import { FeedbackWidget } from "@/components/mc/feedback-widget";
 import { HelpWidget } from "@/components/mc/help-widget";
 import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
@@ -88,21 +89,31 @@ export default async function DashboardLayout({
   const lieuOptions = establishments.map((e) => ({ id: e.id, name: e.name, slug: e.slug, city: e.city }));
 
   return (
-    <div className="grid h-screen grid-cols-[232px_1fr] grid-rows-[56px_1fr] overflow-hidden">
-      <div className="row-span-2 overflow-hidden">
-        <DashboardSidebar
-          orgSlug={organization.slug}
-          orgName={organization.name}
-          openRequests={openRequests}
-          isDemo={!isSupabaseConfigured()}
-          enabledModules={enabledModules}
-          orgTier={orgTier}
-        />
-      </div>
-      <DashboardTopbar orgSlug={organization.slug} establishments={lieuOptions} selectedLieuId={selectedLieuId} unreadNotifCount={unreadNotifCount} />
-      <main className="overflow-y-auto p-7">{children}</main>
+    <>
+      <DashboardShell
+        sidebar={
+          <DashboardSidebar
+            orgSlug={organization.slug}
+            orgName={organization.name}
+            openRequests={openRequests}
+            isDemo={!isSupabaseConfigured()}
+            enabledModules={enabledModules}
+            orgTier={orgTier}
+          />
+        }
+        topbar={
+          <DashboardTopbar
+            orgSlug={organization.slug}
+            establishments={lieuOptions}
+            selectedLieuId={selectedLieuId}
+            unreadNotifCount={unreadNotifCount}
+          />
+        }
+      >
+        {children}
+      </DashboardShell>
       <FeedbackWidget orgSlug={organization.slug} />
       <HelpWidget />
-    </div>
+    </>
   );
 }

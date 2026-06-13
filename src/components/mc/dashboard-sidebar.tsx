@@ -38,9 +38,13 @@ import {
   TrendingDown,
   Sparkles,
   LogOut,
+  X,
+  PanelLeftClose,
+  PanelLeftOpen,
   type LucideIcon,
 } from "lucide-react";
 import { MODULE_SECTIONS, type ModuleDef, type ModuleSection } from "@/lib/modules";
+import { useSidebar } from "@/components/mc/dashboard-shell";
 
 const ICONS: Record<string, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -110,14 +114,14 @@ function NavItem({
     <Link
       href={href}
       className={`mc-nav-item ${active ? "active" : ""} ${locked ? "opacity-50 hover:opacity-75" : ""}`}
-      title={locked ? "Module Asso complète — passer à l'offre supérieure" : undefined}
+      title={locked ? "Module Asso complète — passer à l'offre supérieure" : m.label}
     >
       <span className="mc-nav-icon">
         {locked ? <Lock className="size-[14px]" strokeWidth={1.9} /> : <Icon className="size-[17px]" strokeWidth={1.7} />}
       </span>
-      <span className="truncate">{m.label}</span>
+      <span className="cm-sb-label truncate">{m.label}</span>
       {badge ? <span className="mc-nav-badge danger">{badge}</span> : null}
-      {locked && <Sparkles className="ml-auto size-3 shrink-0 text-amber-400/70" />}
+      {locked && <Sparkles className="cm-sb-label ml-auto size-3 shrink-0 text-amber-400/70" />}
     </Link>
   );
 }
@@ -172,20 +176,20 @@ function SectionGroup({
     <div>
       {/* En-tête de section — cliquable seulement en mode accordéon */}
       {forceOpen ? (
-        <div className="flex items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
-          <span>{section.title}</span>
+        <div className="cm-sb-section-head flex items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
+          <span className="cm-sb-section-title">{section.title}</span>
         </div>
       ) : (
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={isOpen}
-          className="flex w-full items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 transition-colors hover:text-white/55"
+          className="cm-sb-section-head flex w-full items-center gap-2 px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 transition-colors hover:text-white/55"
         >
-          <span className="flex-1 text-left">{section.title}</span>
+          <span className="cm-sb-section-title flex-1 text-left">{section.title}</span>
           {groupBadge > 0 && <span className="mc-nav-badge danger !static">{groupBadge}</span>}
           <ChevronDown
-            className={`size-3.5 shrink-0 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
+            className={`cm-sb-label size-3.5 shrink-0 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
             strokeWidth={2.2}
           />
         </button>
@@ -240,7 +244,7 @@ function UserMenu({
     <div ref={ref} className="relative mt-auto shrink-0 border-t border-white/[0.07] px-3 py-4">
       {/* Dropdown — s'ouvre vers le haut */}
       {open && (
-        <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#1e1e22] shadow-xl">
+        <div className="cm-sb-user-dropdown absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-white/10 bg-[#1e1e22] shadow-xl">
           <Link
             href={`/dashboard/${orgSlug}/parametres`}
             onClick={() => setOpen(false)}
@@ -266,17 +270,18 @@ function UserMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.07]"
+        title={userName}
+        className="cm-sb-user-trigger flex w-full cursor-pointer items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-white/[0.07]"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-[14px] bg-coral text-[12px] font-bold text-white">
           {initials}
         </span>
-        <div className="min-w-0 flex-1 text-left">
+        <div className="cm-sb-usermeta min-w-0 flex-1 text-left">
           <div className="truncate text-[13px] font-semibold text-white">{userName}</div>
           <div className="text-[11px] text-white/35">{userRole}</div>
         </div>
         <ChevronDown
-          className={`size-3.5 shrink-0 text-white/30 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`cm-sb-usermeta size-3.5 shrink-0 text-white/30 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
     </div>
@@ -302,6 +307,8 @@ export function DashboardSidebar({
   enabledModules?: Set<string>;
   orgTier?: OrgTier;
 }) {
+  const { collapsed, closeMobile, toggleCollapsed } = useSidebar();
+
   const initials = userName
     .split(" ")
     .map((p) => p[0])
@@ -336,13 +343,15 @@ export function DashboardSidebar({
   }, [activeSection]);
 
   return (
-    <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-x-hidden bg-sidebar text-sidebar-foreground"
-      style={{ overflowY: flatMode ? "visible" : "auto" }}
+    <aside
+      data-collapsed={collapsed}
+      className="cm-sidebar flex h-full w-full shrink-0 flex-col overflow-x-hidden bg-sidebar text-sidebar-foreground"
+      style={{ overflowY: flatMode || collapsed ? "visible" : "auto" }}
     >
       {/* Logo + organisation */}
-      <div className="flex shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5 pb-4 pt-5">
+      <div className="cm-sb-header flex shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5 pb-4 pt-5">
         <img src="/logo.png" alt="Casa Minga Lieux" className="size-[34px] shrink-0 rounded-lg object-contain bg-white p-0.5" />
-        <div className="min-w-0">
+        <div className="cm-sb-orgmeta min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="truncate font-heading text-[15px] font-extrabold text-white">
               {orgName}
@@ -360,6 +369,15 @@ export function DashboardSidebar({
             Casa Minga Lieux · /{orgSlug}
           </div>
         </div>
+        {/* Fermer le tiroir — mobile uniquement */}
+        <button
+          type="button"
+          onClick={closeMobile}
+          aria-label="Fermer le menu"
+          className="cm-sb-orgmeta -mr-1 shrink-0 rounded-lg p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+        >
+          <X className="size-5" />
+        </button>
       </div>
 
       {/* Navigation — flat si ≤ 10 items, accordéon sinon */}
@@ -376,7 +394,7 @@ export function DashboardSidebar({
             openRequests={openRequests}
             enabledModules={enabledModules}
             orgTier={orgTier}
-            forceOpen={flatMode}
+            forceOpen={flatMode || collapsed}
           />
         ))}
 
@@ -389,10 +407,24 @@ export function DashboardSidebar({
             <span className="mc-nav-icon">
               <Plus className="size-[15px]" strokeWidth={2} />
             </span>
-            <span className="truncate text-[12px]">Modules</span>
+            <span className="cm-sb-label truncate text-[12px]">Modules</span>
           </Link>
         </div>
       </nav>
+
+      {/* Réduire / agrandir — desktop uniquement */}
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        title={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+        aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
+        className="cm-sb-collapse-btn hidden shrink-0 items-center gap-2.5 border-t border-white/[0.07] px-5 py-2.5 text-[12px] font-medium text-white/40 transition-colors hover:text-white/75 lg:flex"
+      >
+        <span className="mc-nav-icon">
+          {collapsed ? <PanelLeftOpen className="size-[17px]" strokeWidth={1.8} /> : <PanelLeftClose className="size-[17px]" strokeWidth={1.8} />}
+        </span>
+        <span className="cm-sb-label truncate">Réduire</span>
+      </button>
 
       {/* Encart upgrade masqué tant que la facturation Stripe n'est pas en place
           (décision sprint finition 10/06/2026 — réactiver avec Lot 10.1) */}

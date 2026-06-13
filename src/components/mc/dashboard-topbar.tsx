@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Globe, Bell, FileText, Users, Calendar, FolderOpen, CalendarCheck } from "lucide-react";
+import { Search, Globe, Bell, FileText, Users, Calendar, FolderOpen, CalendarCheck, Menu } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { moduleLabelForSegment } from "@/lib/modules";
 import { LieuSwitcher, type LieuOption } from "@/components/mc/lieu-switcher";
+import { useSidebar } from "@/components/mc/dashboard-shell";
 import type { SearchHit } from "@/app/api/search/route";
 
 export function DashboardTopbar({
@@ -19,6 +20,7 @@ export function DashboardTopbar({
   selectedLieuId?: string | null;
   unreadNotifCount?: number;
 }) {
+  const { openMobile } = useSidebar();
   const pathname = usePathname();
   const router = useRouter();
   const parts = pathname.split("/").filter(Boolean);
@@ -71,8 +73,18 @@ export function DashboardTopbar({
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-cream px-7 shadow-[0_2px_12px_rgba(255,138,101,0.08)]">
-      <div className="truncate font-heading text-[17px] font-bold text-[#2c2c2c]">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-cream px-3 shadow-[0_2px_12px_rgba(255,138,101,0.08)] sm:gap-4 sm:px-5 lg:px-7">
+      {/* Hamburger — ouvre le tiroir, mobile uniquement */}
+      <button
+        type="button"
+        onClick={openMobile}
+        aria-label="Ouvrir le menu"
+        className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-xl text-warmgray transition-colors hover:bg-peach-pale hover:text-coral-dark lg:hidden"
+      >
+        <Menu className="size-5" />
+      </button>
+
+      <div className="truncate font-heading text-[15px] font-bold text-[#2c2c2c] sm:text-[17px]">
         {title}
       </div>
 

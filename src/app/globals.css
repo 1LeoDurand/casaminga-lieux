@@ -394,6 +394,41 @@
 .mc-nav-badge.soon { background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.5); font-weight: 600; }
 .mc-nav-item.active .mc-nav-badge { background: rgba(0, 0, 0, 0.25); color: #fff; }
 
+/* ─── Sidebar repliée (mode icônes) — DESKTOP uniquement ───
+   En dessous de lg (< 1024px) la sidebar vit en tiroir et reste toujours
+   déployée : ces règles sont donc volontairement gated par la media query. */
+@media (min-width: 1024px) {
+  .cm-sidebar[data-collapsed="true"] .cm-sb-label,
+  .cm-sidebar[data-collapsed="true"] .cm-sb-section-title,
+  .cm-sidebar[data-collapsed="true"] .cm-sb-orgmeta,
+  .cm-sidebar[data-collapsed="true"] .cm-sb-usermeta,
+  .cm-sidebar[data-collapsed="true"] .mc-nav-badge {
+    display: none;
+  }
+  .cm-sidebar[data-collapsed="true"] .mc-nav-item,
+  .cm-sidebar[data-collapsed="true"] .cm-sb-header,
+  .cm-sidebar[data-collapsed="true"] .cm-sb-collapse-btn,
+  .cm-sidebar[data-collapsed="true"] .cm-sb-user-trigger {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .cm-sidebar[data-collapsed="true"] .cm-sb-section-head {
+    padding-top: 12px;
+    padding-bottom: 0;
+    min-height: 0;
+    pointer-events: none;
+  }
+  /* Le menu utilisateur s'ouvre vers le haut : on lui rend une largeur lisible
+     même quand le rail ne fait que 72 px. */
+  .cm-sidebar[data-collapsed="true"] .cm-sb-user-dropdown {
+    left: 8px;
+    right: auto;
+    width: 200px;
+  }
+}
+
 /* ════════════════════════════════════════════════════════════
    v1.4 Demandes — primitives réutilisables (modèle de portage)
    stat-cards · toolbar/chips · table · empty · skeleton · drawer
