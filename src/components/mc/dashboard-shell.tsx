@@ -76,7 +76,7 @@ export function DashboardShell({
   return (
     <SidebarCtx.Provider value={{ collapsed, mobileOpen, toggleCollapsed, openMobile, closeMobile }}>
       <div
-        className="grid h-[100dvh] grid-cols-1 grid-rows-[56px_1fr] overflow-hidden lg:grid-cols-[var(--cm-sb)_1fr]"
+        className="grid h-[100dvh] grid-cols-1 grid-rows-[56px_1fr] overflow-hidden lg:grid-cols-[var(--cm-sb)_minmax(0,1fr)]"
         style={{ "--cm-sb": collapsed ? "72px" : "232px" } as React.CSSProperties}
       >
         {/* Sidebar : tiroir off-canvas en mobile, colonne de grille en desktop */}
@@ -103,7 +103,7 @@ export function DashboardShell({
 
         {topbar}
 
-        <main className="overflow-y-auto p-4 sm:p-6 lg:p-7">{children}</main>
+        <main className="min-w-0 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
     </SidebarCtx.Provider>
   );
