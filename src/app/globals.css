@@ -959,8 +959,13 @@ select.mc-input { cursor: pointer; }
 .lp-footer-grid  { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: clamp(20px,4vw,50px); }
 .lp-diff-row     { display: grid; grid-template-columns: 1.1fr 1.8fr; align-items: center; gap: 18px; }
 
-/* Nav CTA : masqué sous 960px */
+/* Nav CTA : barre complète (desktop) masquée sous 960px ; CTA compacte mobile prend le relais */
 .lp-nav-cta { display: flex; gap: 10px; align-items: center; }
+.lp-nav-cta-m { display: none; }
+
+/* Mockup produit : desktop-shaped. Par défaut affiché tel quel ; sur mobile
+   il devient swipeable au lieu d'être rogné (cf. @media 600px). */
+.lp-mockup-wrap { }
 
 /* Photo hero : conteneur image réelle */
 .lp-photo-hero {
@@ -986,7 +991,19 @@ select.mc-input { cursor: pointer; }
 /* ── Tablette 960px ── */
 @media (max-width: 960px) {
   .lp-nav-cta { display: none; }
+  .lp-nav-cta-m { display: flex; align-items: center; }
   .lp-product-grid { grid-template-columns: 1fr; }
+}
+
+/* Mockup produit swipeable sous 640px : il garde sa forme desktop mais devient
+   défilable horizontalement dans son cadre, au lieu d'être rogné/cassé. */
+@media (max-width: 640px) {
+  .lp-mockup-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 14px;
+  }
+  .lp-mockup { min-width: 520px; }
 }
 
 /* ── Tablette 900px ── */

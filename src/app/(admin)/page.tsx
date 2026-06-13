@@ -89,6 +89,16 @@ export default async function LandingPage() {
               </>
             )}
           </div>
+          {/* CTA compacte mobile — la barre complète (lp-nav-cta) est masquée < 960px ;
+              sans ça, la nav mobile n'affichait que le logo, sans accès connexion. */}
+          <div className="lp-nav-cta-m" style={{ marginLeft: "auto" }}>
+            <Link
+              href={userOrgSlug ? `/dashboard/${userOrgSlug}` : "/login"}
+              style={{ padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65", whiteSpace: "nowrap" }}
+            >
+              {userOrgSlug ? "Dashboard →" : "Connexion"}
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -382,8 +392,10 @@ export default async function LandingPage() {
                 <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, border: "1.5px solid #E5DDD6", color: "#2C2C2C", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Voir le site public généré</Link>
               </div>
             </div>
-            {/* Mockup */}
-            <div style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 14, overflow: "hidden", boxShadow: "0 24px 56px rgba(28,28,28,0.10), 0 6px 16px rgba(255,138,101,0.08)" }}>
+            {/* Mockup — desktop-shaped. Sur mobile, le conteneur .lp-mockup-wrap
+                le rend swipeable (sinon le côté droit était rogné par overflow:hidden). */}
+            <div className="lp-mockup-wrap">
+            <div className="lp-mockup" style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 14, overflow: "hidden", boxShadow: "0 24px 56px rgba(28,28,28,0.10), 0 6px 16px rgba(255,138,101,0.08)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", background: "#fafaf7", borderBottom: "1px solid #E5DDD6" }}>
                 <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#ff5f57", display: "inline-block" }} />
                 <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#febc2e", display: "inline-block" }} />
@@ -424,6 +436,7 @@ export default async function LandingPage() {
                   ))}
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
