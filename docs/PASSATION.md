@@ -21,6 +21,34 @@
 
 ---
 
+## 1bis. Serveur de production (Infomaniak)
+
+Hébergement **Node.js mutualisé** Infomaniak (apps Casa Minga). Accès **SSH par mot de passe**
+(clé privée pas encore supportée). Ressources SSH limitées → pour build/process lourd, passer
+par le **Node.js Builder** du Manager.
+
+| Champ | Valeur |
+|---|---|
+| Racine app admin | `/srv/customer/sites/admin.casaminga.com/` |
+| Fichier env serveur | `/srv/customer/sites/admin.casaminga.com/.env.local` |
+| Redémarrer l'app | **Manager Infomaniak → site admin.casaminga.com → Node.js → Redémarrer** (le SSH seul ne recharge PAS l'env) |
+
+### Variables d'environnement (source à jour = `.env.example`)
+
+Après toute modif de `.env.local` → **redémarrer l'app** (sinon non pris en compte).
+
+| Variable | Rôle | Priorité |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Connexion Supabase (front) | ✅ déjà en place |
+| `SUPABASE_SERVICE_ROLE_KEY` | Inscriptions / invitations / RGPD / newsletters (serveur). **Son absence = comptes orphelins au signup.** Récupérer dans Supabase → projet « Maison commune » → Settings → API → `service_role` secret | 🔴 critique |
+| `PORTAL_LINK_SECRET` | Magic-links espace adhérent (Lot 7). Générer : `openssl rand -base64 32` | 🟠 si espace adhérent activé |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics (`G-XXXX`) | 🟢 optionnel |
+| `NEXT_PUBLIC_CUSTOM_DOMAIN_TARGET_IP` | IP serveur pour domaines perso des lieux (Lot 14) | 🟢 optionnel |
+| `ANTHROPIC_API_KEY` | Assistant rédaction subventions (Lot 12) | 🟢 optionnel |
+| `AIDES_TERRITOIRES_API_KEY` | Import Aides-Territoires (Lot 12) | 🟢 optionnel |
+
+---
+
 ## 2. Stack technique
 
 | Couche | Technologie |
