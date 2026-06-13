@@ -61,7 +61,7 @@ function LoginForm() {
     // ou échec de création de l'org). On l'envoie finaliser la création de son
     // espace — surtout pas vers l'org démo « bernard-kohn », dont il n'est pas
     // membre : c'est ce qui produisait le faux « accès refusé ».
-    router.push("/signup?recover=1");
+    router.push("/onboarding");
   }
 
   return (
