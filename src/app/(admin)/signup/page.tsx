@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -37,27 +37,53 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  // Compte déjà authentifié mais sans espace (récupération d'un compte orphelin) :
+  // on saute la création de compte et on passe directement à la création du lieu.
+  const [recoverUser, setRecoverUser] = useState<{ id: string; email: string } | null>(null);
 
   const slug = slugify(lieuName);
+
+  // Détecte une session existante → mode « finaliser mon espace » (orphelin).
+  useEffect(() => {
+    if (!configured) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user;
+      if (u?.id && u.email) {
+        setRecoverUser({ id: u.id, email: u.email });
+        setEmail(u.email);
+        if (u.user_metadata?.full_name) setFullName(u.user_metadata.full_name as string);
+        setStep("lieu"); // le compte existe déjà : on commence à l'étape du lieu
+      }
+    });
+  }, [configured]);
 
   async function submit(selectedOrgType: string) {
     setError(null);
     setLoading(true);
     const supabase = createClient();
 
-    const { data: authData, error: authErr } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (authErr || !authData.user) {
-      setError(authErr?.message ?? "Erreur lors de la création du compte.");
-      setLoading(false);
-      return;
+    // Identifiant utilisateur : session existante (récupération) sinon création.
+    let userId = recoverUser?.id ?? null;
+    let hasSession = !!recoverUser;
+
+    if (!userId) {
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      if (authErr || !authData.user) {
+        setError(authErr?.message ?? "Erreur lors de la création du compte.");
+        setLoading(false);
+        return;
+      }
+      userId = authData.user.id;
+      hasSession = !!authData.session;
     }
 
     const { orgSlug, error: orgError } = await createOrgAndMember({
-      userId: authData.user.id,
+      userId,
       slug,
       name: lieuName,
       structure: lieuStructure,
@@ -71,8 +97,9 @@ export default function SignupPage() {
       return;
     }
     setDone(true);
-    if (authData.session) {
-      setTimeout(() => router.push(`/dashboard/${orgSlug}`), 1500);
+    // Session active (auto-confirmation ou compte déjà connecté) → on entre direct.
+    if (hasSession) {
+      setTimeout(() => router.push(`/dashboard/${orgSlug}`), 1200);
     }
   }
 
@@ -104,9 +131,9 @@ export default function SignupPage() {
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Bienvenue !</h2>
           <p style={{ fontSize: 14, color: "#6B6460", lineHeight: 1.6, marginBottom: 20 }}>
             Votre espace <strong>{lieuName}</strong> est créé.<br />
-            Vérifiez votre email pour confirmer votre compte, puis connectez-vous.
+            On vous y emmène… Si rien ne se passe, cliquez ci-dessous.
           </p>
-          <Link href="/login" style={{ display: "block", padding: "12px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Se connecter →</Link>
+          <Link href={`/dashboard/${slug}`} style={{ display: "block", padding: "12px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Entrer dans mon espace →</Link>
         </div>
       </main>
     );

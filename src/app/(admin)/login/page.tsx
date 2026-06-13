@@ -57,8 +57,11 @@ function LoginForm() {
       const slug = org?.slug;
       if (slug) { router.push(`/dashboard/${slug}`); return; }
     }
-    setLoading(false);
-    router.push(`/dashboard/${DEMO_SLUG}`);
+    // Compte authentifié mais rattaché à AUCUN espace (inscription interrompue
+    // ou échec de création de l'org). On l'envoie finaliser la création de son
+    // espace — surtout pas vers l'org démo « bernard-kohn », dont il n'est pas
+    // membre : c'est ce qui produisait le faux « accès refusé ».
+    router.push("/signup?recover=1");
   }
 
   return (
