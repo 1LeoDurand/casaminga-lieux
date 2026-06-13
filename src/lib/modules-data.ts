@@ -3,6 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { SOCLE_KEYS, MODULE_SECTIONS, type OrgTier } from "@/lib/modules";
 import { humanError } from "@/lib/errors";
+import { BETA_OPEN_ALL_MODULES } from "@/lib/beta";
+
+/** Tous les module_key déclarés (socle + couches 1/2). */
+function allModuleKeys(): Set<string> {
+  const keys = new Set<string>(SOCLE_KEYS);
+  keys.add("modules"); // page de gestion
+  MODULE_SECTIONS.forEach((s) => s.modules.forEach((m) => keys.add(m.key)));
+  return keys;
+}
 
 export interface OrgSubscription {
   tier: OrgTier;
@@ -20,6 +29,8 @@ const FREE_SUB: OrgSubscription = {
 
 /** Tier effectif d'une org (comped/founding_member → traité comme "complete"). */
 export function effectiveTier(sub: OrgSubscription): OrgTier {
+  // Bêta : tout le monde au tier maximum (aucune contrainte d'offre). [[lib/beta]]
+  if (BETA_OPEN_ALL_MODULES) return "multilieu";
   if (sub.comped || sub.founding_member) return "complete";
   if (sub.status === "canceled" || sub.status === "paused") return "free";
   return sub.tier;
@@ -50,6 +61,9 @@ export function tierSatisfies(orgTier: OrgTier, minTier: OrgTier): boolean {
  * En mode démo (Supabase non configuré), tous les modules sont activés.
  */
 export async function getEnabledModules(orgId: string): Promise<Set<string>> {
+  // Bêta : tous les modules ouverts pour tout le monde. [[lib/beta]]
+  if (BETA_OPEN_ALL_MODULES) return allModuleKeys();
+
   // Socle toujours actif
   const enabled = new Set<string>(SOCLE_KEYS);
   enabled.add("modules"); // page de gestion toujours accessible
