@@ -536,7 +536,10 @@ export default async function LandingPage() {
           </div>
 
           {/* Mockup deux colonnes reliées */}
-          <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 32 }} className="lp-sitepub-grid">
+          {/* NB : pas de gridTemplateColumns inline ici — il écraserait la media
+              query de .lp-sitepub-grid et empêcherait le passage à 1 colonne
+              sous 900px (cause d'un scroll horizontal sur mobile). */}
+          <div style={{ position: "relative", marginBottom: 32 }} className="lp-sitepub-grid">
             {/* Colonne gauche — Site public */}
             <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
