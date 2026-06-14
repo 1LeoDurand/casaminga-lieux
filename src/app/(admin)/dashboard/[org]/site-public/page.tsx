@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
 import { SitePublicEditor } from "@/components/mc/site-public-editor";
+import { SiteEmbedSnippets } from "@/components/mc/site-embed-snippets";
 import { getOrganizationBySlug } from "@/lib/data";
 import { getSiteConfig } from "@/lib/site-public/data";
 
@@ -10,6 +11,7 @@ export default async function SitePublicPage({ params }: { params: Promise<{ org
   if (!organization) notFound();
 
   const config = await getSiteConfig(organization.id, organization.slug, organization.name);
+  const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
 
   return (
     <div className="flex flex-col gap-6">
@@ -19,6 +21,7 @@ export default async function SitePublicPage({ params }: { params: Promise<{ org
         sub="Personnalisez la vitrine de votre lieu : photos, présentation, sections. Publiez quand vous êtes prêt."
       />
       <SitePublicEditor config={config} orgId={organization.id} orgSlug={organization.slug} />
+      <SiteEmbedSnippets appBase={appBase} slug={organization.slug} />
     </div>
   );
 }
