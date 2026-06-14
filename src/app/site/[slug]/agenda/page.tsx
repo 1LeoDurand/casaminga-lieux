@@ -56,6 +56,16 @@ export default async function AgendaPage({
         <h1 className={t.classes.h1}>Agenda</h1>
         <p className={`mt-3 ${t.classes.muted}`}>Tous les rendez-vous à venir du lieu.</p>
 
+        {/* Abonnement / intégration : flux iCal consommable par Google Agenda,
+            Outlook, Apple Calendar et les plugins d'agenda (WordPress…). */}
+        <a
+          href={`/site/${org.slug}/agenda.ics`}
+          className={`mt-4 inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold ${t.classes.muted}`}
+          style={{ border: `1px solid ${accent}40` }}
+        >
+          📅 S&apos;abonner à l&apos;agenda (iCal)
+        </a>
+
         {events.length === 0 ? (
           <div className={`mt-8 px-6 py-12 text-center text-sm ${t.classes.card} ${t.classes.muted}`}>
             Pas d&apos;événement prévu pour l&apos;instant — revenez bientôt&nbsp;!
