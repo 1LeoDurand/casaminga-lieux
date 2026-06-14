@@ -103,6 +103,21 @@ export function tplDemandeRecue(opts: {
   );
 }
 
+// ── 1b. Confirmation d'inscription newsletter (double opt-in) ──────────────
+
+export function tplNewsletterConfirm(opts: { orgName: string; confirmUrl: string }) {
+  return base(
+    `
+    ${h1("Confirmez votre inscription ✉️")}
+    ${p(`Vous (ou quelqu'un avec votre adresse) avez demandé à recevoir la newsletter de <strong>${opts.orgName}</strong>.`)}
+    ${p("Pour finaliser votre inscription, cliquez sur le bouton ci-dessous :")}
+    ${btn("Confirmer mon inscription", opts.confirmUrl)}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email : aucune inscription ne sera enregistrée sans cette confirmation.</span>`)}
+  `,
+    opts.orgName
+  );
+}
+
 // ── 2. Alerte équipe — nouvelle demande ───────────────────────────────────
 
 export function tplDemandeAlerteEquipe(opts: {

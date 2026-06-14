@@ -5,6 +5,7 @@
 import Link from "next/link";
 import type { SiteContent } from "@/lib/site-public/types";
 import { getTheme } from "@/lib/site-public/themes";
+import { NewsletterOptinForm } from "@/components/mc/newsletter-optin-form";
 
 export interface SiteNavLink {
   href: string;
@@ -80,7 +81,8 @@ export function PublicSiteShell({
 
       {/* Footer */}
       <footer className={t.classes.footer}>
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-6 py-8 text-center text-sm">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-6 py-10 text-center text-sm">
+          <NewsletterOptinForm slug={slug} accent={accent} dark={t.dark} />
           <span>
             Site généré avec <span className="font-semibold">Casa Minga Lieux</span>
           </span>
