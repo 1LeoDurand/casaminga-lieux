@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateRequestStatus, getRequestById } from "@/lib/data";
+import { updateRequestStatus, getRequestById, getOrganizationBySlug } from "@/lib/data";
 import type { RequestStatus } from "@/lib/types";
 import { sendMail } from "@/lib/mail";
 import { tplDemandeStatut } from "@/lib/mail-templates";
@@ -22,14 +22,16 @@ export async function setRequestStatus(
 
     // Email de mise à jour au demandeur (sauf statuts internes)
     if (req?.email && ["validee", "refusee", "a_etudier"].includes(status)) {
+      const org = await getOrganizationBySlug(orgSlug);
       void sendMail({
         to: req.email,
-        subject: `Mise à jour de votre demande — ${req.name ?? ""}`,
+        subject: `Mise à jour de votre demande — ${org?.name ?? req.name ?? ""}`,
         html: tplDemandeStatut({
-          orgName: orgSlug, // sera remplacé si on a org.name
+          orgName: org?.name ?? orgSlug,
           personName: req.name ?? "Madame/Monsieur",
           status,
         }),
+        organizationId: org?.id ?? null,
       });
     }
   }

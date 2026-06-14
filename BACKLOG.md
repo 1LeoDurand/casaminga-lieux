@@ -82,9 +82,12 @@ réserver un espace payant, payer une adhésion, faire un don.
 - Réfs liées : Lot 10.1, 10.1-bis B/C.
 
 ## Pilotage
-- **Demandes** — ⚠️ Le formulaire public crée la fiche, mais **aucun `sendMail`
-  côté site** → le demandeur ne reçoit ni accusé de réception ni suivi de statut.
-  *Upgrade : email de confirmation + lien de suivi de sa demande.*
+- **Demandes** — ✅ **CORRECTION 14/06** : l'accusé de réception au demandeur
+  EXISTE déjà (l'audit s'était trompé — le flux passe par la route API
+  `/api/orgs/<slug>/requests`, pas par `site/<slug>`). `tplDemandeRecue` envoyé
+  au demandeur + `tplDemandeStatut` à chaque changement de statut + alerte
+  équipe. *Reste optionnel : un lien de suivi self-service (portail) — non
+  prioritaire, l'email couvre le besoin.*
 - **Personnes (CRM)** — ✅ L'adhérent a son espace `/espace` (Lot 7).
   *Upgrade SHOULD : carte d'adhérent / attestation téléchargeable depuis `/espace`.*
 - **Tâches** — ✅ Assigné agit via `tache/[token]`.
@@ -137,7 +140,7 @@ réserver un espace payant, payer une adhésion, faire un don.
 4. **🎨 Candidater à une résidence** (route publique → module Résidences).
 5. **🗳 Vote AG à distance** côté membre (`vote/[token]`).
 6. **Quick wins** (rapides, fort effet perçu) :
-   - accusé de réception + suivi côté **demandeur** ;
+   - ~~accusé de réception + suivi côté **demandeur**~~ → ✅ existait déjà (14/06) ;
+   - ~~**opt-in newsletter** sur le site public~~ → ✅ livré (14/06, sans migration) ;
    - **carte d'adhérent / attestation** dans `/espace` ;
-   - **opt-in newsletter** sur le site public ;
-   - **page Impact publique**.
+   - **page Impact publique** (nécessite 1 migration : flag « public » par indicateur).
