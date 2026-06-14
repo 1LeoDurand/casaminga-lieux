@@ -37,9 +37,10 @@ function fmtDateShort(iso: string) {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-function AdhesionCard({ adhesion, renewUrl }: {
+function AdhesionCard({ adhesion, renewUrl, attestationUrl }: {
   adhesion: PortalOrgData["adhesion"];
   renewUrl: string | null;
+  attestationUrl: string | null;
 }) {
   const meta = STATUS_META[adhesion?.derivedStatus ?? "aucune"];
 
@@ -100,23 +101,46 @@ function AdhesionCard({ adhesion, renewUrl }: {
         <p style={{ margin: 0, fontSize: 14, color: "#9C9590" }}>Aucune adhésion enregistrée.</p>
       )}
 
-      {renewUrl && (
-        <a
-          href={renewUrl}
-          style={{
-            display: "inline-block",
-            marginTop: 12,
-            background: "#FF8A65",
-            color: "#fff",
-            textDecoration: "none",
-            borderRadius: 100,
-            padding: "10px 20px",
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          Renouveler mon adhésion →
-        </a>
+      {(renewUrl || attestationUrl) && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
+          {renewUrl && (
+            <a
+              href={renewUrl}
+              style={{
+                display: "inline-block",
+                background: "#FF8A65",
+                color: "#fff",
+                textDecoration: "none",
+                borderRadius: 100,
+                padding: "10px 20px",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Renouveler mon adhésion →
+            </a>
+          )}
+          {attestationUrl && (
+            <a
+              href={attestationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-block",
+                background: "#fff",
+                color: "#2C2C2C",
+                textDecoration: "none",
+                border: "1.5px solid #E5DDD6",
+                borderRadius: 100,
+                padding: "10px 20px",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              📄 Mon attestation
+            </a>
+          )}
+        </div>
       )}
     </div>
   );
@@ -263,7 +287,15 @@ function OrgSection({ org, token }: { org: PortalOrgData; token: string }) {
         </p>
       ) : (
         <>
-          <AdhesionCard adhesion={org.adhesion} renewUrl={renewUrl} />
+          <AdhesionCard
+            adhesion={org.adhesion}
+            renewUrl={renewUrl}
+            attestationUrl={
+              org.adhesion && ["active", "expire_bientot"].includes(org.adhesion.derivedStatus)
+                ? `/espace/${token}/attestation/${org.orgSlug}`
+                : null
+            }
+          />
           <BilletsSection billets={org.billets} />
           <RecusSection recus={org.recus} token={token} />
         </>

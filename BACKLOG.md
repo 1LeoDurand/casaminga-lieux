@@ -142,5 +142,5 @@ réserver un espace payant, payer une adhésion, faire un don.
 6. **Quick wins** (rapides, fort effet perçu) :
    - ~~accusé de réception + suivi côté **demandeur**~~ → ✅ existait déjà (14/06) ;
    - ~~**opt-in newsletter** sur le site public~~ → ✅ livré (14/06, sans migration) ;
-   - **carte d'adhérent / attestation** dans `/espace` ;
+   - ~~**carte d'adhérent / attestation** dans `/espace`~~ → ✅ livré (14/06, PDF, sans migration) ;
    - **page Impact publique** (nécessite 1 migration : flag « public » par indicateur).
