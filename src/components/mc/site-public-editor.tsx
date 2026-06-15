@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Save, Eye, X, Globe, FileText } from "lucide-react";
@@ -54,6 +54,8 @@ export function SitePublicEditor({
   const [seo, setSeo] = useState(config.seo_description ?? "");
   const [status, setStatus] = useState(config.status);
   const [c, setC] = useState<SiteContent>(config.content);
+  const cRef = useRef(c);
+  cRef.current = c;
   const [pending, start] = useTransition();
 
   function set<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
@@ -70,7 +72,7 @@ export function SitePublicEditor({
     const nextStatus = publish !== undefined ? (publish ? "publie" : "brouillon") : status;
     start(async () => {
       const res = await saveSiteConfig(orgId, orgSlug, {
-        title, seo_description: seo || null, status: nextStatus, content: c,
+        title, seo_description: seo || null, status: nextStatus, content: cRef.current,
       });
       if (res.ok) {
         setStatus(nextStatus);

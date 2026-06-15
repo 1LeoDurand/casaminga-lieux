@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   X,
   Search,
@@ -135,6 +135,13 @@ export function PersonsView({
   const [pending, startTransition] = useTransition();
 
   const selected = persons.find((p) => p.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setSelectedId(null); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [selectedId]);
 
   const kpis = useMemo(() => {
     const active = persons.filter((p) => p.status === "actif");

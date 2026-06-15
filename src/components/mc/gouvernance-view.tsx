@@ -50,8 +50,9 @@ function MeetingModal({ open, meeting, busy, onSubmit, onClose }: {
               <select className="mc-input" value={v.type} onChange={(e) => set("type", e.target.value as Meeting["type"])}>
                 {MEETING_TYPES.map((t) => <option key={t.value} value={t.value}>{meetingTypeShort(t.value)}</option>)}
               </select></div>
-            <div className="mc-form-group"><label className="mc-form-label">Date</label>
-              <input className="mc-input" type="date" value={v.date} onChange={(e) => set("date", e.target.value)} /></div>
+            <div className="mc-form-group"><label className="mc-form-label">Date *</label>
+              <input className="mc-input" type="date" value={v.date} onChange={(e) => { set("date", e.target.value); setError(null); }} aria-invalid={!!error && !v.date} />
+              {error && !v.date ? <p className="mt-1 text-sm font-medium text-coral-dark">{error}</p> : null}</div>
             <div className="mc-form-group"><label className="mc-form-label">Statut</label>
               <select className="mc-input" value={v.status} onChange={(e) => set("status", e.target.value as Meeting["status"])}>
                 {MEETING_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -61,7 +62,7 @@ function MeetingModal({ open, meeting, busy, onSubmit, onClose }: {
             <textarea className="mc-textarea" value={v.agenda} onChange={(e) => set("agenda", e.target.value)} placeholder="1. ...\n2. ..." /></div>
           <div className="mc-form-group"><label className="mc-form-label">Compte-rendu</label>
             <textarea className="mc-textarea" value={v.minutes} onChange={(e) => set("minutes", e.target.value)} placeholder="Décisions, votes, points abordés…" /></div>
-          {error ? <p className="text-sm font-medium text-coral-dark">{error}</p> : null}
+          {error && v.date ? <p className="text-sm font-medium text-coral-dark">{error}</p> : null}
         </div>
         <div className="mt-6 flex justify-end gap-2.5">
           <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" onClick={onClose} disabled={busy}>Annuler</button>
