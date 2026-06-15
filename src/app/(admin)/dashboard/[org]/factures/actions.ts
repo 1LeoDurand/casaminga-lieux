@@ -305,13 +305,61 @@ export async function setInvoiceStatus(
 ): Promise<ActionResult> {
   if (!isSupabaseConfigured()) return NOT_CONFIGURED;
   const supabase = await createClient();
+
+  // Lecture de la facture avant mise à jour (nécessaire pour le câblage Finances)
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("organization_id, kind, notes, total_ttc, client_id, client_name, number, pole")
+    .eq("id", id)
+    .maybeSingle();
+  if (!inv) return { ok: false, error: "Facture introuvable." };
+
+  const paidAt = opts?.paid_at ?? new Date().toISOString().slice(0, 10);
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (status === "payee") {
     if (opts?.payment_method) patch.payment_method = opts.payment_method;
-    patch.paid_at = opts?.paid_at ?? new Date().toISOString().slice(0, 10);
+    patch.paid_at = paidAt;
   }
   const { error } = await supabase.from("invoices").update(patch).eq("id", id);
   if (error) return { ok: false, error: humanError(error) };
+
+  // ── Câblage Finances ────────────────────────────────────────────────────────
+  // Facture payée → recette Finances automatique.
+  // Exclusions :
+  //   - avoirs (kind !== "facture") : montant négatif, pas de recette
+  //   - factures caisse : la clôture de caisse a déjà créé la recette (double-comptage)
+  //   - factures déjà liées (re-marquer payée ne duplique pas)
+  const isCaisseOrigin =
+    typeof inv.notes === "string" && inv.notes.startsWith("Généré depuis caisse");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  if (status === "payee" && inv.kind === "facture" && !isCaisseOrigin) {
+    const { count } = await db
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("invoice_id", id);
+    if ((count ?? 0) === 0) {
+      await db.from("transactions").insert({
+        organization_id: inv.organization_id,
+        type: "recette",
+        category: inv.pole ?? "Facturation",
+        amount: Number(inv.total_ttc),
+        date: paidAt,
+        label: `Facture ${inv.number ?? id.slice(0, 8)} — ${inv.client_name}`,
+        status: "validee",
+        person_id: inv.client_id ?? null,
+        invoice_id: id,
+      });
+    }
+  }
+
+  // Facture annulée → supprime la recette liée (si elle existe)
+  if (status === "annulee") {
+    await db.from("transactions").delete().eq("invoice_id", id);
+  }
+
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id };
 }
