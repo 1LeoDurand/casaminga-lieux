@@ -5,6 +5,8 @@ import { getMembershipCampaignsForOrg, getTiersForCampaign } from "@/lib/data";
 import { loadPublicSite } from "@/lib/site-public/page-data";
 import { getTheme } from "@/lib/site-public/themes";
 import { PublicSiteShell, buildNav } from "@/components/mc/public-site-shell";
+import { PublicDonationForm } from "@/components/mc/public-donation-form";
+import { createAdminClient } from "@/lib/admin/guard";
 
 export async function generateMetadata({
   params,
@@ -40,6 +42,20 @@ export default async function SoutenirPage({
     campaigns.map(async (cp) => ({ id: cp.id, tiers: await getTiersForCampaign(cp.id) }))
   );
   const tiersMap = Object.fromEntries(campaignTiers.map((ct) => [ct.id, ct.tiers]));
+
+  // Campagnes de dons publiques (module Dons)
+  let donationCampaigns: { id: string; title: string }[] = [];
+  const admin = createAdminClient();
+  if (admin) {
+    const { data } = await admin
+      .from("donation_campaigns")
+      .select("id, title")
+      .eq("organization_id", org.id)
+      .eq("is_public", true)
+      .neq("status", "terminee")
+      .order("created_at", { ascending: false });
+    donationCampaigns = data ?? [];
+  }
 
   return (
     <PublicSiteShell slug={org.slug} displayName={displayName} content={c} nav={nav}>
@@ -103,13 +119,9 @@ export default async function SoutenirPage({
             {" "}(article 200 du CGI) — un don de 50&nbsp;€ ne vous coûte que 17&nbsp;€, et un reçu
             fiscal vous est délivré.
           </p>
-          <a
-            href={`/site/${org.slug}#contact`}
-            className={`mt-5 inline-flex items-center px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 ${t.classes.btn}`}
-            style={{ background: accent }}
-          >
-            Nous contacter pour donner
-          </a>
+          <div className="mt-6">
+            <PublicDonationForm slug={org.slug} accent={accent} campaigns={donationCampaigns} />
+          </div>
         </div>
       </section>
     </PublicSiteShell>

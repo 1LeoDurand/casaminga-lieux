@@ -761,3 +761,120 @@ export interface PublicSite {
   status: "brouillon" | "publie";
   seo_description: string | null;
 }
+
+// ── Dons & mécénat (Lot 16) ───────────────────────────────────────────────
+export type DonationType = "ponctuel" | "recurrent" | "nature" | "mecenat";
+export type DonationPaymentStatus = "confirme" | "en_attente";
+export type DonationCampaignStatus = "brouillon" | "active" | "terminee";
+
+export interface DonationCampaign {
+  id: string;
+  organization_id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  goal_amount: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: DonationCampaignStatus;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Donation {
+  id: string;
+  organization_id: string;
+  donor_name: string;
+  donor_person_id: string | null;
+  donor_email: string | null;
+  donor_address: string | null;
+  amount: number;
+  donation_type: DonationType;
+  received_at: string;
+  payment_method: string | null;
+  payment_status: DonationPaymentStatus;
+  campaign_id: string | null;
+  pole_id: string | null;
+  tax_receipt_issued: boolean;
+  tax_receipt_ref: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Contrats & échéances (Lot 17) ─────────────────────────────────────────
+export type ContractType =
+  | "assurance" | "bail" | "convention" | "prestation"
+  | "mission" | "partenariat" | "abonnement" | "autre";
+export type ContractPeriod = "mensuel" | "annuel" | "ponctuel";
+export type ContractStatus =
+  | "brouillon" | "en_negociation" | "actif" | "expire" | "resilie";
+
+export interface Contract {
+  id: string;
+  organization_id: string;
+  title: string;
+  contract_type: ContractType;
+  counterparty_name: string | null;
+  counterparty_person_id: string | null;
+  pole_id: string | null;
+  amount: number | null;
+  amount_period: ContractPeriod;
+  start_date: string | null;
+  end_date: string | null;
+  renewal_date: string | null;
+  auto_renew: boolean;
+  notice_period_days: number | null;
+  status: ContractStatus;
+  document_id: string | null;
+  signed: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Inventaire & Matériel (Lot 15) ────────────────────────────────────────
+export type AssetCategory =
+  | "mobilier" | "informatique" | "son" | "lumiere" | "cuisine" | "outillage" | "autre";
+export type AssetStatus = "disponible" | "en_pret" | "en_panne" | "maintenance" | "reforme";
+export type AssetCondition = "neuf" | "bon" | "use" | "hs";
+export type MaintenanceStatus = "a_faire" | "en_cours" | "fait";
+
+export interface Asset {
+  id: string;
+  organization_id: string;
+  name: string;
+  category: AssetCategory;
+  reference: string | null;
+  location: string | null;
+  pole_id: string | null;
+  holder_person_id: string | null;
+  status: AssetStatus;
+  condition: AssetCondition;
+  quantity: number;
+  purchase_date: string | null;
+  purchase_value: number | null;
+  warranty_until: string | null;
+  photo_url: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssetMaintenance {
+  id: string;
+  organization_id: string;
+  asset_id: string | null;
+  title: string;
+  description: string | null;
+  status: MaintenanceStatus;
+  reported_at: string;
+  due_date: string | null;
+  done_at: string | null;
+  cost: number | null;
+  expense_id: string | null;
+  assignee_person_id: string | null;
+  created_at: string;
+  updated_at: string;
+}

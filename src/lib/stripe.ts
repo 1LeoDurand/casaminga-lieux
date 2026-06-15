@@ -69,13 +69,18 @@ export async function createCheckoutSession(opts: {
   accountId: string;
   amountEuros: number;
   label: string;
-  reservationId: string;
+  /** Réservation à régler (rétro-compat). Pour les autres usages, passer `metadata`. */
+  reservationId?: string;
+  /** Métadonnées additionnelles (ex. { donation_id }). Lues par le webhook. */
+  metadata?: Record<string, string>;
   customerEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
 }): Promise<{ id: string; url: string } | null> {
   const stripe = stripeClient();
   if (!stripe) return null;
+  const metadata: Record<string, string> = { product: "casa-minga-lieux", ...(opts.metadata ?? {}) };
+  if (opts.reservationId) metadata.reservation_id = opts.reservationId;
   const session = await stripe.checkout.sessions.create(
     {
       mode: "payment",
@@ -90,7 +95,7 @@ export async function createCheckoutSession(opts: {
         },
       ],
       customer_email: opts.customerEmail ?? undefined,
-      metadata: { reservation_id: opts.reservationId, product: "casa-minga-lieux" },
+      metadata,
       success_url: opts.successUrl,
       cancel_url: opts.cancelUrl,
     },

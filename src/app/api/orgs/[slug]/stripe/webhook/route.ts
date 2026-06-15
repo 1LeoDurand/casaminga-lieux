@@ -26,12 +26,58 @@ export async function POST(request: Request) {
 
   const session = event.data.object as Stripe.Checkout.Session;
   const reservationId = session.metadata?.reservation_id;
-  if (!reservationId) return NextResponse.json({ ok: true, skipped: true, reason: "no_metadata" });
+  const donationId = session.metadata?.donation_id;
 
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "service indisponible" }, { status: 500 });
 
-  // Idempotent : ne repasse pas une réservation déjà payée
+  const amountPaid = typeof session.amount_total === "number" ? session.amount_total / 100 : null;
+
+  // ── Don en ligne → confirme + recette auto (idempotent) ──
+  if (donationId) {
+    const { data: don } = await admin
+      .from("donations")
+      .select("id, organization_id, donor_name, donor_person_id, amount, received_at, pole_id, payment_status")
+      .eq("id", donationId)
+      .maybeSingle();
+    if (!don) return NextResponse.json({ ok: true, skipped: true, reason: "donation_not_found" });
+    if (don.payment_status === "confirme") return NextResponse.json({ ok: true, skipped: true, reason: "already_confirmed" });
+
+    await admin.from("donations").update({
+      payment_status: "confirme",
+      payment_method: "en_ligne",
+      updated_at: new Date().toISOString(),
+    }).eq("id", don.id);
+
+    // Recette auto (dédoublonnage par donation_id)
+    const { count } = await admin
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("donation_id", don.id);
+    if ((count ?? 0) === 0) {
+      let category = "Dons";
+      if (don.pole_id) {
+        const { data: pole } = await admin.from("poles").select("name").eq("id", don.pole_id).maybeSingle();
+        if (pole?.name) category = pole.name;
+      }
+      await admin.from("transactions").insert({
+        organization_id: don.organization_id,
+        type: "recette",
+        category,
+        amount: amountPaid ?? Number(don.amount),
+        date: don.received_at,
+        label: `Don de ${don.donor_name}`,
+        status: "validee",
+        person_id: don.donor_person_id ?? null,
+        donation_id: don.id,
+      });
+    }
+    return NextResponse.json({ ok: true, donation_paid: true });
+  }
+
+  // ── Réservation → payée (idempotent) ──
+  if (!reservationId) return NextResponse.json({ ok: true, skipped: true, reason: "no_metadata" });
+
   const { data: resa } = await admin
     .from("reservations")
     .select("id, payment_status")
@@ -40,7 +86,6 @@ export async function POST(request: Request) {
   if (!resa) return NextResponse.json({ ok: true, skipped: true, reason: "not_found" });
   if (resa.payment_status === "paid") return NextResponse.json({ ok: true, skipped: true, reason: "already_paid" });
 
-  const amountPaid = typeof session.amount_total === "number" ? session.amount_total / 100 : null;
   await admin
     .from("reservations")
     .update({
