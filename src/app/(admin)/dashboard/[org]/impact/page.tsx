@@ -6,19 +6,21 @@ import {
   getReservationsForOrg, getEvenementsForOrg, getPersonsForOrg,
   getSpacesForOrg, getTransactionsForOrg,
 } from "@/lib/data";
+import { getCoordinationNotes } from "@/lib/coordination/data";
 
 export default async function ImpactPage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [indicators, reservations, evenements, persons, spaces, transactions] = await Promise.all([
+  const [indicators, reservations, evenements, persons, spaces, transactions, notes] = await Promise.all([
     getImpactIndicatorsForOrg(organization.id),
     getReservationsForOrg(organization.id),
     getEvenementsForOrg(organization.id),
     getPersonsForOrg(organization.id),
     getSpacesForOrg(organization.id),
     getTransactionsForOrg(organization.id),
+    getCoordinationNotes(organization.id),
   ]);
 
   const auto: AutoStats = {
@@ -36,7 +38,7 @@ export default async function ImpactPage({ params }: { params: Promise<{ org: st
     <div className="flex flex-col gap-6">
       <PageHeader tag="Pilotage" title="Impact"
         sub="La mesure de l'impact du lieu — indicateurs agrégés en temps réel et indicateurs manuels pour vos bilans et subventions." />
-      <ImpactView indicators={indicators} auto={auto} orgSlug={organization.slug} orgId={organization.id} />
+      <ImpactView indicators={indicators} auto={auto} notes={notes} orgSlug={organization.slug} orgId={organization.id} />
     </div>
   );
 }

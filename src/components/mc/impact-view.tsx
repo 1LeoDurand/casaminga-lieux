@@ -6,7 +6,9 @@ import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { KpiTile } from "@/components/mc/kpi-tile";
 import { IMPACT_CATEGORIES, impactCategoryLabel, impactCategoryBadge, impactCategoryColor, formatIndicator } from "@/lib/impact-meta";
 import { createImpactAction, updateImpactAction, deleteImpactAction } from "@/app/(admin)/dashboard/[org]/impact/actions";
+import { CoordinationNotesPanel } from "@/components/mc/coordination-notes-panel";
 import type { ImpactIndicator } from "@/lib/types";
+import type { CoordinationNote } from "@/lib/coordination/types";
 
 export interface AutoStats {
   reservations: number; reservationsConfirmees: number;
@@ -67,8 +69,8 @@ function IndicatorModal({ open, indicator, busy, onSubmit, onClose }: {
   );
 }
 
-export function ImpactView({ indicators, auto, orgSlug, orgId }: {
-  indicators: ImpactIndicator[]; auto: AutoStats; orgSlug: string; orgId: string;
+export function ImpactView({ indicators, auto, notes, orgSlug, orgId }: {
+  indicators: ImpactIndicator[]; auto: AutoStats; notes: CoordinationNote[]; orgSlug: string; orgId: string;
 }) {
   const [catF, setCatF] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
@@ -118,6 +120,9 @@ export function ImpactView({ indicators, auto, orgSlug, orgId }: {
           ))}
         </div>
       </div>
+
+      {/* Notes de coordination */}
+      <CoordinationNotesPanel notes={notes} orgSlug={orgSlug} orgId={orgId} />
 
       {/* Indicateurs manuels */}
       <div>
