@@ -911,3 +911,43 @@ export function tplPaiementConfirme(opts: {
     opts.orgName
   );
 }
+
+// ── Facture ecommunication (superadmin / Léo Durand EI) ─────────────────────
+
+export function tplFactureEcommunication(opts: {
+  issuerName: string;
+  clientName: string;
+  number: string;
+  object: string | null;
+  amountEuros: number;
+  dueDate: string | null;
+  iban: string | null;
+  bic: string | null;
+}) {
+  const fmt = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(opts.amountEuros);
+  const dueStr = opts.dueDate
+    ? new Date(opts.dueDate).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
+    : "à réception";
+  const rows = [
+    { label: "Facture n°", value: opts.number },
+    ...(opts.object ? [{ label: "Objet", value: opts.object }] : []),
+    { label: "Montant", value: fmt },
+    { label: "Échéance", value: dueStr },
+  ];
+  const paiement = opts.iban
+    ? p(`Règlement par virement — IBAN <strong>${opts.iban}</strong>${opts.bic ? ` · BIC ${opts.bic}` : ""}.`)
+    : "";
+  return base(
+    `
+    ${badge("Nouvelle facture", "#FF8A65")}
+    <div style="height:12px;"></div>
+    ${h1("Votre facture")}
+    ${p(`Bonjour,`)}
+    ${p(`Veuillez trouver ci-joint la facture <strong>${opts.number}</strong> émise par <strong>${opts.issuerName}</strong>.`)}
+    ${card(rows)}
+    ${paiement}
+    ${p("La facture détaillée est jointe au format PDF. Pour toute question, répondez directement à cet email.")}
+  `,
+    opts.issuerName
+  );
+}

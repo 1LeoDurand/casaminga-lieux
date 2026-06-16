@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/sante", label: "Santé technique", icon: HeartPulse, exact: false },
   { href: "/admin/demos", label: "Démos", icon: FlaskConical, exact: false },
   { href: "/admin/feedback", label: "Feedback & bugs", icon: MessageSquareWarning, exact: false },
+  { href: "/admin/facturation", label: "Facturation", icon: Receipt, exact: false },
   { href: "/admin/emails", label: "Emails envoyés", icon: Mail, exact: false },
   { href: "/admin/subventions-veille", label: "Veille subventions", icon: Landmark, exact: false },
   { href: "/admin/aide", label: "Centre d'aide", icon: BookOpen, exact: false },
