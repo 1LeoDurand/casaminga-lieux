@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronLeft, ChevronRight, Heart, Users } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CreditCard, Heart, Users } from "lucide-react";
 import type { MembershipCampaign, MembershipTier } from "@/lib/types";
 import { formatAmount, PERIOD_TYPES } from "@/lib/adhesions-meta";
 
@@ -20,16 +20,19 @@ export function AdhesionTunnel({
   slug,
   campaign,
   tiers,
+  stripeEnabled = false,
 }: {
   slug: string;
   campaign: MembershipCampaign;
   tiers: MembershipTier[];
+  stripeEnabled?: boolean;
 }) {
   const SESSION_KEY = `adhesion-${campaign.id}`;
   const steps = ["Formule", "Adhérent", "Coordonnées", "Récapitulatif"];
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [payOnline, setPayOnline] = useState(true);
   const restoredRef = useRef(false);
 
   const [tierId, setTierId] = useState<string | null>(tiers[0]?.id ?? null);
@@ -123,6 +126,7 @@ export function AdhesionTunnel({
         payer_name: payerSame ? `${adherent.first_name.trim()} ${adherent.last_name.trim()}` : payerName.trim(),
         payer_email: payerSame ? adherent.email.trim() : payerEmail.trim(),
         donation_amount: effectiveDonation > 0 ? effectiveDonation : null,
+        online: stripeEnabled && payOnline && total > 0,
       };
       const res = await fetch(`/api/orgs/${slug}/adhesions/${campaign.slug}`, {
         method: "POST",
@@ -132,6 +136,7 @@ export function AdhesionTunnel({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data.error ?? "Envoi impossible. Réessayez."); return; }
       clearSession();
+      if (data.redirectUrl) { window.location.href = data.redirectUrl; return; }
       setDone(true);
     } catch {
       toast.error("Erreur réseau. Réessayez.");
@@ -293,9 +298,25 @@ export function AdhesionTunnel({
             <div className="text-muted-foreground">{adherent.email}{adherent.phone ? ` · ${adherent.phone}` : ""}</div>
             {!payerSame ? <div className="mt-1 text-muted-foreground">Payeur : {payerName} ({payerEmail})</div> : null}
           </div>
+          {stripeEnabled && total > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mode de paiement</p>
+              <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${payOnline ? "border-coral bg-peach-pale" : "border-input bg-cream hover:border-peach"}`}>
+                <input type="radio" name="payMode" checked={payOnline} onChange={() => setPayOnline(true)} className="accent-[var(--coral)]" />
+                <CreditCard className="size-4 shrink-0 text-coral-dark" />
+                <span className="text-sm font-semibold">Payer par carte maintenant</span>
+              </label>
+              <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${!payOnline ? "border-coral bg-peach-pale" : "border-input bg-cream hover:border-peach"}`}>
+                <input type="radio" name="payMode" checked={!payOnline} onChange={() => setPayOnline(false)} className="accent-[var(--coral)]" />
+                <span className="text-sm">Payer plus tard (virement / chèque)</span>
+              </label>
+            </div>
+          )}
           <p className="text-[12px] text-muted-foreground">
             Validité : {PERIOD_TYPES.find((p) => p.value === campaign.period_type)?.label}.
-            Votre adhésion sera confirmée par l&apos;équipe après réception du règlement.
+            {stripeEnabled && total > 0 && payOnline
+              ? " Vous serez redirigé·e vers le paiement sécurisé Stripe."
+              : " Votre adhésion sera confirmée par l'équipe après réception du règlement."}
           </p>
         </div>
       )}

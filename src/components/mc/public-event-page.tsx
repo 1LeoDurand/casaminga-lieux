@@ -319,6 +319,9 @@ function StepRecap({
   onBack,
   onConfirm,
   pending,
+  stripeEnabled = false,
+  payOnline,
+  setPayOnline,
 }: {
   event: Evenement;
   org: Organization;
@@ -329,6 +332,9 @@ function StepRecap({
   onBack: () => void;
   onConfirm: () => void;
   pending: boolean;
+  stripeEnabled?: boolean;
+  payOnline: boolean;
+  setPayOnline: (v: boolean) => void;
 }) {
   const [agreed, setAgreed] = useState(false);
   const price = event.price ?? 0;
@@ -380,6 +386,21 @@ function StepRecap({
         </div>
       </div>
 
+      {/* Mode de paiement (événement payant + Stripe dispo) */}
+      {stripeEnabled && total > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-warmgray">Mode de paiement</p>
+          <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${payOnline ? "border-coral bg-[#FFF5F0]" : "border-border bg-white hover:border-coral/40"}`}>
+            <input type="radio" name="payMode" checked={payOnline} onChange={() => setPayOnline(true)} className="accent-coral" />
+            <span className="text-sm font-semibold text-ink">Payer par carte maintenant</span>
+          </label>
+          <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${!payOnline ? "border-coral bg-[#FFF5F0]" : "border-border bg-white hover:border-coral/40"}`}>
+            <input type="radio" name="payMode" checked={!payOnline} onChange={() => setPayOnline(false)} className="accent-coral" />
+            <span className="text-sm text-warmgray">Payer sur place / plus tard</span>
+          </label>
+        </div>
+      )}
+
       {/* Consentement */}
       <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-[#FAFAF7] p-4">
         <input
@@ -409,7 +430,7 @@ function StepRecap({
           className="flex-1 rounded-full px-4 py-3 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:opacity-40"
           style={{ background: accent }}
         >
-          {pending ? "Confirmation…" : "Confirmer l'inscription →"}
+          {pending ? "Confirmation…" : stripeEnabled && payOnline && total > 0 ? `Payer ${fmt(total)} →` : "Confirmer l'inscription →"}
         </button>
       </div>
     </div>
@@ -480,12 +501,14 @@ export function PublicEventPage({
   accent,
   orgSlug,
   remaining = null,
+  stripeEnabled = false,
 }: {
   event: Evenement;
   org: Organization;
   accent: string;
   orgSlug: string;
   remaining?: number | null;
+  stripeEnabled?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("view");
   const [step, setStep] = useState<TunnelStep>(0);
@@ -493,6 +516,7 @@ export function PublicEventPage({
   const [participants, setParticipants] = useState<Participant[]>([{ prenom: "", nom: "" }]);
   const [contact, setContact] = useState<Contact>({ prenom: "", nom: "", email: "", telephone: "" });
   const [waiting, setWaiting] = useState(false);
+  const [payOnline, setPayOnline] = useState(true);
   const [pending, startTransition] = useTransition();
 
   const price = event.price ?? 0;
@@ -520,8 +544,10 @@ export function PublicEventPage({
         nbPlaces,
         participants,
         montantTotal: price * nbPlaces,
+        online: stripeEnabled && payOnline && price > 0,
       });
       if (res.ok) {
+        if (res.redirectUrl) { window.location.href = res.redirectUrl; return; }
         setWaiting(res.status === "liste_attente");
         setMode("done");
       } else {
@@ -625,6 +651,9 @@ export function PublicEventPage({
                   onBack={() => setStep(2)}
                   onConfirm={confirm}
                   pending={pending}
+                  stripeEnabled={stripeEnabled}
+                  payOnline={payOnline}
+                  setPayOnline={setPayOnline}
                 />
               )}
             </>

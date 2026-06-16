@@ -8,6 +8,7 @@ import {
 import { computeMembershipEnd } from "@/lib/adhesions-meta";
 import { sendMail } from "@/lib/mail";
 import { tplAdhesionCandidat } from "@/lib/mail-templates";
+import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
 
 export async function POST(
   request: Request,
@@ -31,6 +32,7 @@ export async function POST(
   const payer_email = String(body.payer_email ?? "").trim() || null;
   const donationRaw = Number(body.donation_amount);
   const donation_amount = Number.isFinite(donationRaw) && donationRaw > 0 ? donationRaw : null;
+  const online = body.online === true;
 
   if (!first_name || !last_name) {
     return NextResponse.json({ error: "Prénom et nom sont requis." }, { status: 400 });
@@ -60,7 +62,7 @@ export async function POST(
   const membership_start = new Date().toISOString().slice(0, 10);
   const membership_end = computeMembershipEnd(campaign.period_type, membership_start, campaign.period_end);
 
-  const ok = await createMembershipApplication({
+  const adhesionId = await createMembershipApplication({
     campaign_id: campaign.id,
     tier_id: tier.id,
     organization_id: org.id,
@@ -76,16 +78,38 @@ export async function POST(
     membership_start,
     membership_end,
     notes: null,
+    payment_method: online ? "en_ligne" : null,
   });
 
-  if (!ok) {
+  if (!adhesionId) {
     return NextResponse.json(
       { error: "L'enregistrement a échoué. Réessayez." },
       { status: 500 }
     );
   }
 
-  // Confirmation au candidat
+  const tierAmount = Number(tier.amount) || 0;
+  const totalAmount = tierAmount + (donation_amount ?? 0);
+
+  // Paiement en ligne via Stripe Connect (compte du lieu)
+  if (online && totalAmount > 0 && isStripeConfigured() && org.stripe_account_id && org.stripe_charges_enabled) {
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
+    const session = await createCheckoutSession({
+      accountId: org.stripe_account_id,
+      amountEuros: totalAmount,
+      label: `Adhésion ${tier.name} — ${org.name}`,
+      metadata: { adhesion_id: adhesionId },
+      customerEmail: email,
+      successUrl: `${base}/site/${org.slug}/adhesion/${campaign.slug}?paiement=ok`,
+      cancelUrl: `${base}/site/${org.slug}/adhesion/${campaign.slug}?paiement=annule`,
+    });
+    if (session) {
+      return NextResponse.json({ ok: true, redirectUrl: session.url }, { status: 201 });
+    }
+    // Si Stripe échoue → on continue sans paiement (best-effort)
+  }
+
+  // Confirmation au candidat (paiement offline ou Stripe indisponible)
   void sendMail({
     to: email,
     subject: `✓ Votre candidature d'adhésion — ${org.name}`,
@@ -94,7 +118,7 @@ export async function POST(
       firstName: first_name,
       lastName: last_name,
       tierLabel: tier.name ?? "Adhésion",
-      amount: Number(tier.amount) || 0,
+      amount: tierAmount,
       membershipEnd: membership_end ?? "",
     }),
   });

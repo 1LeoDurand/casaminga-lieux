@@ -54,6 +54,7 @@ export default async function PublicEventDetailPage({
       accent={accent}
       orgSlug={slug}
       remaining={remaining}
+      stripeEnabled={!!(org.stripe_account_id && org.stripe_charges_enabled)}
     />
   );
 }

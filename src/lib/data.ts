@@ -1320,12 +1320,13 @@ export interface MembershipApplicationInput {
   payment_method?: string | null | undefined; payment_ref?: string | null | undefined;
 }
 
-/** Souscription publique (anon). */
-export async function createMembershipApplication(input: MembershipApplicationInput): Promise<boolean> {
-  if (!isSupabaseConfigured()) { addDemoApplication(input); return true; }
+/** Souscription publique (anon). Retourne l'id créé, ou null en cas d'échec. */
+export async function createMembershipApplication(input: MembershipApplicationInput): Promise<string | null> {
+  if (!isSupabaseConfigured()) { addDemoApplication(input); return "demo"; }
   const supabase = await createClient();
-  const { error } = await supabase.from("membership_applications").insert(input);
-  if (error) console.error("createMembershipApplication:", error); return !error;
+  const { data, error } = await supabase.from("membership_applications").insert(input).select("id").single();
+  if (error) console.error("createMembershipApplication:", error);
+  return data?.id ?? null;
 }
 
 /** Admin : changer le statut d'une souscription. */

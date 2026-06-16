@@ -27,6 +27,8 @@ export async function POST(request: Request) {
   const session = event.data.object as Stripe.Checkout.Session;
   const reservationId = session.metadata?.reservation_id;
   const donationId = session.metadata?.donation_id;
+  const adhesionId = session.metadata?.adhesion_id;
+  const eventRegistrationId = session.metadata?.event_registration_id;
 
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "service indisponible" }, { status: 500 });
@@ -73,6 +75,39 @@ export async function POST(request: Request) {
       });
     }
     return NextResponse.json({ ok: true, donation_paid: true });
+  }
+
+  // ── Adhésion en ligne → confirmée (idempotent) ──
+  if (adhesionId) {
+    const { data: adhesion } = await admin
+      .from("membership_applications")
+      .select("id, status")
+      .eq("id", adhesionId)
+      .maybeSingle();
+    if (!adhesion) return NextResponse.json({ ok: true, skipped: true, reason: "adhesion_not_found" });
+    if (adhesion.status === "confirmee") return NextResponse.json({ ok: true, skipped: true, reason: "already_confirmed" });
+
+    await admin.from("membership_applications").update({
+      status: "confirmee",
+      payment_method: "en_ligne",
+      payment_ref: session.id,
+      updated_at: new Date().toISOString(),
+    }).eq("id", adhesion.id);
+
+    return NextResponse.json({ ok: true, adhesion_paid: true });
+  }
+
+  // ── Inscription événement → paiement enregistré (idempotent) ──
+  if (eventRegistrationId) {
+    await admin
+      .from("event_registrations")
+      .update({
+        stripe_session_id: session.id,
+        amount_paid: amountPaid,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", eventRegistrationId);
+    return NextResponse.json({ ok: true, event_registration_paid: true });
   }
 
   // ── Réservation → payée (idempotent) ──

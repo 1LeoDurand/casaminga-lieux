@@ -53,7 +53,12 @@ export default async function AdhesionTunnelPage({
         </p>
 
         <div className="mt-8">
-          <AdhesionTunnel slug={org.slug} campaign={campaign} tiers={tiers} />
+          <AdhesionTunnel
+            slug={org.slug}
+            campaign={campaign}
+            tiers={tiers}
+            stripeEnabled={!!(org.stripe_account_id && org.stripe_charges_enabled)}
+          />
         </div>
       </section>
 
