@@ -57,7 +57,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster position="top-center" offset={{ top: "76px" }} richColors closeButton />
         <CookieBanner />
         <GoogleAnalytics />
       </body>
