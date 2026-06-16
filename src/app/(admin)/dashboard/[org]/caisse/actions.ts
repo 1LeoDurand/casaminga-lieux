@@ -175,6 +175,7 @@ export async function createInvoiceFromCashEntryAction(
     reference: entry.ticket_ref,
     pole: null,
     pole_id: entry.pole_id,
+    establishment_id: entry.establishment_id,
     payment_method: paymentMethod,
     paid_at: entry.occurred_at.slice(0, 10),
   };

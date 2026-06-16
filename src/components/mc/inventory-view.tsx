@@ -14,8 +14,9 @@ import {
   saveMaintenance, deleteMaintenance, maintenanceToExpense,
   type AssetInput, type MaintenanceInput,
 } from "@/app/(admin)/dashboard/[org]/inventaire/actions";
+import { LieuBadge } from "@/components/mc/lieu-badge";
 import type {
-  Asset, AssetMaintenance, Person, Pole, AssetCategory, AssetStatus, AssetCondition, MaintenanceStatus,
+  Asset, AssetMaintenance, Person, Pole, Establishment, AssetCategory, AssetStatus, AssetCondition, MaintenanceStatus,
 } from "@/lib/types";
 
 const inputCls = "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/15";
@@ -24,9 +25,9 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 
 // ── Formulaire bien ──────────────────────────────────────────────
 function AssetForm({
-  orgId, orgSlug, poles, initial, assetId, onDone, onCancel,
+  orgId, orgSlug, poles, establishments, defaultEstablishmentId, initial, assetId, onDone, onCancel,
 }: {
-  orgId: string; orgSlug: string; poles: Pole[];
+  orgId: string; orgSlug: string; poles: Pole[]; establishments: Establishment[]; defaultEstablishmentId: string | null;
   initial?: Partial<AssetInput>; assetId?: string; onDone: () => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -34,6 +35,7 @@ function AssetForm({
   const [reference, setReference] = useState(initial?.reference ?? "");
   const [location, setLocation] = useState(initial?.location ?? "");
   const [poleId, setPoleId] = useState(initial?.pole_id ?? "");
+  const [establishmentId, setEstablishmentId] = useState(initial?.establishment_id ?? defaultEstablishmentId ?? "");
   const [status, setStatus] = useState<string>(initial?.status ?? "disponible");
   const [condition, setCondition] = useState<string>(initial?.condition ?? "bon");
   const [quantity, setQuantity] = useState(initial?.quantity != null ? String(initial.quantity) : "1");
@@ -73,6 +75,7 @@ function AssetForm({
       reference: reference.trim() || null,
       location: location.trim() || null,
       pole_id: poleId || null,
+      establishment_id: establishmentId || null,
       status: status as AssetStatus,
       condition: condition as AssetCondition,
       quantity: parseInt(quantity, 10) || 1,
@@ -134,6 +137,15 @@ function AssetForm({
             {poles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
+        {establishments.length > 0 && (
+          <div>
+            <label className={labelCls}>Lieu</label>
+            <select className={inputCls} value={establishmentId} onChange={(e) => setEstablishmentId(e.target.value)}>
+              <option value="">— Aucun (commun) —</option>
+              {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <label className={labelCls}>Valeur d&apos;achat (€)</label>
           <input className={inputCls} inputMode="decimal" value={purchaseValue} onChange={(e) => setPurchaseValue(e.target.value)} placeholder="0.00" />
@@ -318,8 +330,9 @@ function MaintenanceForm({ orgId, orgSlug, assets, persons, initial, mId, onDone
 }
 
 // ── Vue principale ───────────────────────────────────────────────
-export function InventoryView({ assets, maintenance, persons, poles, orgSlug, orgId }: {
-  assets: Asset[]; maintenance: AssetMaintenance[]; persons: Person[]; poles: Pole[]; orgSlug: string; orgId: string;
+export function InventoryView({ assets, maintenance, persons, poles, establishments, selectedLieuId, orgSlug, orgId }: {
+  assets: Asset[]; maintenance: AssetMaintenance[]; persons: Person[]; poles: Pole[];
+  establishments: Establishment[]; selectedLieuId: string | null; orgSlug: string; orgId: string;
 }) {
   const [tab, setTab] = useState<"inventaire" | "maintenance">("inventaire");
   const [formOpen, setFormOpen] = useState(false);
@@ -454,9 +467,10 @@ export function InventoryView({ assets, maintenance, persons, poles, orgSlug, or
           {formOpen && (
             <AssetForm
               orgId={orgId} orgSlug={orgSlug} poles={poles}
+              establishments={establishments} defaultEstablishmentId={selectedLieuId}
               initial={editing ? {
                 name: editing.name, category: editing.category, reference: editing.reference,
-                location: editing.location, pole_id: editing.pole_id, status: editing.status,
+                location: editing.location, pole_id: editing.pole_id, establishment_id: editing.establishment_id, status: editing.status,
                 condition: editing.condition, quantity: editing.quantity, purchase_date: editing.purchase_date,
                 purchase_value: editing.purchase_value, warranty_until: editing.warranty_until,
                 photo_url: editing.photo_url, notes: editing.notes,
@@ -494,6 +508,7 @@ export function InventoryView({ assets, maintenance, persons, poles, orgSlug, or
                         <div className="mt-1 flex flex-wrap items-center gap-1.5">
                           <span className={`mc-badge ${assetStatusBadge(a.status)}`}>{assetStatusLabel(a.status)}</span>
                           <span className="text-[11px] text-warmgray">{conditionLabel(a.condition)}</span>
+                          <LieuBadge establishmentId={a.establishment_id} establishments={establishments} />
                         </div>
                       </div>
                     </div>

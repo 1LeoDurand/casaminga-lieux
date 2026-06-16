@@ -39,7 +39,8 @@ import {
   getPortalLinkAction,
 } from "@/app/(admin)/dashboard/[org]/personnes/actions";
 import { PersonAccessPanel } from "@/components/mc/person-access-panel";
-import type { Person, TeamMember } from "@/lib/types";
+import type { Person, TeamMember, Establishment } from "@/lib/types";
+import { LieuBadge } from "@/components/mc/lieu-badge";
 
 type View = "cards" | "table";
 
@@ -117,11 +118,15 @@ export function PersonsView({
   orgSlug,
   orgId,
   teamMembers = [],
+  establishments = [],
+  selectedLieuId = null,
 }: {
   persons: Person[];
   orgSlug: string;
   orgId: string;
   teamMembers?: TeamMember[];
+  establishments?: Establishment[];
+  selectedLieuId?: string | null;
 }) {
   const [view, setView] = useState<View>("cards");
   const [search, setSearch] = useState("");
@@ -158,6 +163,7 @@ export function PersonsView({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return persons.filter((p) => {
+      if (selectedLieuId && p.establishment_id !== selectedLieuId) return false;
       if (roleF.size && !roleF.has(p.role)) return false;
       if (statusF.size && !statusF.has(p.status)) return false;
       if (q) {
@@ -169,7 +175,7 @@ export function PersonsView({
       }
       return true;
     });
-  }, [persons, search, roleF, statusF]);
+  }, [persons, search, roleF, statusF, selectedLieuId]);
 
   const hasFilters = search.trim() !== "" || roleF.size > 0 || statusF.size > 0;
 
@@ -196,6 +202,7 @@ export function PersonsView({
         phone: values.phone.trim() || null,
         role: values.role,
         status: values.status,
+        establishment_id: values.establishment_id || null,
         tags: values.tags,
         notes: values.notes.trim() || null,
       };
@@ -267,6 +274,8 @@ export function PersonsView({
           key={formOpen ? "create-open" : "create-closed"}
           open={formOpen}
           person={null}
+          establishments={establishments}
+          defaultEstablishmentId={selectedLieuId}
           busy={pending}
           onClose={() => setFormOpen(false)}
           onSubmit={submitForm}
@@ -417,6 +426,7 @@ export function PersonsView({
                   {p.status === "inactif" ? (
                     <span className="mc-badge mc-badge-gray">Inactif</span>
                   ) : null}
+                  <LieuBadge establishmentId={p.establishment_id} establishments={establishments} />
                 </div>
                 {p.tags.length ? (
                   <div className="flex flex-wrap gap-1.5">
@@ -624,6 +634,8 @@ export function PersonsView({
         key={formOpen ? `edit-${editing?.id ?? "new"}` : "edit-closed"}
         open={formOpen}
         person={editing}
+        establishments={establishments}
+        defaultEstablishmentId={selectedLieuId}
         busy={pending}
         onClose={() => {
           setFormOpen(false);

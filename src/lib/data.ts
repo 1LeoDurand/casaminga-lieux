@@ -307,6 +307,7 @@ export interface PersonInput {
   newsletter_opt_out?: boolean;
   unsubscribe_token?: string;
   status: Person["status"];
+  establishment_id?: string | null;
   tags: string[];
   notes: string | null;
 }
@@ -314,7 +315,7 @@ export interface PersonInput {
 /** Crée une personne. Membre uniquement (RLS). */
 export async function createPerson(input: PersonInput): Promise<boolean> {
   if (!isSupabaseConfigured()) {
-    return addDemoPerson(input) !== null;
+    return addDemoPerson({ ...input, establishment_id: input.establishment_id ?? null }) !== null;
   }
   const supabase = await createClient();
   const { error } = await supabase.from("persons").insert(input);
@@ -1528,6 +1529,7 @@ export interface CashEntryInput {
   source_ref?: string | null;
   pole_id?: string | null;
   person_id?: string | null;
+  establishment_id?: string | null;
 }
 
 /** Ajoute une écriture immuable via la fonction atomique (seq continu + hash chaîné). */
@@ -1545,6 +1547,7 @@ export async function addCashEntry(input: CashEntryInput): Promise<{ ok: boolean
     p_source_ref: input.source_ref ?? null,
     p_pole_id: input.pole_id ?? null,
     p_person_id: input.person_id ?? null,
+    p_establishment_id: input.establishment_id ?? null,
   });
   if (error) { console.error("addCashEntry:", error); return { ok: false, error: humanError(error) }; }
   return { ok: true };

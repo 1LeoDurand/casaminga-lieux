@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/mc/page-header";
 import { InvoiceEditor } from "@/components/mc/invoice-editor";
 import { getOrganizationBySlug, getPersonsForOrg } from "@/lib/data";
 import { getInvoiceById, getInvoiceSettings } from "@/lib/invoicing/data";
+import { getPolesForOrg } from "@/lib/poles";
+import { getActiveEstablishments } from "@/lib/establishments";
 
 export default async function ModifierFacturePage({
   params,
@@ -15,10 +17,12 @@ export default async function ModifierFacturePage({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [invoice, persons, settings] = await Promise.all([
+  const [invoice, persons, settings, poles, establishments] = await Promise.all([
     getInvoiceById(organization.id, id),
     getPersonsForOrg(organization.id),
     getInvoiceSettings(organization.id),
+    getPolesForOrg(organization.id),
+    getActiveEstablishments(organization.id),
   ]);
   if (!invoice) notFound();
   // Une facture émise est figée → pas de modification.
@@ -36,6 +40,8 @@ export default async function ModifierFacturePage({
         invoiceId={invoice.id}
         persons={persons.map((p) => ({ id: p.id, name: p.name, email: p.email }))}
         defaultTermsDays={settings.payment_terms_days}
+        poles={poles}
+        establishments={establishments}
         initial={{
           client_id: invoice.client_id,
           client_name: invoice.client_name,
@@ -46,6 +52,11 @@ export default async function ModifierFacturePage({
           lines: invoice.lines,
           vat_applicable: invoice.vat_applicable,
           notes: invoice.notes,
+          object: invoice.object,
+          reference: invoice.reference,
+          pole_id: invoice.pole_id,
+          establishment_id: invoice.establishment_id,
+          payment_method: invoice.payment_method,
         }}
       />
     </div>

@@ -12,7 +12,7 @@ import {
   formatEuros,
 } from "@/lib/invoicing/types";
 import { saveInvoice, type InvoiceInput } from "@/app/(admin)/dashboard/[org]/factures/actions";
-import type { Pole } from "@/lib/types";
+import type { Pole, Establishment } from "@/lib/types";
 
 interface PersonLite { id: string; name: string; email: string | null }
 
@@ -35,6 +35,8 @@ export function InvoiceEditor({
   persons,
   defaultTermsDays,
   poles = [],
+  establishments = [],
+  defaultEstablishmentId = null,
   initial,
   invoiceId,
 }: {
@@ -43,6 +45,8 @@ export function InvoiceEditor({
   persons: PersonLite[];
   defaultTermsDays: number;
   poles?: Pole[];
+  establishments?: Establishment[];
+  defaultEstablishmentId?: string | null;
   initial?: Partial<InvoiceInput>;
   invoiceId?: string;
 }) {
@@ -60,6 +64,7 @@ export function InvoiceEditor({
   const [object, setObject] = useState(initial?.object ?? "");
   const [reference, setReference] = useState(initial?.reference ?? "");
   const [poleId, setPoleId] = useState<string>(initial?.pole_id ?? "");
+  const [establishmentId, setEstablishmentId] = useState<string>(initial?.establishment_id ?? defaultEstablishmentId ?? "");
   const [paymentMethod, setPaymentMethod] = useState(initial?.payment_method ?? "");
   const [lines, setLines] = useState<InvoiceLine[]>(
     initial?.lines ?? [{ designation: "", qty: 1, unit_ht: 0, vat_rate: 0 }]
@@ -105,6 +110,7 @@ export function InvoiceEditor({
       reference: reference.trim() || null,
       pole: selectedPole?.name ?? null,
       pole_id: poleId || null,
+      establishment_id: establishmentId || null,
       payment_method: paymentMethod || null,
       paid_at: null,
     };
@@ -184,6 +190,15 @@ export function InvoiceEditor({
               </div>
             )}
           </div>
+          {establishments.length > 0 && (
+            <div>
+              <label className={labelCls}>Lieu</label>
+              <select className={input} value={establishmentId} onChange={(e) => setEstablishmentId(e.target.value)}>
+                <option value="">— Aucun (commun) —</option>
+                {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

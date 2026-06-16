@@ -22,6 +22,7 @@ export interface ExpenseInput {
   supplier_name: string | null;
   supplier_person_id: string | null;
   pole_id: string | null;
+  establishment_id: string | null;
   payment_method: string | null;
   paid_at: string | null;
   receipt_url: string | null;
@@ -59,6 +60,7 @@ export async function saveExpense(
     supplier_name: input.supplier_name,
     supplier_person_id: input.supplier_person_id || null,
     pole_id: input.pole_id || null,
+    establishment_id: input.establishment_id || null,
     payment_method: input.payment_method,
     paid_at: input.paid_at,
     receipt_url: input.receipt_url,

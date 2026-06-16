@@ -8,7 +8,8 @@ import {
   EXPENSE_CATEGORIES, PAYMENT_METHODS, categoryLabel, categoryEmoji, paymentLabel, fmtDate, fmtEuros,
 } from "@/lib/expenses-meta";
 import { saveExpense, deleteExpense, type ExpenseInput } from "@/app/(admin)/dashboard/[org]/depenses/actions";
-import type { Expense, Person, Pole, ExpenseCategory } from "@/lib/types";
+import { LieuBadge } from "@/components/mc/lieu-badge";
+import type { Expense, Person, Pole, Establishment, ExpenseCategory } from "@/lib/types";
 
 const inputCls = "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/15";
 const labelCls = "mb-1 block text-[12px] font-semibold text-ink";
@@ -17,9 +18,10 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 
 // ── Formulaire ─────────────────────────────────────────────────
 function ExpenseForm({
-  orgId, orgSlug, persons, poles, initial, expenseId, onDone, onCancel,
+  orgId, orgSlug, persons, poles, establishments, defaultEstablishmentId, initial, expenseId, onDone, onCancel,
 }: {
   orgId: string; orgSlug: string; persons: Person[]; poles: Pole[];
+  establishments: Establishment[]; defaultEstablishmentId: string | null;
   initial?: Partial<ExpenseInput>; expenseId?: string;
   onDone: () => void; onCancel: () => void;
 }) {
@@ -31,6 +33,7 @@ function ExpenseForm({
   const [supplierName, setSupplierName] = useState(initial?.supplier_name ?? "");
   const [personId, setPersonId] = useState(initial?.supplier_person_id ?? "");
   const [poleId, setPoleId] = useState(initial?.pole_id ?? "");
+  const [establishmentId, setEstablishmentId] = useState(initial?.establishment_id ?? defaultEstablishmentId ?? "");
   const [paymentMethod, setPaymentMethod] = useState(initial?.payment_method ?? "");
   const [paidAt, setPaidAt] = useState(initial?.paid_at ?? "");
   const [receiptUrl, setReceiptUrl] = useState(initial?.receipt_url ?? "");
@@ -72,6 +75,7 @@ function ExpenseForm({
       supplier_name: supplierName.trim() || null,
       supplier_person_id: personId || null,
       pole_id: poleId || null,
+      establishment_id: establishmentId || null,
       payment_method: paymentMethod || null,
       paid_at: paidAt || null,
       receipt_url: receiptUrl || null,
@@ -117,6 +121,15 @@ function ExpenseForm({
             {poles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
+        {establishments.length > 0 && (
+          <div>
+            <label className={labelCls}>Lieu</label>
+            <select className={inputCls} value={establishmentId} onChange={(e) => setEstablishmentId(e.target.value)}>
+              <option value="">— Aucun (commun) —</option>
+              {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <label className={labelCls}>Fournisseur (nom libre)</label>
           <input className={inputCls} value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="EDF, SARL Dupont…" />
@@ -165,8 +178,9 @@ function ExpenseForm({
 }
 
 // ── Vue principale ──────────────────────────────────────────────
-export function ExpensesView({ expenses, persons, poles, orgSlug, orgId }: {
-  expenses: Expense[]; persons: Person[]; poles: Pole[]; orgSlug: string; orgId: string;
+export function ExpensesView({ expenses, persons, poles, establishments, selectedLieuId, orgSlug, orgId }: {
+  expenses: Expense[]; persons: Person[]; poles: Pole[];
+  establishments: Establishment[]; selectedLieuId: string | null; orgSlug: string; orgId: string;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -285,6 +299,8 @@ export function ExpensesView({ expenses, persons, poles, orgSlug, orgId }: {
           orgSlug={orgSlug}
           persons={persons}
           poles={poles}
+          establishments={establishments}
+          defaultEstablishmentId={selectedLieuId}
           initial={editing ? {
             label: editing.label,
             amount_ttc: editing.amount_ttc,
@@ -294,6 +310,7 @@ export function ExpensesView({ expenses, persons, poles, orgSlug, orgId }: {
             supplier_name: editing.supplier_name,
             supplier_person_id: editing.supplier_person_id,
             pole_id: editing.pole_id,
+            establishment_id: editing.establishment_id,
             payment_method: editing.payment_method,
             paid_at: editing.paid_at,
             receipt_url: editing.receipt_url,
@@ -349,6 +366,7 @@ export function ExpensesView({ expenses, persons, poles, orgSlug, orgId }: {
                         {pole.name}
                       </span>
                     ) : <span className="text-[12px] text-warmgray">—</span>}
+                    <LieuBadge establishmentId={e.establishment_id} establishments={establishments} className="mt-1" />
                   </div>
                   <span className="text-[12px] text-warmgray">{paymentLabel(e.payment_method)}</span>
                   <div className="flex items-center gap-1.5">

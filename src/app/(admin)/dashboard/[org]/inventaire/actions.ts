@@ -18,6 +18,7 @@ export interface AssetInput {
   reference: string | null;
   location: string | null;
   pole_id: string | null;
+  establishment_id: string | null;
   status: AssetStatus;
   condition: AssetCondition;
   quantity: number;
@@ -65,6 +66,7 @@ export async function saveAsset(orgId: string, orgSlug: string, input: AssetInpu
     reference: input.reference?.trim() || null,
     location: input.location?.trim() || null,
     pole_id: input.pole_id || null,
+    establishment_id: input.establishment_id || null,
     status: input.status,
     condition: input.condition,
     quantity: input.quantity,
@@ -222,11 +224,13 @@ export async function maintenanceToExpense(orgId: string, orgSlug: string, maint
   if (m.expense_id) return { ok: false, error: "Une dépense est déjà liée à ce ticket." };
   if (!m.cost || Number(m.cost) <= 0) return { ok: false, error: "Renseignez d'abord un coût sur le ticket." };
 
-  // Pôle hérité du bien si disponible
+  // Pôle et lieu hérités du bien si disponible
   let poleId: string | null = null;
+  let establishmentId: string | null = null;
   if (m.asset_id) {
-    const { data: asset } = await supabase.from("assets").select("pole_id").eq("id", m.asset_id).maybeSingle();
+    const { data: asset } = await supabase.from("assets").select("pole_id, establishment_id").eq("id", m.asset_id).maybeSingle();
     poleId = asset?.pole_id ?? null;
+    establishmentId = asset?.establishment_id ?? null;
   }
 
   const { data: exp, error } = await supabase
@@ -239,6 +243,7 @@ export async function maintenanceToExpense(orgId: string, orgSlug: string, maint
       vat_amount: null,
       category: "materiel",
       pole_id: poleId,
+      establishment_id: establishmentId,
       spent_at: m.reported_at,
       notes: "Généré depuis un ticket de maintenance (Inventaire).",
     })

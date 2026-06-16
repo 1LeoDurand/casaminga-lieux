@@ -51,6 +51,7 @@ export interface Invoice {
   subscription_id: string | null;
   pole: string | null;
   pole_id: string | null;
+  establishment_id: string | null;
   payment_method: PaymentMethod | null;
   paid_at: string | null;
   validation_status: "a_valider" | "valide" | "refuse" | null;

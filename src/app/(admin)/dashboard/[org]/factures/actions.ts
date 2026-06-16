@@ -70,6 +70,7 @@ export interface InvoiceInput {
   reference: string | null;
   pole: string | null;
   pole_id: string | null;
+  establishment_id: string | null;
   payment_method: string | null;
   paid_at: string | null;
 }
@@ -100,6 +101,7 @@ export async function saveInvoice(
     reference: input.reference ?? null,
     pole: input.pole ?? null,
     pole_id: input.pole_id ?? null,
+    establishment_id: input.establishment_id ?? null,
     payment_method: input.payment_method ?? null,
     paid_at: input.paid_at ?? null,
     updated_at: new Date().toISOString(),

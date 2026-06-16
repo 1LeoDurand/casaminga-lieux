@@ -6,6 +6,8 @@ import { PersonsView } from "@/components/mc/persons-view";
 import { GroupsManager } from "@/components/mc/groups-manager";
 import { getOrganizationBySlug, getPersonsForOrg, getTeamMembers } from "@/lib/data";
 import { getMemberGroups } from "@/lib/member-groups";
+import { getActiveEstablishments } from "@/lib/establishments";
+import { getSelectedLieuId } from "@/lib/establishment-scope";
 
 export default async function PersonnesPage({
   params,
@@ -16,11 +18,13 @@ export default async function PersonnesPage({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [persons, groups, teamMembers] = await Promise.all([
+  const [persons, groups, teamMembers, establishments] = await Promise.all([
     getPersonsForOrg(organization.id),
     getMemberGroups(organization.id),
     getTeamMembers(organization.id),
+    getActiveEstablishments(organization.id),
   ]);
+  const selectedLieuId = await getSelectedLieuId(organization.slug, establishments);
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,6 +60,8 @@ export default async function PersonnesPage({
         orgSlug={organization.slug}
         orgId={organization.id}
         teamMembers={teamMembers}
+        establishments={establishments}
+        selectedLieuId={selectedLieuId}
       />
     </div>
   );

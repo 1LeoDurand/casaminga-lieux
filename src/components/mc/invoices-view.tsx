@@ -13,6 +13,7 @@ import {
   formatEuros,
 } from "@/lib/invoicing/types";
 import { setInvoiceStatus, relanceInvoice, setInvoiceValidation } from "@/app/(admin)/dashboard/[org]/factures/actions";
+import { LieuBadge, type LieuOpt } from "@/components/mc/lieu-badge";
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "Toutes" },
@@ -37,7 +38,7 @@ function fmtDate(iso: string | null) {
 
 const PM_LABEL: Record<string, string> = Object.fromEntries(PAYMENT_METHODS.map((m) => [m.value, `${m.emoji} ${m.label}`]));
 
-export function InvoicesView({ invoices, orgSlug, validatorName = "" }: { invoices: Invoice[]; orgSlug: string; validatorName?: string }) {
+export function InvoicesView({ invoices, orgSlug, validatorName = "", establishments = [] }: { invoices: Invoice[]; orgSlug: string; validatorName?: string; establishments?: LieuOpt[] }) {
   const [filter, setFilter] = useState("all");
   const [poleFilter, setPoleFilter] = useState("all");
   const [pending, startTransition] = useTransition();
@@ -220,6 +221,7 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "" }: { invoic
                   <div>
                     <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
                     {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray">{inv.pole}</div>}
+                    <LieuBadge establishmentId={inv.establishment_id} establishments={establishments} className="mt-0.5" />
                   </div>
                   <span className="truncate text-[13px] text-ink">{inv.client_name}</span>
                   <span className="text-[12px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</span>

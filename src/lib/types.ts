@@ -97,6 +97,7 @@ export interface Person {
   phone: string | null;
   role: string;
   status: PersonStatus;
+  establishment_id: string | null;
   tags: string[];
   notes: string | null;
   newsletter_opt_out?: boolean;
@@ -451,6 +452,7 @@ export interface CashEntry {
   prev_hash: string;
   entry_hash: string;
   pole_id: string | null;
+  establishment_id: string | null;
   person_id: string | null;
   created_at: string;
 }
@@ -746,6 +748,7 @@ export interface Expense {
   supplier_name: string | null;
   supplier_person_id: string | null;
   pole_id: string | null;
+  establishment_id: string | null;
   payment_method: string | null;
   paid_at: string | null;
   receipt_url: string | null;
@@ -849,6 +852,7 @@ export interface Asset {
   reference: string | null;
   location: string | null;
   pole_id: string | null;
+  establishment_id: string | null;
   holder_person_id: string | null;
   status: AssetStatus;
   condition: AssetCondition;

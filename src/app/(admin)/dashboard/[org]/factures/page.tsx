@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/mc/page-header";
 import { InvoicesView } from "@/components/mc/invoices-view";
 import { getOrganizationBySlug } from "@/lib/data";
 import { getInvoices, getInvoiceSettings } from "@/lib/invoicing/data";
+import { getActiveEstablishments } from "@/lib/establishments";
+import { getSelectedLieuId, filterByLieu } from "@/lib/establishment-scope";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function FacturesPage({ params }: { params: Promise<{ org: string }> }) {
@@ -12,10 +14,13 @@ export default async function FacturesPage({ params }: { params: Promise<{ org: 
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [invoices, settings] = await Promise.all([
+  const [allInvoices, settings, establishments] = await Promise.all([
     getInvoices(organization.id),
     getInvoiceSettings(organization.id),
+    getActiveEstablishments(organization.id),
   ]);
+  const selectedLieuId = await getSelectedLieuId(organization.slug, establishments);
+  const invoices = filterByLieu(allInvoices, selectedLieuId);
 
   let validatorName = "";
   try {
@@ -64,7 +69,7 @@ export default async function FacturesPage({ params }: { params: Promise<{ org: 
         </div>
       )}
 
-      <InvoicesView invoices={invoices} orgSlug={org} validatorName={validatorName} />
+      <InvoicesView invoices={invoices} orgSlug={org} validatorName={validatorName} establishments={establishments} />
     </div>
   );
 }

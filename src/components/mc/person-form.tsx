@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { PERSON_ROLES, PERSON_STATUSES } from "@/lib/persons-meta";
-import type { Person } from "@/lib/types";
+import type { Person, Establishment } from "@/lib/types";
 
 export interface PersonFormValues {
   name: string;
@@ -13,10 +13,11 @@ export interface PersonFormValues {
   status: Person["status"];
   tags: string[];
   notes: string;
+  establishment_id: string;
   sendWelcome: boolean;
 }
 
-function fromPerson(p: Person | null): PersonFormValues {
+function fromPerson(p: Person | null, defaultEstablishmentId: string | null): PersonFormValues {
   return {
     name: p?.name ?? "",
     email: p?.email ?? "",
@@ -25,6 +26,7 @@ function fromPerson(p: Person | null): PersonFormValues {
     status: p?.status ?? "actif",
     tags: p?.tags ? [...p.tags] : [],
     notes: p?.notes ?? "",
+    establishment_id: p?.establishment_id ?? defaultEstablishmentId ?? "",
     sendWelcome: false,
   };
 }
@@ -36,19 +38,23 @@ function fromPerson(p: Person | null): PersonFormValues {
 export function PersonForm({
   open,
   person,
+  establishments = [],
+  defaultEstablishmentId = null,
   busy = false,
   onSubmit,
   onClose,
 }: {
   open: boolean;
   person: Person | null;
+  establishments?: Establishment[];
+  defaultEstablishmentId?: string | null;
   busy?: boolean;
   onSubmit: (values: PersonFormValues) => void;
   onClose: () => void;
 }) {
   // Les champs sont initialisés depuis `person` au montage. Le parent remonte
   // ce composant via une `key` à chaque ouverture, garantissant un état frais.
-  const [values, setValues] = useState<PersonFormValues>(fromPerson(person));
+  const [values, setValues] = useState<PersonFormValues>(fromPerson(person, defaultEstablishmentId));
   const [tagsInput, setTagsInput] = useState((person?.tags ?? []).join(", "));
   const [error, setError] = useState<string | null>(null);
 
@@ -178,6 +184,22 @@ export function PersonForm({
               placeholder="céramique, résidence…"
             />
           </div>
+
+          {establishments.length > 0 ? (
+            <div className="mc-form-group">
+              <label className="mc-form-label">Lieu de rattachement</label>
+              <select
+                className="mc-input"
+                value={values.establishment_id}
+                onChange={(e) => set("establishment_id", e.target.value)}
+              >
+                <option value="">— Aucun (commun à tous les lieux) —</option>
+                {establishments.map((es) => (
+                  <option key={es.id} value={es.id}>{es.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
 
           <div className="mc-form-group">
             <label className="mc-form-label">Notes</label>

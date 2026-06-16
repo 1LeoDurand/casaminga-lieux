@@ -18,7 +18,8 @@ import {
   PAYMENT_METHODS, CASH_SOURCES, VAT_RATES, CLOSURE_TYPES,
   paymentLabel, sourceLabel, closureTypeLabel, fmtEuro, fmtDateTime, fmtDate, shortHash, splitVat,
 } from "@/lib/cash-register-meta";
-import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole, Person, CashShortcut } from "@/lib/types";
+import type { CashEntry, CashClosure, CashClosureType, CashVerifyResult, CashPaymentMethod, CashSource, Pole, Person, Establishment, CashShortcut } from "@/lib/types";
+import { LieuBadge } from "@/components/mc/lieu-badge";
 
 const inputCls = "rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400";
 const selectCls = inputCls + " cursor-pointer";
@@ -37,12 +38,12 @@ interface EntryForm {
   label: string; amount_ttc: string; vat_rate: string;
   payment_method: CashPaymentMethod; source: CashSource;
   operator: string; source_ref: string; receipt_email: string; pole_id: string;
-  person_id: string;
+  person_id: string; establishment_id: string;
 }
 const EMPTY: EntryForm = {
   label: "", amount_ttc: "", vat_rate: "0",
   payment_method: "especes", source: "adhesion", operator: "", source_ref: "", receipt_email: "", pole_id: "",
-  person_id: "",
+  person_id: "", establishment_id: "",
 };
 
 // ── Sélecteur de personne (combobox inline) ──────────────────
@@ -154,10 +155,11 @@ const QUICK_PRESETS: { label: string; emoji: string; values: Shortcut }[] = [
   { label: "Boutique",         emoji: "🛍", values: { label: "Vente boutique",    amount_ttc: "",    vat_rate: "20", payment_method: "especes", source: "boutique"    } },
 ];
 
-function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons, shortcuts = [] }: {
-  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[]; persons: Person[]; shortcuts?: CashShortcut[];
+function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons, establishments = [], defaultEstablishmentId = null, shortcuts = [] }: {
+  open: boolean; onClose: () => void; orgSlug: string; orgId: string; poles: Pole[]; persons: Person[];
+  establishments?: Establishment[]; defaultEstablishmentId?: string | null; shortcuts?: CashShortcut[];
 }) {
-  const [form, setForm] = useState<EntryForm>(EMPTY);
+  const [form, setForm] = useState<EntryForm>({ ...EMPTY, establishment_id: defaultEstablishmentId ?? "" });
   const [pending, start] = useTransition();
   const set = (k: keyof EntryForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -205,12 +207,13 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons, shortcuts 
         source_ref: form.source_ref.trim() || null,
         pole_id: form.pole_id || null,
         person_id: form.person_id || null,
+        establishment_id: form.establishment_id || null,
       }, form.receipt_email.trim()
         ? { email: form.receipt_email.trim(), name: selectedPerson?.name }
         : undefined);
       if (res.ok) {
         toast.success(form.receipt_email.trim() ? "Encaissement scellé · reçu envoyé" : "Encaissement enregistré (écriture scellée)");
-        setForm(EMPTY); onClose();
+        setForm({ ...EMPTY, establishment_id: defaultEstablishmentId ?? "" }); onClose();
       }
       else toast.error(res.error ?? "Erreur");
     });
@@ -286,6 +289,14 @@ function EntryDrawer({ open, onClose, orgSlug, orgId, poles, persons, shortcuts 
                 <select value={form.pole_id} onChange={set("pole_id")} className={selectCls}>
                   <option value="">— Aucun pôle —</option>
                   {poles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
+            )}
+            {establishments.length > 0 && (
+              <Field label="Lieu">
+                <select value={form.establishment_id} onChange={set("establishment_id")} className={selectCls}>
+                  <option value="">— Aucun (commun) —</option>
+                  {establishments.map((es) => <option key={es.id} value={es.id}>{es.name}</option>)}
                 </select>
               </Field>
             )}
@@ -495,10 +506,11 @@ function CashShortcutsEditor({
 
 // ── Vue principale ───────────────────────────────────────────
 export function CashRegisterView({
-  entries, closures, orgSlug, orgId, poles = [], persons = [], shortcuts: initialShortcuts = [], pointedIds = [], postedClosureIds = [],
+  entries, closures, orgSlug, orgId, poles = [], persons = [], establishments = [], selectedLieuId = null, shortcuts: initialShortcuts = [], pointedIds = [], postedClosureIds = [],
 }: {
   entries: CashEntry[]; closures: CashClosure[]; orgSlug: string; orgId: string;
-  poles?: Pole[]; persons?: Person[]; shortcuts?: CashShortcut[]; pointedIds?: string[]; postedClosureIds?: string[];
+  poles?: Pole[]; persons?: Person[]; establishments?: Establishment[]; selectedLieuId?: string | null;
+  shortcuts?: CashShortcut[]; pointedIds?: string[]; postedClosureIds?: string[];
 }) {
   const postedSet = new Set(postedClosureIds);
   const [tab, setTab] = useState<"ecritures" | "pointage" | "clotures" | "statistiques">("ecritures");
@@ -749,6 +761,7 @@ export function CashRegisterView({
                       <td className="px-3 py-2">
                         <span className={e.is_void ? "text-red-700" : "text-slate-800"}>{e.label}</span>
                         {e.is_void && <span className="ml-1.5 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">Annulation</span>}
+                        {establishments.length > 0 && <LieuBadge establishmentId={e.establishment_id} establishments={establishments} className="ml-1.5" />}
                       </td>
                       <td className="px-3 py-2 text-xs text-slate-500">{sourceLabel(e.source)}</td>
                       {poles.length > 0 && (
@@ -963,7 +976,7 @@ export function CashRegisterView({
         <StatsView entries={entries} poles={poles} />
       )}
 
-      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} persons={persons} shortcuts={shortcuts} />
+      <EntryDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} orgSlug={orgSlug} orgId={orgId} poles={poles} persons={persons} establishments={establishments} defaultEstablishmentId={selectedLieuId} shortcuts={shortcuts} />
 
       <CashShortcutsEditor
         open={shortcutsEditorOpen}
