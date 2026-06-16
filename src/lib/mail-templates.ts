@@ -879,3 +879,35 @@ export function tplFactureRappel(opts: {
     opts.orgName
   );
 }
+
+// ── Reçu de paiement en ligne (adhésion ou billet) ───────────────────────
+
+export function tplPaiementConfirme(opts: {
+  orgName: string;
+  firstName: string;
+  description: string;
+  amountEuros: number;
+  receiptRef: string;
+  date: string;
+}) {
+  const fmt = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(opts.amountEuros);
+  const dateStr = new Date(opts.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  return base(
+    `
+    ${badge("Paiement confirmé ✓", "#22C55E")}
+    <div style="height:12px;"></div>
+    ${h1("Votre paiement a été reçu")}
+    ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
+    ${p(`Merci ! Votre paiement auprès de <strong>${opts.orgName}</strong> a bien été enregistré.`)}
+    ${card([
+      { label: "Objet",        value: opts.description },
+      { label: "Montant payé", value: fmt },
+      { label: "Date",         value: dateStr },
+      { label: "Référence",    value: opts.receiptRef.slice(0, 24) + "…" },
+    ])}
+    ${p("Le reçu PDF est joint à cet email. Conservez-le comme justificatif de paiement.")}
+    ${p("Merci pour votre confiance !")}
+  `,
+    opts.orgName
+  );
+}

@@ -2,7 +2,7 @@
 import { useMemo, useState, useTransition } from "react";
 import {
   X, Plus, Pencil, Trash2, Users, Eye, EyeOff,
-  Check, Ban, ExternalLink, ArrowRight, ChevronRight, ChevronLeft,
+  Check, Ban, ExternalLink, ArrowRight, ChevronRight, ChevronLeft, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
@@ -325,6 +325,20 @@ function CampaignAdmin({ campaign, tiers, applications, orgSlug, onClose }: {
     });
   }
 
+  function refundAdhesion(id: string) {
+    if (!confirm("Rembourser ce paiement Stripe ? Cette action est irréversible.")) return;
+    startT(async () => {
+      const r = await fetch(`/api/orgs/${orgSlug}/stripe/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "adhesion", id }),
+      });
+      const data = await r.json() as { ok?: boolean; error?: string; amount?: number };
+      if (data.ok) toast.success(`Remboursement effectué${data.amount ? ` — ${data.amount.toFixed(2)} €` : ""}`);
+      else toast.error(data.error ?? "Erreur lors du remboursement");
+    });
+  }
+
   return (
     <>
       <button type="button" aria-label="Fermer" className="mc-drawer-ov" onClick={onClose} />
@@ -362,9 +376,21 @@ function CampaignAdmin({ campaign, tiers, applications, orgSlug, onClose }: {
                       {a.status === "confirmee" ? (
                         <div className="mt-2">
                           {a.payment_method ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-[#e8f5ee] px-2 py-0.5 text-[11px] font-semibold text-[#2f8a4c]">
-                              ✓ {paymentLabel(a.payment_method)}{a.payment_ref ? ` · ${a.payment_ref}` : ""}
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-[#e8f5ee] px-2 py-0.5 text-[11px] font-semibold text-[#2f8a4c]">
+                                ✓ {paymentLabel(a.payment_method)}{a.payment_ref ? ` · ${a.payment_ref.slice(0, 16)}…` : ""}
+                              </span>
+                              {a.payment_method === "en_ligne" && a.payment_ref ? (
+                                <button
+                                  type="button"
+                                  disabled={pending}
+                                  onClick={() => refundAdhesion(a.id)}
+                                  className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-100 disabled:opacity-50"
+                                >
+                                  <RotateCcw className="size-3" /> Rembourser
+                                </button>
+                              ) : null}
+                            </div>
                           ) : (
                             <select
                               className="rounded-md border border-input bg-cream px-2 py-1 text-[11px] text-warmgray"

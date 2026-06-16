@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/admin/guard";
 import { constructWebhookEvent } from "@/lib/stripe";
+import { generatePaymentReceiptPdf } from "@/lib/payment-receipt-pdf";
+import { sendMail } from "@/lib/mail";
+import { tplPaiementConfirme } from "@/lib/mail-templates";
 
 /**
  * Webhook Stripe Connect — POST /api/orgs/[slug]/stripe/webhook
@@ -94,6 +97,50 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     }).eq("id", adhesion.id);
 
+    // Reçu PDF + email de confirmation
+    const { data: fullAdhesion } = await admin
+      .from("membership_applications")
+      .select("first_name, last_name, email, amount_paid, membership_start, membership_end, tier_id, organization_id")
+      .eq("id", adhesion.id)
+      .maybeSingle();
+    if (fullAdhesion?.email) {
+      const { data: org } = await admin.from("organizations").select("name").eq("id", fullAdhesion.organization_id).maybeSingle();
+      const { data: tier } = fullAdhesion.tier_id
+        ? await admin.from("membership_tiers").select("name").eq("id", fullAdhesion.tier_id).maybeSingle()
+        : { data: null };
+      const description = tier?.name ? `Adhésion — ${tier.name}` : "Adhésion";
+      const receiptData = {
+        orgName: org?.name ?? "Casa Minga",
+        receiptRef: session.id,
+        date: new Date().toISOString(),
+        holderName: `${fullAdhesion.first_name} ${fullAdhesion.last_name}`.trim(),
+        holderEmail: fullAdhesion.email,
+        description,
+        amountEuros: amountPaid ?? Number(fullAdhesion.amount_paid),
+        paymentMethod: "Carte bancaire (Stripe)",
+      };
+      try {
+        const pdfBuffer = await generatePaymentReceiptPdf(receiptData);
+        await sendMail({
+          to: fullAdhesion.email,
+          subject: `Reçu de paiement — ${org?.name ?? "Casa Minga"}`,
+          html: tplPaiementConfirme({
+            orgName: receiptData.orgName,
+            firstName: fullAdhesion.first_name,
+            description,
+            amountEuros: receiptData.amountEuros,
+            receiptRef: session.id,
+            date: receiptData.date,
+          }),
+          attachments: [{ filename: "recu-paiement.pdf", content: pdfBuffer, contentType: "application/pdf" }],
+          category: "recu-paiement",
+          organizationId: fullAdhesion.organization_id,
+        });
+      } catch (e) {
+        console.error("[webhook] Erreur génération reçu adhésion:", e);
+      }
+    }
+
     return NextResponse.json({ ok: true, adhesion_paid: true });
   }
 
@@ -107,6 +154,49 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", eventRegistrationId);
+
+    // Reçu PDF + email de confirmation
+    const { data: reg } = await admin
+      .from("event_registrations")
+      .select("full_name, email, amount_ttc, event_id, organization_id")
+      .eq("id", eventRegistrationId)
+      .maybeSingle();
+    if (reg?.email) {
+      const { data: org } = await admin.from("organizations").select("name").eq("id", reg.organization_id).maybeSingle();
+      const { data: evt } = await admin.from("evenements").select("title").eq("id", reg.event_id).maybeSingle();
+      const description = evt?.title ? `Billet — ${evt.title}` : "Billet événement";
+      const receiptData = {
+        orgName: org?.name ?? "Casa Minga",
+        receiptRef: session.id,
+        date: new Date().toISOString(),
+        holderName: reg.full_name,
+        holderEmail: reg.email,
+        description,
+        amountEuros: amountPaid ?? Number(reg.amount_ttc),
+        paymentMethod: "Carte bancaire (Stripe)",
+      };
+      try {
+        const pdfBuffer = await generatePaymentReceiptPdf(receiptData);
+        await sendMail({
+          to: reg.email,
+          subject: `Reçu de paiement — ${org?.name ?? "Casa Minga"}`,
+          html: tplPaiementConfirme({
+            orgName: receiptData.orgName,
+            firstName: reg.full_name.split(" ")[0] ?? reg.full_name,
+            description,
+            amountEuros: receiptData.amountEuros,
+            receiptRef: session.id,
+            date: receiptData.date,
+          }),
+          attachments: [{ filename: "recu-paiement.pdf", content: pdfBuffer, contentType: "application/pdf" }],
+          category: "recu-paiement",
+          organizationId: reg.organization_id,
+        });
+      } catch (e) {
+        console.error("[webhook] Erreur génération reçu événement:", e);
+      }
+    }
+
     return NextResponse.json({ ok: true, event_registration_paid: true });
   }
 

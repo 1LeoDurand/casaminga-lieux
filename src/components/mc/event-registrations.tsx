@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserCheck, Plus, X, Download, QrCode, Copy, ExternalLink, Trash2 } from "lucide-react";
+import { UserCheck, Plus, X, Download, QrCode, Copy, ExternalLink, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import {
   getTicketsForEvent, addRegistrationManual,
@@ -90,6 +90,21 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
     });
   }
 
+  function refundTicket(t: EventTicket) {
+    if (!t.registration_id) return;
+    if (!confirm(`Rembourser le paiement Stripe de ${t.holder_name} ? Cette action est irréversible.`)) return;
+    startTransition(async () => {
+      const r = await fetch(`/api/orgs/${orgSlug}/stripe/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "event_registration", id: t.registration_id }),
+      });
+      const data = await r.json() as { ok?: boolean; error?: string; amount?: number };
+      if (data.ok) toast.success(`Remboursement effectué${data.amount ? ` — ${data.amount.toFixed(2)} €` : ""}`);
+      else toast.error(data.error ?? "Erreur lors du remboursement");
+    });
+  }
+
   function promote(w: WaitlistEntry) {
     startTransition(async () => {
       const res = await promoteWaitlistEntry(orgSlug, w.id);
@@ -170,6 +185,11 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
                         {t.email ?? "—"}{t.checked_in_at ? ` · ✅ entré à ${fmtTime(t.checked_in_at)}` : ""}
                       </div>
                     </div>
+                    {t.stripe_session_id ? (
+                      <button onClick={() => refundTicket(t)} className="rounded-lg p-1.5 text-warmgray hover:text-rose-600" title="Rembourser (Stripe)">
+                        <RotateCcw className="size-4" />
+                      </button>
+                    ) : null}
                     <button onClick={() => toggleCheckIn(t)}
                       className={`rounded-lg p-1.5 ${t.checked_in_at ? "bg-emerald-100 text-emerald-700" : "text-warmgray hover:bg-emerald-50 hover:text-emerald-600"}`}
                       title={t.checked_in_at ? "Marquer absent" : "Marquer présent"}>

@@ -12,8 +12,9 @@ export interface EventTicket {
   holder_name: string;
   ticket_token: string;
   checked_in_at: string | null;
-  email: string | null;        // email de la réservation (acheteur)
-  reg_status: string | null;   // statut de la réservation
+  email: string | null;
+  reg_status: string | null;
+  stripe_session_id: string | null;
   created_at: string;
 }
 
@@ -25,11 +26,11 @@ export async function getTicketsForEvent(eventId: string): Promise<EventTicket[]
   const supabase = await createClient();
   const { data } = await supabase
     .from("event_tickets")
-    .select("id, registration_id, holder_name, ticket_token, checked_in_at, created_at, event_registrations(email, status)")
+    .select("id, registration_id, holder_name, ticket_token, checked_in_at, created_at, event_registrations(email, status, stripe_session_id)")
     .eq("event_id", eventId)
     .order("created_at", { ascending: true });
   return (data ?? []).map((t: Record<string, unknown>) => {
-    const reg = t.event_registrations as { email: string | null; status: string | null } | null;
+    const reg = t.event_registrations as { email: string | null; status: string | null; stripe_session_id?: string | null } | null;
     return {
       id: t.id as string,
       registration_id: (t.registration_id as string) ?? null,
@@ -38,6 +39,7 @@ export async function getTicketsForEvent(eventId: string): Promise<EventTicket[]
       checked_in_at: (t.checked_in_at as string) ?? null,
       email: reg?.email ?? null,
       reg_status: reg?.status ?? null,
+      stripe_session_id: reg?.stripe_session_id ?? null,
       created_at: t.created_at as string,
     };
   });
