@@ -1,6 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createResidence, deleteResidence, updateResidence, type ResidenceInput } from "@/lib/data";
+import {
+  createResidence, deleteResidence, updateResidence, type ResidenceInput,
+  createMilestone, updateMilestone, deleteMilestone, type ArtistMilestoneInput,
+} from "@/lib/data";
 
 function refresh(orgSlug: string) {
   revalidatePath(`/dashboard/${orgSlug}/residences`);
@@ -15,4 +18,14 @@ export async function updateResidenceAction(orgSlug: string, id: string, patch: 
 }
 export async function deleteResidenceAction(orgSlug: string, id: string): Promise<{ ok: boolean }> {
   const ok = await deleteResidence(id); if (ok) refresh(orgSlug); return { ok };
+}
+
+export async function createMilestoneAction(input: ArtistMilestoneInput): Promise<{ ok: boolean }> {
+  return { ok: await createMilestone(input) };
+}
+export async function updateMilestoneAction(id: string, patch: Partial<ArtistMilestoneInput>): Promise<{ ok: boolean }> {
+  return { ok: await updateMilestone(id, patch) };
+}
+export async function deleteMilestoneAction(id: string): Promise<{ ok: boolean }> {
+  return { ok: await deleteMilestone(id) };
 }

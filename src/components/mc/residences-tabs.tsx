@@ -60,6 +60,7 @@ export function ResidencesTabs({
           residences={residences}
           spaces={spaces}
           persons={persons}
+          artists={artists}
           orgSlug={orgSlug}
           orgId={orgId}
         />
