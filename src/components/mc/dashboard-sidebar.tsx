@@ -125,7 +125,7 @@ function RailButton({
       onClick={onClick}
       title={section.title}
       aria-current={current ? "page" : undefined}
-      className="relative flex w-full flex-col items-center gap-[5px] rounded-[13px] px-0.5 py-2.5 transition-colors"
+      className="relative flex w-full cursor-pointer flex-col items-center gap-[5px] rounded-[13px] px-0.5 py-2.5 transition-colors"
       style={{ background: bg, color, boxShadow: current ? "0 4px 12px -4px rgba(255,138,101,0.6)" : "none" }}
     >
       {current && (
@@ -170,7 +170,7 @@ function RailUserMenu({ orgSlug, initials, userName }: { orgSlug: string; initia
         type="button"
         onClick={() => setOpen((v) => !v)}
         title={userName}
-        className="flex size-[33px] items-center justify-center rounded-[11px] bg-coral text-[13px] font-bold text-white transition-transform hover:scale-105"
+        className="flex size-[33px] cursor-pointer items-center justify-center rounded-[11px] bg-coral text-[13px] font-bold text-white transition-transform hover:scale-105"
       >
         {initials}
       </button>
@@ -319,7 +319,7 @@ export function DashboardSidebar({
         onClick={toggleCollapsed}
         title={collapsed ? "Déployer le panneau" : "Réduire le panneau"}
         aria-label={collapsed ? "Déployer le panneau" : "Réduire le panneau"}
-        className="flex shrink-0 items-center justify-center border-t border-white/[0.08] py-3.5 text-white/50 transition-colors hover:text-white/80"
+        className="flex shrink-0 cursor-pointer items-center justify-center border-t border-white/[0.08] py-3.5 text-white/50 transition-colors hover:text-white/80"
       >
         <PanelLeft className="size-[19px]" strokeWidth={1.8} style={{ transform: collapsed ? "scaleX(-1)" : undefined }} />
       </button>
@@ -340,7 +340,7 @@ export function DashboardSidebar({
           onClick={toggleCollapsed}
           title="Réduire le panneau"
           aria-label="Réduire le panneau"
-          className="flex size-[26px] items-center justify-center rounded-lg bg-white/[0.06] text-white/50 transition-colors hover:text-white"
+          className="flex size-[26px] cursor-pointer items-center justify-center rounded-lg bg-white/[0.06] text-white/50 transition-colors hover:text-white"
         >
           <ChevronsLeft className="size-4" />
         </button>
