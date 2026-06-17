@@ -23,13 +23,19 @@ export interface ModuleDef {
 }
 
 export interface ModuleSection {
+  /** Clé stable de la section (rail, flyout, surlignage). */
+  key: string;
   title: string;
+  /** Label court affiché sous l'icône du rail. */
+  shortLabel: string;
   modules: ModuleDef[];
 }
 
 export const MODULE_SECTIONS: ModuleSection[] = [
   {
+    key: "pilotage",
     title: "Pilotage",
+    shortLabel: "Pilotage",
     modules: [
       { key: "dashboard",  label: "Tableau de bord", segment: null,         layer: 0 },
       { key: "demandes",   label: "Demandes",         segment: "demandes",   layer: 0, description: "Le pont entre votre site public et votre équipe." },
@@ -38,7 +44,9 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     ],
   },
   {
+    key: "lieu",
     title: "Gestion du lieu",
+    shortLabel: "Lieu",
     modules: [
       { key: "espaces",    label: "Espaces",    segment: "espaces",    layer: 1, tableKey: "spaces",     description: "Catalogue des salles et ateliers réservables, avec planning des créneaux.", minTier: "complete" },
       { key: "residences", label: "Résidences", segment: "residences", layer: 1, tableKey: "residences", description: "Séjours artistiques et annuaire des artistes accueillis.",               minTier: "complete" },
@@ -47,23 +55,34 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     ],
   },
   {
-    title: "Structure",
+    key: "finances",
+    title: "Finances",
+    shortLabel: "Finances",
     modules: [
-      { key: "adhesions",   label: "Adhésions",       segment: "adhesions",   layer: 1, tableKey: "membership_campaigns", description: "Campagnes et tunnel d'adhésion en ligne." },
       { key: "finances",    label: "Finances",         segment: "finances",    layer: 1, tableKey: "transactions",          description: "Transactions, solde, export comptable.",  minTier: "complete" },
       { key: "factures",    label: "Facturation",      segment: "factures",    layer: 1, tableKey: "invoices",               description: "Factures, avoirs, coworking.",            minTier: "complete" },
       { key: "depenses",    label: "Dépenses",         segment: "depenses",    layer: 1, tableKey: "expenses",               description: "Charges et justificatifs par pôle.",      minTier: "complete" },
       { key: "subventions", label: "Subventions",      segment: "subventions", layer: 2, tableKey: "grants",                 description: "Suivi des demandes et conventions.",      minTier: "complete" },
       { key: "dons",        label: "Dons & mécénat",   segment: "dons",        layer: 2, tableKey: "donations",              description: "Collecte, donateurs, reçus fiscaux Cerfa.", minTier: "complete" },
       { key: "caisse",      label: "Caisse certifiée", segment: "caisse",      layer: 2, tableKey: "cash_entries",           description: "Encaissements conformes NF525.",          minTier: "complete" },
-      { key: "documents",   label: "Documents",        segment: "documents",   layer: 1, tableKey: "documents",              description: "Stockage et signatures en ligne.",         minTier: "complete" },
+    ],
+  },
+  {
+    key: "admin",
+    title: "Administration",
+    shortLabel: "Admin",
+    modules: [
+      { key: "adhesions",   label: "Adhésions",       segment: "adhesions",   layer: 1, tableKey: "membership_campaigns", description: "Campagnes et tunnel d'adhésion en ligne." },
       { key: "contrats",    label: "Contrats",         segment: "contrats",    layer: 2, tableKey: "contracts",              description: "Assurances, baux, conventions + échéances.", minTier: "complete" },
+      { key: "documents",   label: "Documents",        segment: "documents",   layer: 1, tableKey: "documents",              description: "Stockage et signatures en ligne.",         minTier: "complete" },
       { key: "gouvernance", label: "Gouvernance",      segment: "gouvernance", layer: 2, tableKey: "governance_meetings",    description: "CA, AG, mandats, votes.",                 minTier: "complete" },
       { key: "impact",      label: "Impact",           segment: "impact",      layer: 2, tableKey: "impact_indicators",      description: "Indicateurs et tableaux de bord.",        minTier: "complete" },
     ],
   },
   {
+    key: "comm",
     title: "Communication",
+    shortLabel: "Comm.",
     modules: [
       { key: "site-public",   label: "Site public",    segment: "site-public",   layer: 0, description: "Votre vitrine publique." },
       { key: "domaine",       label: "Nom de domaine", segment: "upgrade",       layer: 0, description: "Connectez votre propre adresse web." },
@@ -71,7 +90,9 @@ export const MODULE_SECTIONS: ModuleSection[] = [
     ],
   },
   {
+    key: "systeme",
     title: "Système",
+    shortLabel: "Système",
     modules: [
       { key: "automatisations", label: "Automatisations", segment: "automatisations", layer: 2, description: "Règles et déclencheurs automatiques.", minTier: "complete" },
       { key: "equipe",          label: "Équipe",           segment: "equipe",          layer: 0, description: "Membres de l'équipe et accès." },

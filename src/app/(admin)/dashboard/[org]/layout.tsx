@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { DashboardSidebar } from "@/components/mc/dashboard-sidebar";
+import { DashboardSidebar, DashboardMobileTabBar } from "@/components/mc/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
 import { DashboardShell } from "@/components/mc/dashboard-shell";
 import { FeedbackWidget } from "@/components/mc/feedback-widget";
@@ -112,6 +112,9 @@ export default async function DashboardLayout({
             selectedLieuId={selectedLieuId}
             unreadNotifCount={unreadNotifCount}
           />
+        }
+        mobileTabBar={
+          <DashboardMobileTabBar orgSlug={organization.slug} openRequests={openRequests} />
         }
       >
         {children}

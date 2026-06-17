@@ -36,10 +36,12 @@ export function DashboardShell({
   sidebar,
   topbar,
   children,
+  mobileTabBar,
 }: {
   sidebar: React.ReactNode;
   topbar: React.ReactNode;
   children: React.ReactNode;
+  mobileTabBar?: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -77,14 +79,14 @@ export function DashboardShell({
     <SidebarCtx.Provider value={{ collapsed, mobileOpen, toggleCollapsed, openMobile, closeMobile }}>
       <div
         className="grid h-[100dvh] grid-cols-1 grid-rows-[56px_1fr] overflow-hidden lg:grid-cols-[var(--cm-sb)_minmax(0,1fr)]"
-        style={{ "--cm-sb": collapsed ? "72px" : "232px" } as React.CSSProperties}
+        style={{ "--cm-sb": collapsed ? "88px" : "300px" } as React.CSSProperties}
       >
-        {/* Sidebar : tiroir off-canvas en mobile, colonne de grille en desktop */}
+        {/* Sidebar : tiroir off-canvas en mobile, rail+panneau en desktop */}
         <div
           className={[
-            "fixed inset-y-0 left-0 z-50 w-[232px] max-w-[82vw]",
+            "fixed inset-y-0 left-0 z-50 w-[300px] max-w-[88vw]",
             "transition-transform duration-300 ease-out",
-            "lg:static lg:z-auto lg:row-span-2 lg:w-auto lg:max-w-none lg:translate-x-0 lg:!transition-none",
+            "lg:static lg:z-auto lg:row-span-2 lg:w-auto lg:max-w-none lg:!transform-none lg:!transition-none",
             mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
           ].join(" ")}
         >
@@ -103,8 +105,11 @@ export function DashboardShell({
 
         {topbar}
 
-        <main className="min-w-0 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-7">{children}</main>
+        <main className="min-w-0 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-7 max-lg:!pb-[88px]">{children}</main>
       </div>
+
+      {/* Barre d'onglets — mobile uniquement (hors tiroir off-canvas) */}
+      {mobileTabBar}
     </SidebarCtx.Provider>
   );
 }
