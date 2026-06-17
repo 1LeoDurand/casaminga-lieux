@@ -720,13 +720,14 @@ export function tplNewsletter(opts: {
 export function tplPortalLink(opts: {
   firstName: string;
   portalUrl: string;
-  orgName: string;
+  orgName?: string;
   establishmentName?: string | null;
 }) {
+  const orgName = opts.orgName || "Casa Minga";
   const sender =
-    opts.establishmentName && opts.establishmentName !== opts.orgName
-      ? `<strong>${opts.orgName}</strong> — ${opts.establishmentName}`
-      : `<strong>${opts.orgName}</strong>`;
+    opts.establishmentName && opts.establishmentName !== orgName
+      ? `<strong>${orgName}</strong> — ${opts.establishmentName}`
+      : `<strong>${orgName}</strong>`;
   return base(
     `
     ${h1("Bienvenue dans votre espace adhérent ✨")}
@@ -742,14 +743,14 @@ export function tplPortalLink(opts: {
       </table>
     </div>
     ${btn("Accéder à mon espace →", opts.portalUrl)}
-    ${p(`<span style="font-size:13px;color:#9C9590;">Cet espace est propulsé par <strong>Casa Minga</strong>, l'outil avec lequel ${opts.orgName} gère ses adhésions, ses événements et sa communauté. Rien à installer : tout se passe en ligne, depuis ce lien.</span>`)}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Cet espace est propulsé par <strong>Casa Minga</strong>, l'outil avec lequel ${orgName} gère ses adhésions, ses événements et sa communauté. Rien à installer : tout se passe en ligne, depuis ce lien.</span>`)}
     ${p(`Ce lien est strictement personnel — ne le partagez pas. Il reste valide jusqu'à ce que vous en demandiez un nouveau.`)}
     <p style="margin:24px 0 0;font-size:12px;color:#9C9590;text-align:center;">
       Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br/>
       <span style="font-size:11px;word-break:break-all;">${opts.portalUrl}</span>
     </p>
   `,
-    opts.orgName
+    orgName
   );
 }
 
