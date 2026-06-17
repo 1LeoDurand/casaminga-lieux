@@ -57,13 +57,13 @@ function RoleBadge({ role }: { role: string }) {
 
 // ── Espace adhérent : boutons envoi lien + copie ─────────────────────────────
 
-function PortalLinkButtons({ email, name }: { email: string; name: string }) {
+function PortalLinkButtons({ email, name, orgSlug, establishmentName }: { email: string; name: string; orgSlug: string; establishmentName?: string | null }) {
   const [sending, setSending] = useState(false);
   const [copying, setCopying] = useState(false);
 
   async function handleSend() {
     setSending(true);
-    const res = await sendPortalLinkAction(email, name);
+    const res = await sendPortalLinkAction(orgSlug, email, name, establishmentName);
     setSending(false);
     if (res.ok) {
       toast.success("Lien espace envoyé ✓");
@@ -568,6 +568,10 @@ export function PersonsView({
                 <PortalLinkButtons
                   email={selected.email}
                   name={selected.name}
+                  orgSlug={orgSlug}
+                  establishmentName={
+                    establishments.find((e) => e.id === selected.establishment_id)?.name ?? null
+                  }
                 />
               )}
 

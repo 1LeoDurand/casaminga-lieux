@@ -96,24 +96,31 @@ export async function anonymizePersonAction(
  * Retourne toujours { ok: true } pour masquer les erreurs éventuelles.
  */
 export async function sendPortalLinkAction(
+  orgSlug: string,
   personEmail: string,
   personName: string,
+  establishmentName?: string | null,
 ): Promise<{ ok: boolean; error?: string }> {
   const secret = process.env.PORTAL_LINK_SECRET;
   if (!secret) return { ok: false, error: "PORTAL_LINK_SECRET non configuré" };
 
   try {
-    const { sendMail } = await import("@/lib/mail");
-    const { tplPortalLink } = await import("@/lib/mail-templates");
-    const { portalUrlForEmail } = await import("@/lib/portal/url");
+    const [org, { sendMail }, { tplPortalLink }, { portalUrlForEmail }] = await Promise.all([
+      getOrganizationBySlug(orgSlug),
+      import("@/lib/mail"),
+      import("@/lib/mail-templates"),
+      import("@/lib/portal/url"),
+    ]);
+    const orgName = org?.name ?? "Casa Minga";
 
     const url = portalUrlForEmail(personEmail);
     const firstName = personName.split(" ")[0] ?? personName;
     const sent = await sendMail({
       to: personEmail,
-      subject: "Votre espace adhérent Casa Minga",
-      html: tplPortalLink({ firstName, portalUrl: url }),
+      subject: `Votre espace adhérent · ${orgName}`,
+      html: tplPortalLink({ firstName, portalUrl: url, orgName, establishmentName }),
       category: "espace-adherent",
+      organizationId: org?.id,
     });
     return sent ? { ok: true } : { ok: false, error: "Erreur d'envoi email" };
   } catch (e) {

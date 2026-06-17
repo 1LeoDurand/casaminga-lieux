@@ -720,19 +720,36 @@ export function tplNewsletter(opts: {
 export function tplPortalLink(opts: {
   firstName: string;
   portalUrl: string;
+  orgName: string;
+  establishmentName?: string | null;
 }) {
+  const sender =
+    opts.establishmentName && opts.establishmentName !== opts.orgName
+      ? `<strong>${opts.orgName}</strong> — ${opts.establishmentName}`
+      : `<strong>${opts.orgName}</strong>`;
   return base(
     `
-    ${h1("Votre espace adhérent ✨")}
+    ${h1("Bienvenue dans votre espace adhérent ✨")}
     ${p(`Bonjour <strong>${opts.firstName || "cher adhérent"}</strong>,`)}
-    ${p("Votre lien personnel pour accéder à votre espace adhérent est prêt. Vous y retrouvez votre statut d'adhésion, vos billets à venir et les liens de renouvellement.")}
+    ${p(`${sender} vous ouvre votre <strong>espace adhérent personnel</strong> : un espace en ligne dédié à votre lien avec le lieu.`)}
+    <div style="background:#FAFAF7;border:1px solid #E5DDD6;border-radius:12px;padding:16px 20px;margin:20px 0;">
+      <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#2C2C2C;">Dans votre espace, vous pouvez :</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;color:#4A4540;line-height:1.9;">
+        <tr><td>📋&nbsp;&nbsp;Consulter votre <strong>statut d'adhésion</strong> et votre historique</td></tr>
+        <tr><td>🎟️&nbsp;&nbsp;Retrouver vos <strong>billets et inscriptions</strong> à venir</td></tr>
+        <tr><td>🔄&nbsp;&nbsp;<strong>Renouveler</strong> votre adhésion en quelques clics</td></tr>
+        <tr><td>🧾&nbsp;&nbsp;Télécharger vos <strong>reçus</strong> et documents</td></tr>
+      </table>
+    </div>
     ${btn("Accéder à mon espace →", opts.portalUrl)}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Cet espace est propulsé par <strong>Casa Minga</strong>, l'outil avec lequel ${opts.orgName} gère ses adhésions, ses événements et sa communauté. Rien à installer : tout se passe en ligne, depuis ce lien.</span>`)}
     ${p(`Ce lien est strictement personnel — ne le partagez pas. Il reste valide jusqu'à ce que vous en demandiez un nouveau.`)}
     <p style="margin:24px 0 0;font-size:12px;color:#9C9590;text-align:center;">
       Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br/>
       <span style="font-size:11px;word-break:break-all;">${opts.portalUrl}</span>
     </p>
-  `
+  `,
+    opts.orgName
   );
 }
 
