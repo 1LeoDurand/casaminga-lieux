@@ -86,7 +86,7 @@ export function DashboardShell({
           className={[
             "fixed inset-y-0 left-0 z-50 w-[300px] max-w-[88vw]",
             "transition-transform duration-300 ease-out",
-            "lg:static lg:z-auto lg:row-span-2 lg:w-auto lg:max-w-none lg:!transform-none lg:!transition-none",
+            "lg:static lg:z-auto lg:row-span-2 lg:w-auto lg:max-w-none lg:!translate-x-0 lg:!transform-none lg:!transition-none",
             mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
           ].join(" ")}
         >
