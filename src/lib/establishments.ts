@@ -56,6 +56,9 @@ export interface EstablishmentInput {
   slug?: string;
   city?: string | null;
   address?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   siret?: string | null;
   description?: string | null;
   is_primary?: boolean;
@@ -73,6 +76,9 @@ export async function createEstablishment(orgId: string, orgSlug: string, input:
       slug,
       city: input.city ?? null,
       address: input.address ?? null,
+      postal_code: input.postal_code ?? null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
       siret: input.siret ?? null,
       description: input.description ?? null,
       is_primary: input.is_primary ?? false,
@@ -88,7 +94,7 @@ export async function updateEstablishment(orgSlug: string, id: string, input: Pa
   if (!isSupabaseConfigured()) return { ok: false, error: "Non configuré." };
   const supabase = await createClient();
   const patch: Record<string, unknown> = {};
-  for (const k of ["name", "city", "address", "siret", "description", "is_primary"] as const) {
+  for (const k of ["name", "city", "address", "postal_code", "latitude", "longitude", "siret", "description", "is_primary"] as const) {
     if (input[k] !== undefined) patch[k] = input[k];
   }
   if (input.slug) patch.slug = slugify(input.slug);

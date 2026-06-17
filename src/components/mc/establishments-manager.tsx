@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Pencil, Check, X, MapPin, Star, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Check, X, MapPin, Star, Eye, EyeOff, MapPinned } from "lucide-react";
 import { toast } from "sonner";
 import { createEstablishment, updateEstablishment, setEstablishmentActive } from "@/lib/establishments";
+import { AddressAutocomplete, type AddressPick } from "@/components/mc/address-autocomplete";
 import type { Establishment } from "@/lib/types";
 
 function Form({ orgId, orgSlug, initial, onDone, onCancel }: {
@@ -13,15 +14,35 @@ function Form({ orgId, orgSlug, initial, onDone, onCancel }: {
   const [name, setName] = useState(initial?.name ?? "");
   const [city, setCity] = useState(initial?.city ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
+  const [postalCode, setPostalCode] = useState(initial?.postal_code ?? "");
+  const [lat, setLat] = useState<number | null>(initial?.latitude ?? null);
+  const [lng, setLng] = useState<number | null>(initial?.longitude ?? null);
   const [siret, setSiret] = useState(initial?.siret ?? "");
   const [isPrimary, setIsPrimary] = useState(initial?.is_primary ?? false);
   const [pending, start] = useTransition();
   const input = "w-full rounded-lg border border-border bg-[#FAFAF7] px-3 py-2 text-sm outline-none focus:border-coral";
 
+  function onPickAddress(p: AddressPick) {
+    setAddress(p.address);
+    setCity(p.city);
+    setPostalCode(p.postalCode);
+    setLat(p.lat);
+    setLng(p.lng);
+  }
+
   function save() {
     if (!name.trim()) { toast.error("Le nom est obligatoire."); return; }
     start(async () => {
-      const payload = { name: name.trim(), city: city.trim() || null, address: address.trim() || null, siret: siret.trim() || null, is_primary: isPrimary };
+      const payload = {
+        name: name.trim(),
+        city: city.trim() || null,
+        address: address.trim() || null,
+        postal_code: postalCode.trim() || null,
+        latitude: lat,
+        longitude: lng,
+        siret: siret.trim() || null,
+        is_primary: isPrimary,
+      };
       const res = initial
         ? await updateEstablishment(orgSlug, initial.id, payload)
         : await createEstablishment(orgId, orgSlug, payload);
@@ -30,14 +51,32 @@ function Form({ orgId, orgSlug, initial, onDone, onCancel }: {
     });
   }
 
+  const located = lat !== null && lng !== null;
+
   return (
     <div className="rounded-xl border border-coral/40 bg-peach-pale p-4">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <input className={input} autoFocus placeholder="Nom du lieu (ex. Lodève, Paris)" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className={input} placeholder="Ville" value={city} onChange={(e) => setCity(e.target.value)} />
-        <input className={`${input} sm:col-span-2`} placeholder="Adresse complète" value={address} onChange={(e) => setAddress(e.target.value)} />
+        <input className={input} autoFocus placeholder="Nom du lieu (ex. La Conserverie)" value={name} onChange={(e) => setName(e.target.value)} />
         <input className={input} placeholder="SIRET (établissement secondaire)" value={siret} onChange={(e) => setSiret(e.target.value)} />
-        <label className="flex items-center gap-2 px-1 text-[13px] text-ink">
+        <div className="sm:col-span-2">
+          <AddressAutocomplete
+            defaultValue={initial?.address ? [initial.address, initial.postal_code, initial.city].filter(Boolean).join(" ") : ""}
+            onPick={onPickAddress}
+            inputClassName={input}
+            placeholder="Adresse — tapez et choisissez dans la liste (ville + carte auto)"
+          />
+          {located ? (
+            <div className="mt-1.5 flex items-center gap-1.5 px-1 text-[12px] font-medium text-emerald-700">
+              <MapPinned className="size-3.5" />
+              {[city, postalCode].filter(Boolean).join(" · ")} — localisé pour la carte ✓
+            </div>
+          ) : (
+            <div className="mt-1.5 px-1 text-[12px] text-warmgray">
+              Choisissez une adresse dans la liste pour positionner le lieu sur la carte publique.
+            </div>
+          )}
+        </div>
+        <label className="flex items-center gap-2 px-1 text-[13px] text-ink sm:col-span-2">
           <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="size-4 accent-coral" />
           Établissement principal
         </label>

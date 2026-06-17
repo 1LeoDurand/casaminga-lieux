@@ -698,6 +698,9 @@ export interface Establishment {
   slug: string;
   city: string | null;
   address: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
   siret: string | null;
   description: string | null;
   is_primary: boolean;
