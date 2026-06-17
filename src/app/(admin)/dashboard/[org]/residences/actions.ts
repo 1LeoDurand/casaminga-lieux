@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import {
   createResidence, deleteResidence, updateResidence, type ResidenceInput,
   createMilestone, updateMilestone, deleteMilestone, type ArtistMilestoneInput,
+  getMilestonesForResidence,
 } from "@/lib/data";
 
 function refresh(orgSlug: string) {
@@ -22,6 +23,11 @@ export async function deleteResidenceAction(orgSlug: string, id: string): Promis
 
 export async function createMilestoneAction(input: ArtistMilestoneInput): Promise<{ ok: boolean }> {
   return { ok: await createMilestone(input) };
+}
+
+/** Charge les jalons d'une résidence (server action → appelable depuis le client). */
+export async function getMilestonesAction(residenceId: string) {
+  return getMilestonesForResidence(residenceId);
 }
 export async function updateMilestoneAction(id: string, patch: Partial<ArtistMilestoneInput>): Promise<{ ok: boolean }> {
   return { ok: await updateMilestone(id, patch) };

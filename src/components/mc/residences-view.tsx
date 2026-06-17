@@ -15,8 +15,8 @@ import {
 import {
   createResidenceAction, deleteResidenceAction, updateResidenceAction,
   createMilestoneAction, updateMilestoneAction, deleteMilestoneAction,
+  getMilestonesAction,
 } from "@/app/(admin)/dashboard/[org]/residences/actions";
-import { getMilestonesForResidence } from "@/lib/data";
 import type { Artist, ArtistMilestone, Person, Residence, Space } from "@/lib/types";
 
 function toggle<T>(set: Set<T>, v: T): Set<T> {
@@ -49,7 +49,7 @@ function MilestonesPanel({ residenceId }: { residenceId: string }) {
   async function load() {
     if (loaded) return;
     setLoading(true);
-    setMilestones(await getMilestonesForResidence(residenceId));
+    setMilestones(await getMilestonesAction(residenceId));
     setLoaded(true);
     setLoading(false);
   }
@@ -78,7 +78,7 @@ function MilestonesPanel({ residenceId }: { residenceId: string }) {
         status: "a_faire",
       });
       if (r.ok) {
-        setMilestones(await getMilestonesForResidence(residenceId));
+        setMilestones(await getMilestonesAction(residenceId));
         setNewTitle(""); setNewDue(""); setAdding(false);
       } else toast.error("Erreur.");
     });
