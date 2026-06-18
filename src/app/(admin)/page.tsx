@@ -345,11 +345,9 @@ export default function TestAccueilPage() {
 
       {/* ── FIXED CHROME ── */}
       <div style={{ position: "fixed", top: 0, left: 0, display: "flex", alignItems: "center", gap: "13px", padding: "26px 0 0 clamp(28px,5vw,64px)", zIndex: 50, pointerEvents: "none" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/accueil/logo.png" alt="Casa Minga" style={{ width: "46px", height: "46px", borderRadius: "13px", objectFit: "cover", boxShadow: "0 6px 20px -8px rgba(0,0,0,.5)" }} />
-        <div ref={wordmarkRef} style={{ lineHeight: 1.04, color: "#FFF9EC", transition: "color .5s ease" }}>
-          <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: "16px", letterSpacing: "-.01em" }}>Casa Minga</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "10px", letterSpacing: ".16em", textTransform: "uppercase", opacity: .7, marginTop: "1px" }}>Lieux</div>
+        <div ref={wordmarkRef} style={{ lineHeight: 1, color: "#FFF9EC", transition: "color .5s ease" }}>
+          <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: "18px", letterSpacing: "-.02em" }}>Casa Minga</div>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "10px", letterSpacing: ".22em", textTransform: "uppercase", opacity: .6, marginTop: "3px" }}>Lieux</div>
         </div>
       </div>
 
