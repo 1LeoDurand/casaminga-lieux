@@ -5,14 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/admin/guard";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { humanError } from "@/lib/errors";
-
-export interface PermissionSet {
-  perm_pilotage: boolean;
-  perm_gestion_lieu: boolean;
-  perm_structure: boolean;
-  perm_publication: boolean;
-  perm_systeme: boolean;
-}
+import type { PermissionSet } from "@/lib/roles";
+export type { PermissionSet } from "@/lib/roles";
 
 type AR = { ok: boolean; error?: string };
 

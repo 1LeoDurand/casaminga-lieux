@@ -6,9 +6,10 @@ import { KeyRound, ShieldCheck, RotateCcw } from "lucide-react";
 import {
   updatePermissionsAction,
   sendPasswordResetAction,
-  type PermissionSet,
 } from "@/app/(admin)/dashboard/[org]/personnes/access-actions";
-import type { TeamMember, OrgRole } from "@/lib/types";
+import type { TeamMember } from "@/lib/types";
+import { ROLE_PERMS, roleLabel } from "@/lib/roles";
+import type { OrgRole, PermissionSet } from "@/lib/roles";
 import { Avatar } from "@/components/mc/avatar";
 
 const PERM_LABELS: Array<{ key: keyof PermissionSet; label: string; icon: string }> = [
@@ -19,25 +20,6 @@ const PERM_LABELS: Array<{ key: keyof PermissionSet; label: string; icon: string
   { key: "perm_systeme",      label: "Système",           icon: "⚙️" },
 ];
 
-const ROLE_PERMS: Record<OrgRole, PermissionSet> = {
-  admin:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: true,  perm_publication: true,  perm_systeme: true  },
-  coord:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-  finance:     { perm_pilotage: true,  perm_gestion_lieu: false, perm_structure: true,  perm_publication: false, perm_systeme: true  },
-  comm:        { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-  benevole:    { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-  intervenant: { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-  readonly:    { perm_pilotage: false, perm_gestion_lieu: false, perm_structure: false, perm_publication: false, perm_systeme: false },
-};
-
-const ROLE_LABELS: Record<OrgRole, string> = {
-  admin:       "Administrateur·ice",
-  coord:       "Coordinateur·ice",
-  finance:     "Trésorier·e",
-  comm:        "Communication",
-  benevole:    "Bénévole",
-  intervenant: "Intervenant·e",
-  readonly:    "Lecture seule",
-};
 
 function MemberRow({
   member,
@@ -103,7 +85,7 @@ function MemberRow({
             {member.full_name ?? member.email}
           </p>
           <p className="truncate text-[12px] text-warmgray">
-            {member.email} · {ROLE_LABELS[member.role] ?? member.role}
+            {member.email} · {roleLabel(member.role)}
           </p>
         </div>
 
@@ -141,7 +123,7 @@ function MemberRow({
                 type="button"
                 onClick={resetToRole}
                 className="flex items-center gap-1 text-[11px] text-coral hover:underline"
-                title={`Réinitialiser selon le rôle « ${ROLE_LABELS[member.role]} »`}
+                title={`Réinitialiser selon le rôle « ${roleLabel(member.role)} »`}
               >
                 <RotateCcw className="size-3" /> Selon le rôle
               </button>

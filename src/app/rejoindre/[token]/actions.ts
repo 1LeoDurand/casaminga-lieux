@@ -2,6 +2,8 @@
 
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "@/lib/supabase/env";
+import { ROLE_PERMS } from "@/lib/roles";
+import type { OrgRole } from "@/lib/roles";
 
 export async function acceptInvitation(params: {
   token: string;
@@ -74,16 +76,7 @@ export async function acceptInvitation(params: {
   }
 
   // Permissions pré-configurées selon le rôle
-  const ROLE_PERMS: Record<string, Record<string, boolean>> = {
-    admin:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: true,  perm_publication: true,  perm_systeme: true  },
-    coord:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-    finance:     { perm_pilotage: true,  perm_gestion_lieu: false, perm_structure: true,  perm_publication: false, perm_systeme: true  },
-    comm:        { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-    benevole:    { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-    intervenant: { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-    readonly:    { perm_pilotage: false, perm_gestion_lieu: false, perm_structure: false, perm_publication: false, perm_systeme: false },
-  };
-  const perms = ROLE_PERMS[inv.role as string] ?? ROLE_PERMS.readonly;
+  const perms = ROLE_PERMS[inv.role as OrgRole] ?? ROLE_PERMS.readonly;
 
   // 4. Ajouter à l'org (idempotent)
   const { error: memberErr } = await admin.from("organization_members").upsert(

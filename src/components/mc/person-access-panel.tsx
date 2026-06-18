@@ -6,9 +6,10 @@ import { KeyRound, ShieldCheck, RotateCcw, ShieldOff } from "lucide-react";
 import {
   updatePermissionsAction,
   sendPasswordResetAction,
-  type PermissionSet,
 } from "@/app/(admin)/dashboard/[org]/personnes/access-actions";
-import type { TeamMember, OrgRole } from "@/lib/types";
+import type { TeamMember } from "@/lib/types";
+import { ROLE_PERMS, roleLabel } from "@/lib/roles";
+import type { OrgRole, PermissionSet } from "@/lib/roles";
 
 // ── Définition des 5 permissions ─────────────────────────────────────────────
 
@@ -52,27 +53,6 @@ const PERMISSIONS: PermDef[] = [
   },
 ];
 
-// ── Mapping rôle → permissions suggérées ─────────────────────────────────────
-
-const ROLE_PERMS: Record<OrgRole, PermissionSet> = {
-  admin:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: true,  perm_publication: true,  perm_systeme: true  },
-  coord:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-  finance:     { perm_pilotage: true,  perm_gestion_lieu: false, perm_structure: true,  perm_publication: false, perm_systeme: true  },
-  comm:        { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-  benevole:    { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-  intervenant: { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-  readonly:    { perm_pilotage: false, perm_gestion_lieu: false, perm_structure: false, perm_publication: false, perm_systeme: false },
-};
-
-const ROLE_LABELS: Record<OrgRole, string> = {
-  admin:       "Administrateur·ice",
-  coord:       "Coordinateur·ice",
-  finance:     "Trésorier·e",
-  comm:        "Communication",
-  benevole:    "Bénévole",
-  intervenant: "Intervenant·e",
-  readonly:    "Lecture seule",
-};
 
 // ── Composant principal ───────────────────────────────────────────────────────
 
@@ -170,7 +150,7 @@ function AccessForm({
     else toast.error(res.error ?? "Erreur");
   }
 
-  const roleLabel = ROLE_LABELS[member.role] ?? member.role;
+  const roleLabelStr = roleLabel(member.role);
 
   return (
     <div className="space-y-3.5">
@@ -179,7 +159,7 @@ function AccessForm({
         <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-emerald-800">Accès actif</p>
-          <p className="truncate text-[11.5px] text-emerald-700">{member.email} · {roleLabel}</p>
+          <p className="truncate text-[11.5px] text-emerald-700">{member.email} · {roleLabelStr}</p>
         </div>
         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
           member.status === "actif" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
@@ -196,7 +176,7 @@ function AccessForm({
             type="button"
             onClick={resetToRole}
             className="flex items-center gap-1 text-[11px] text-coral hover:underline"
-            title={`Réinitialiser selon le rôle « ${roleLabel} »`}
+            title={`Réinitialiser selon le rôle « ${roleLabelStr} »`}
           >
             <RotateCcw className="size-3" /> Selon le rôle
           </button>
