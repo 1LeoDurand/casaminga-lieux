@@ -1,20 +1,31 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 
 type CS = React.CSSProperties;
 
 const ACCENT = "#FE8B65";
 
-const MENU_ITEMS = [
-  { i: 0, num: "01", l: "Accueil" },
-  { i: 1, num: "02", l: "Le mouvement" },
-  { i: 2, num: "03", l: "Le nom" },
-  { i: 3, num: "04", l: "La plateforme" },
-  { i: 4, num: "05", l: "Notre impact" },
-  { i: 5, num: "06", l: "Notre histoire" },
-  { i: 6, num: "07", l: "Les 4 piliers" },
-  { i: 7, num: "08", l: "Parlons-en" },
+const MENU_GROUPS = [
+  {
+    title: "Découvrir",
+    items: [
+      { num: "01", l: "Accueil", href: "/" },
+      { num: "02", l: "Notre approche", href: "/approche" },
+      { num: "03", l: "La plateforme", href: "/fonctionnement" },
+      { num: "04", l: "Notre histoire", href: "/histoire" },
+      { num: "05", l: "Centre d'aide", href: "/aide" },
+    ],
+  },
+  {
+    title: "Essayer",
+    items: [
+      { num: "06", l: "Dashboard démo", href: "/dashboard/bernard-kohn" },
+      { num: "07", l: "Connexion", href: "/login" },
+      { num: "08", l: "S'inscrire", href: "/signup" },
+    ],
+  },
 ];
 
 const STATS = [
@@ -304,8 +315,8 @@ export default function TestAccueilPage() {
     const menuClose = document.getElementById("cm-menu-close");
     if (menuBtn) menuBtn.addEventListener("click", openMenu);
     if (menuClose) menuClose.addEventListener("click", closeMenu);
-    document.querySelectorAll<HTMLButtonElement>(".cm-menu-item").forEach(b => {
-      b.addEventListener("click", () => { goTo(parseInt(b.dataset.i ?? "0", 10)); closeMenu(); });
+    document.querySelectorAll<HTMLAnchorElement>(".cm-menu-item").forEach(b => {
+      b.addEventListener("click", closeMenu);
     });
     if (demo) demo.addEventListener("click", (e) => { e.preventDefault(); goTo(7); });
 
@@ -373,11 +384,16 @@ export default function TestAccueilPage() {
       <div ref={menuRef} id="cm-menu" style={{ position: "fixed", inset: 0, zIndex: 60, background: "#222323", display: "none", flexDirection: "column", justifyContent: "center", padding: "0 clamp(32px,8vw,120px)" }}>
         <button id="cm-menu-close" style={{ position: "absolute", top: "24px", right: "clamp(20px,4vw,52px)", width: "58px", height: "58px", borderRadius: "50%", border: "none", cursor: "pointer", background: "#FFF9EC", color: "#2C2D2D", fontSize: "24px", lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         <div style={{ ...monoTag, color: ACCENT, marginBottom: "26px" }}>Navigation</div>
-        {MENU_ITEMS.map(m => (
-          <button key={m.i} className="cm-menu-item" data-i={m.i} style={{ display: "flex", alignItems: "baseline", gap: "20px", background: "none", border: "none", cursor: "pointer", textAlign: "left", padding: "9px 0", color: "#FFF9EC", fontFamily: displayFont, fontSize: "clamp(30px,5vw,58px)", lineHeight: 1, transition: "color .25s ease, padding-left .25s ease" }}>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".1em", opacity: .45 }}>{m.num}</span>
-            {m.l}
-          </button>
+        {MENU_GROUPS.map((g, gi) => (
+          <div key={g.title} style={{ marginTop: gi === 0 ? 0 : "28px" }}>
+            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "11.5px", letterSpacing: ".18em", textTransform: "uppercase", color: "rgba(255,249,236,.4)", marginBottom: "10px" }}>{g.title}</div>
+            {g.items.map(m => (
+              <Link key={m.href} href={m.href} className="cm-menu-item" style={{ display: "flex", alignItems: "baseline", gap: "20px", textDecoration: "none", padding: "6px 0", color: "#FFF9EC", fontFamily: displayFont, fontSize: "clamp(26px,4vw,50px)", lineHeight: 1, transition: "color .25s ease, padding-left .25s ease" }}>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".1em", opacity: .45 }}>{m.num}</span>
+                {m.l}
+              </Link>
+            ))}
+          </div>
         ))}
       </div>
 
