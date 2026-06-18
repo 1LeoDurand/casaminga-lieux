@@ -40,9 +40,37 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Casa Minga Lieux",
+  metadataBase: new URL("https://admin.casaminga.com"),
+  title: {
+    default: "Casa Minga Lieux",
+    template: "%s · Casa Minga",
+  },
   description:
     "Le pilotage des lieux collectifs vivants — tiers-lieux, lieux culturels, résidences et espaces partagés.",
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    url: "https://admin.casaminga.com",
+    siteName: "Casa Minga Lieux",
+    title: "Casa Minga Lieux",
+    description:
+      "Le pilotage des lieux collectifs vivants — tiers-lieux, lieux culturels, résidences et espaces partagés.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Casa Minga — pilotage des lieux collectifs",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Casa Minga Lieux",
+    description:
+      "Le pilotage des lieux collectifs vivants — tiers-lieux, lieux culturels, résidences et espaces partagés.",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({
