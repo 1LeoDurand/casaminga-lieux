@@ -467,10 +467,105 @@ export default function TestAccueilPage() {
         </section>
 
         {/* PANEL 3 · LA PLATEFORME */}
-        <section style={{ ...panelBase, background: "linear-gradient(90deg,#FDF2E7,#FAE6D5)", display: "flex", alignItems: "center", ...pad }}>
-          <h2 className="line-reveal" style={{ margin: 0, maxWidth: "1100px", fontFamily: displayFont, fontWeight: 400, fontSize: "clamp(32px,6.2vw,98px)", lineHeight: .96, letterSpacing: "-.015em", color: "#2C2D2D" }}>
-            Le système de pilotage des <span style={{ fontStyle: "italic", color: ACCENT }}>tiers-lieux</span> et lieux collectifs.
-          </h2>
+        <section style={{ ...panelBase, background: "linear-gradient(90deg,#FDF2E7,#FAE6D5)", display: "flex", flexDirection: "column", justifyContent: "center", gap: "clamp(28px,3vw,48px)", ...pad }}>
+          {/* Top: texte + mockup */}
+          <div style={{ display: "flex", alignItems: "center", gap: "clamp(32px,4vw,72px)" }}>
+            {/* Gauche */}
+            <div style={{ flex: "0 0 auto", maxWidth: "clamp(280px,36vw,500px)" }}>
+              <div className="rv" style={{ "--d": ".05s", ...monoTag, color: "#b5572f", marginBottom: "18px" } as CS}>Le produit</div>
+              <h2 className="line-reveal" style={{ margin: "0 0 18px", fontFamily: displayFont, fontWeight: 400, fontSize: "clamp(28px,4vw,58px)", lineHeight: 1, letterSpacing: "-.01em", color: "#2C2D2D" }}>
+                Le système de pilotage des <span style={{ fontStyle: "italic", color: ACCENT }}>tiers-lieux</span> et lieux collectifs.
+              </h2>
+              <p className="rv" style={{ "--d": ".12s", margin: "0 0 22px", fontSize: "clamp(13px,1.1vw,15.5px)", lineHeight: 1.6, color: "rgba(44,45,45,.62)" } as CS}>
+                17 modules métier articulés autour des usages réels d&apos;un tiers-lieu — sans sur-ingénierie.
+              </p>
+              <ul className="rv" style={{ "--d": ".18s", listStyle: "none", padding: 0, margin: "0 0 28px", display: "flex", flexDirection: "column", gap: "9px" } as CS}>
+                {[
+                  ["Demandes & personnes", "boîte unifiée, CRM, membres"],
+                  ["Espaces & réservations", "planning, conflits évités"],
+                  ["Finances", "factures, dons, prévisionnel"],
+                  ["Événements", "programmation et publication"],
+                  ["Site public connecté", "vitrine mise à jour automatiquement"],
+                ].map(([bold, rest]) => (
+                  <li key={bold} style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "clamp(12px,0.95vw,14px)", color: "rgba(44,45,45,.8)" }}>
+                    <span style={{ color: ACCENT, fontWeight: 800, fontSize: "13px", marginTop: "1px", flexShrink: 0 }}>✓</span>
+                    <span><strong style={{ fontWeight: 700 }}>{bold}</strong> — {rest}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/dashboard/bernard-kohn" className="rv" style={{ "--d": ".24s", display: "inline-block", padding: "13px 26px", borderRadius: "100px", background: ACCENT, color: "#fff", fontWeight: 700, fontSize: "clamp(12px,0.9vw,14.5px)", textDecoration: "none", letterSpacing: ".01em" } as CS}>
+                Explorer le dashboard démo →
+              </Link>
+            </div>
+            {/* Droite — mockup navigateur */}
+            <div className="amb" style={{ flex: 1, minWidth: 0, animation: "cmFloatA 7s ease-in-out infinite" }}>
+              {/* Chrome */}
+              <div style={{ borderRadius: "14px", overflow: "hidden", boxShadow: "0 28px 60px -18px rgba(44,45,45,.28)", border: "1px solid rgba(44,45,45,.10)", background: "#fff" }}>
+                {/* Barre navigateur */}
+                <div style={{ background: "#F5F4F0", padding: "10px 14px", display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px solid rgba(0,0,0,.07)" }}>
+                  <div style={{ display: "flex", gap: "5px" }}>
+                    {["#FF5F57","#FFBD2E","#28C840"].map(c => <span key={c} style={{ width: "11px", height: "11px", borderRadius: "50%", background: c, display: "block" }} />)}
+                  </div>
+                  <div style={{ flex: 1, background: "#ECEAE4", borderRadius: "6px", padding: "4px 12px", fontSize: "11px", color: "rgba(44,45,45,.5)", fontFamily: "'DM Mono', monospace" }}>
+                    admin.casaminga.com/dashboard/bernard-kohn
+                  </div>
+                </div>
+                {/* Dashboard */}
+                <div style={{ display: "flex", height: "clamp(220px,26vw,380px)" }}>
+                  {/* Sidebar */}
+                  <div style={{ width: "140px", background: "#2C2D2D", padding: "14px 0", flexShrink: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
+                    {[
+                      { label: "Dashboard", group: "PILOTAGE" },
+                      { label: "Demandes" },
+                      { label: "Personnes" },
+                      { label: "Tâches", active: true },
+                      { label: "Espaces", group: "LIEU" },
+                      { label: "Événements" },
+                      { label: "Finances", group: "FINANCES" },
+                      { label: "Factures" },
+                    ].map((item) => (
+                      <div key={item.label}>
+                        {item.group && <div style={{ padding: "8px 14px 3px", fontSize: "8.5px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.3)" }}>{item.group}</div>}
+                        <div style={{ margin: "1px 6px", padding: "5px 10px", borderRadius: "6px", fontSize: "11px", color: item.active ? "#fff" : "rgba(255,255,255,.5)", background: item.active ? ACCENT : "transparent", fontWeight: item.active ? 600 : 400 }}>{item.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Contenu */}
+                  <div style={{ flex: 1, padding: "16px", background: "#FAFAF7", overflow: "hidden" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#2C2D2D" }}>Tâches &amp; alertes</div>
+                      <div style={{ background: ACCENT, color: "#fff", fontSize: "9px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px" }}>+ Nouvelle tâche</div>
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                      {[["12","OUVERTES"],["3","URGENTES"],["5","ALERTES"]].map(([n, l]) => (
+                        <div key={l} style={{ flex: 1, background: "#fff", border: "1px solid #EEEBE4", borderRadius: "8px", padding: "8px 10px" }}>
+                          <div style={{ fontSize: "18px", fontWeight: 800, color: "#2C2D2D", lineHeight: 1 }}>{n}</div>
+                          <div style={{ fontSize: "8px", color: "rgba(44,45,45,.4)", letterSpacing: ".08em", marginTop: "3px" }}>{l}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {[
+                      { tag: "URGENTE", tagColor: "#FFF0EB", tagText: "#C0550A", text: "Relancer Studio Petite Lune · facture 290 €", badge: "Finances", badgeColor: "#E8F4FF", badgeText: "#1A6FA8" },
+                      { tag: "EN COURS", tagColor: "#E8F4FF", tagText: "#1A6FA8", text: "Préparer dossier subvention Région", badge: "Gouvernance", badgeColor: "#F3E8FF", badgeText: "#7A2DBE" },
+                      { tag: "À FAIRE", tagColor: "#F5F4F0", tagText: "rgba(44,45,45,.5)", text: "Commander affiches portes ouvertes", badge: "Communication", badgeColor: "#E8FFF3", badgeText: "#0E7A4A" },
+                    ].map((row) => (
+                      <div key={row.text} style={{ display: "flex", alignItems: "center", gap: "8px", background: "#fff", border: "1px solid #EEEBE4", borderRadius: "8px", padding: "7px 10px", marginBottom: "6px" }}>
+                        <span style={{ background: row.tagColor, color: row.tagText, fontSize: "7px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px", flexShrink: 0, letterSpacing: ".05em" }}>{row.tag}</span>
+                        <span style={{ flex: 1, fontSize: "10px", color: "#2C2D2D", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.text}</span>
+                        <span style={{ background: row.badgeColor, color: row.badgeText, fontSize: "7px", fontWeight: 600, padding: "2px 7px", borderRadius: "4px", flexShrink: 0 }}>{row.badge}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Bas — modules en pills */}
+          <div className="rv" style={{ "--d": ".3s", display: "flex", flexWrap: "wrap", gap: "8px" } as CS}>
+            {["Demandes","Personnes","Espaces","Réservations","Résidences","Événements","Tâches","Finances","Factures","Dépenses","Subventions","Dons","Documents","Gouvernance","Impact","Communication","Site public"].map(m => (
+              <span key={m} style={{ padding: "5px 13px", borderRadius: "100px", border: "1px solid rgba(44,45,45,.15)", fontSize: "clamp(10.5px,0.8vw,12.5px)", color: "rgba(44,45,45,.65)", background: "rgba(255,255,255,.55)", whiteSpace: "nowrap" }}>{m}</span>
+            ))}
+          </div>
         </section>
 
         {/* PANEL 4 · NOTRE IMPACT */}
