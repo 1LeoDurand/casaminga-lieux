@@ -207,7 +207,8 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-white">
-          <div className="hidden grid-cols-[1fr_1.2fr_0.8fr_0.8fr_0.9fr_0.7fr_auto] gap-3 border-b border-border bg-cream px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-warmgray md:grid">
+          {/* En-tête desktop */}
+          <div className="hidden grid-cols-[1.1fr_1.3fr_0.9fr_0.9fr_1fr_0.8fr_auto] items-center gap-4 border-b border-border bg-cream px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-warmgray md:grid">
             <span>Numéro</span><span>Client</span><span>Date</span><span>Montant TTC</span><span>Statut</span><span>Règlement</span><span></span>
           </div>
           <ul className="divide-y divide-border">
@@ -216,80 +217,110 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
               const isBusy = busyId === inv.id && pending;
               const isPaid = inv.status === "payee";
               const isUnpaid = inv.number && !isPaid && inv.status !== "annulee";
-              return (
-                <li key={inv.id} className="grid grid-cols-1 gap-2 px-5 py-3.5 md:grid-cols-[1fr_1.2fr_0.8fr_0.8fr_0.9fr_0.7fr_auto] md:items-center md:gap-3">
-                  <div>
-                    <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
-                    {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray">{inv.pole}</div>}
-                    <LieuBadge establishmentId={inv.establishment_id} establishments={establishments} className="mt-0.5" />
-                  </div>
-                  <span className="truncate text-[13px] text-ink">{inv.client_name}</span>
-                  <span className="text-[12px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</span>
-                  <div>
-                    <div className={`text-[13px] font-semibold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
-                      {formatEuros(inv.total_ttc)}
-                    </div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-warmgray">
-                      {isPaid ? "✅ Payé" : isUnpaid ? "⏳ À payer" : ""}
-                    </div>
-                  </div>
-                  <span className="flex flex-col items-start gap-1">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span>
-                    {inv.validation_status === "a_valider" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⏳ À valider</span>}
-                    {inv.validation_status === "valide" && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Validée</span>}
-                    {inv.validation_status === "refuse" && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">✗ Refusée</span>}
-                    {isOverdue(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
-                  </span>
-                  <span className="text-[12px] text-warmgray">
-                    {inv.payment_method ? PM_LABEL[inv.payment_method] ?? inv.payment_method : "—"}
-                  </span>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Link href={`/dashboard/${orgSlug}/factures/${inv.id}`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-ink hover:border-coral/40">
-                      <Eye className="size-3.5" /> Voir
-                    </Link>
-                    {inv.validation_status === "a_valider" && (
-                      <>
-                        <button disabled={isBusy} onClick={() => doValidate(inv.id, "valide")}
-                          title="Valider (direction)"
-                          className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
-                          <ShieldCheck className="size-3.5" />
-                        </button>
-                        <button disabled={isBusy} onClick={() => doValidate(inv.id, "refuse")}
-                          title="Refuser (direction)"
-                          className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
-                          <ShieldX className="size-3.5" />
-                        </button>
-                      </>
-                    )}
-                    {isOverdue(inv) && (
-                      <button disabled={isBusy} onClick={() => doRelance(inv.id)}
-                        title="Relancer par email"
-                        className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
-                        <BellRing className="size-3.5" />
-                      </button>
-                    )}
-                    {inv.status === "emise" && (
-                      <button disabled={isBusy} onClick={() => changeStatus(inv.id, "envoyee", "Marquée envoyée")}
-                        title="Marquer envoyée"
-                        className="inline-flex items-center rounded-lg border border-border p-1.5 text-indigo-600 hover:border-indigo-300 disabled:opacity-40">
-                        <Send className="size-3.5" />
-                      </button>
-                    )}
-                    {inv.number && !isPaid && inv.status !== "annulee" && (
-                      <button disabled={isBusy} onClick={() => { setPayModal({ id: inv.id, name: inv.client_name }); setPayMethod(""); }}
-                        title="Marquer payée"
+
+              const actionButtons = (
+                <div className="flex items-center gap-1.5">
+                  <Link href={`/dashboard/${orgSlug}/factures/${inv.id}`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-ink hover:border-coral/40">
+                    <Eye className="size-3.5" /> Voir
+                  </Link>
+                  {inv.validation_status === "a_valider" && (
+                    <>
+                      <button disabled={isBusy} onClick={() => doValidate(inv.id, "valide")}
+                        title="Valider (direction)"
                         className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
-                        <Check className="size-3.5" />
+                        <ShieldCheck className="size-3.5" />
                       </button>
-                    )}
-                    {inv.number && inv.status !== "annulee" && !isPaid && (
-                      <button disabled={isBusy} onClick={() => changeStatus(inv.id, "annulee", "Facture annulée")}
-                        title="Annuler"
-                        className="inline-flex items-center rounded-lg border border-border p-1.5 text-warmgray hover:border-red-300 hover:text-red-600 disabled:opacity-40">
-                        <Ban className="size-3.5" />
+                      <button disabled={isBusy} onClick={() => doValidate(inv.id, "refuse")}
+                        title="Refuser (direction)"
+                        className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
+                        <ShieldX className="size-3.5" />
                       </button>
-                    )}
+                    </>
+                  )}
+                  {isOverdue(inv) && (
+                    <button disabled={isBusy} onClick={() => doRelance(inv.id)}
+                      title="Relancer par email"
+                      className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
+                      <BellRing className="size-3.5" />
+                    </button>
+                  )}
+                  {inv.status === "emise" && (
+                    <button disabled={isBusy} onClick={() => changeStatus(inv.id, "envoyee", "Marquée envoyée")}
+                      title="Marquer envoyée"
+                      className="inline-flex items-center rounded-lg border border-border p-1.5 text-indigo-600 hover:border-indigo-300 disabled:opacity-40">
+                      <Send className="size-3.5" />
+                    </button>
+                  )}
+                  {inv.number && !isPaid && inv.status !== "annulee" && (
+                    <button disabled={isBusy} onClick={() => { setPayModal({ id: inv.id, name: inv.client_name }); setPayMethod(""); }}
+                      title="Marquer payée"
+                      className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+                      <Check className="size-3.5" />
+                    </button>
+                  )}
+                  {inv.number && inv.status !== "annulee" && !isPaid && (
+                    <button disabled={isBusy} onClick={() => changeStatus(inv.id, "annulee", "Facture annulée")}
+                      title="Annuler"
+                      className="inline-flex items-center rounded-lg border border-border p-1.5 text-warmgray hover:border-red-300 hover:text-red-600 disabled:opacity-40">
+                      <Ban className="size-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+
+              const statusBadges = (
+                <div className="flex flex-wrap gap-1">
+                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span>
+                  {inv.validation_status === "a_valider" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⏳ À valider</span>}
+                  {inv.validation_status === "valide" && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Validée</span>}
+                  {inv.validation_status === "refuse" && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">✗ Refusée</span>}
+                  {isOverdue(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
+                </div>
+              );
+
+              return (
+                <li key={inv.id}>
+                  {/* Vue mobile : carte avec étiquettes */}
+                  <div className="flex flex-col gap-3 px-5 py-4 md:hidden">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
+                        <div className="mt-0.5 text-[13px] text-warmgray">{inv.client_name}</div>
+                        {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray/70">{inv.pole}</div>}
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-[14px] font-bold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
+                          {formatEuros(inv.total_ttc)}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      {statusBadges}
+                      {actionButtons}
+                    </div>
+                  </div>
+
+                  {/* Vue desktop : grille alignée */}
+                  <div className="hidden grid-cols-[1.1fr_1.3fr_0.9fr_0.9fr_1fr_0.8fr_auto] items-center gap-4 px-5 py-3.5 md:grid">
+                    <div>
+                      <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
+                      {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray">{inv.pole}</div>}
+                      <LieuBadge establishmentId={inv.establishment_id} establishments={establishments} className="mt-0.5" />
+                    </div>
+                    <span className="truncate text-[13px] text-ink">{inv.client_name}</span>
+                    <span className="text-[12px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</span>
+                    <div>
+                      <div className={`text-[13px] font-semibold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
+                        {formatEuros(inv.total_ttc)}
+                      </div>
+                    </div>
+                    {statusBadges}
+                    <span className="text-[12px] text-warmgray">
+                      {inv.payment_method ? PM_LABEL[inv.payment_method] ?? inv.payment_method : "—"}
+                    </span>
+                    {actionButtons}
                   </div>
                 </li>
               );

@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { moduleLabelForSegment } from "@/lib/modules";
 import { LieuSwitcher, type LieuOption } from "@/components/mc/lieu-switcher";
 import { useSidebar } from "@/components/mc/dashboard-shell";
+import { publicSiteUrl } from "@/lib/site-public/url";
 import type { SearchHit } from "@/app/api/search/route";
 
 export function DashboardTopbar({
@@ -27,7 +28,7 @@ export function DashboardTopbar({
   const segment = parts.length > 2 ? parts[2] : null;
   const title = moduleLabelForSegment(segment);
   const selectedLieu = establishments.find((e) => e.id === selectedLieuId) ?? null;
-  const publicHref = selectedLieu ? `/site/${selectedLieu.slug}` : `/site/${orgSlug}`;
+  const publicHref = publicSiteUrl(selectedLieu ? selectedLieu.slug : orgSlug);
 
   // ── Recherche globale ────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
