@@ -11,8 +11,9 @@ export interface EventFormValues {
   status: Evenement["status"];
   spaceId: string;
   establishmentId: string;
-  date: string;
+  startDate: string;
   startTime: string;
+  endDate: string;
   endTime: string;
   capacity: string;
   price: string;
@@ -29,15 +30,16 @@ function localDate(d: Date) {
 function fromEvenement(e: Evenement | null, defaultSpaceId: string, defaultEstId: string): EventFormValues {
   if (!e) {
     return { title: "", type: "autre", status: "brouillon", spaceId: defaultSpaceId, establishmentId: defaultEstId,
-      date: localDate(new Date()), startTime: "18:00", endTime: "21:00",
+      startDate: localDate(new Date()), startTime: "18:00", endDate: localDate(new Date()), endTime: "21:00",
       capacity: "", price: "", description: "", photosInput: "", showOnPublicSite: false };
   }
   const s = new Date(e.start_at); const en = new Date(e.end_at);
   return {
     title: e.title, type: e.type, status: e.status, spaceId: e.space_id ?? "",
     establishmentId: e.establishment_id ?? "",
-    date: localDate(s),
+    startDate: localDate(s),
     startTime: `${pad(s.getHours())}:${pad(s.getMinutes())}`,
+    endDate: localDate(en),
     endTime: `${pad(en.getHours())}:${pad(en.getMinutes())}`,
     capacity: e.capacity != null ? String(e.capacity) : "",
     price: e.price != null ? String(e.price) : "",
@@ -72,8 +74,11 @@ export function EventForm({ open, evenement, spaces, establishments = [], busy =
   function submit() {
     setError(null);
     if (!values.title.trim()) { setError("Le titre est obligatoire."); return; }
-    if (!values.date) { setError("La date est obligatoire."); return; }
-    if (values.endTime <= values.startTime) { setError("L'heure de fin doit être après le début."); return; }
+    if (!values.startDate) { setError("La date de début est obligatoire."); return; }
+    if (!values.endDate) { setError("La date de fin est obligatoire."); return; }
+    if (new Date(`${values.endDate}T${values.endTime}`) <= new Date(`${values.startDate}T${values.startTime}`)) {
+      setError("La fin doit être après le début."); return;
+    }
     if (values.capacity.trim()) {
       const n = Number(values.capacity.trim());
       if (Number.isNaN(n) || n < 0) { setError("La capacité doit être un nombre positif."); return; }
@@ -142,20 +147,31 @@ export function EventForm({ open, evenement, spaces, establishments = [], busy =
             </select>
           </div>
 
-          <div className="mc-form-group">
-            <label className="mc-form-label">Date *</label>
-            <input className="mc-input" type="date" value={values.date}
-              onChange={(e) => set("date", e.target.value)} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[1fr_auto] gap-3">
             <div className="mc-form-group">
-              <label className="mc-form-label">Début *</label>
+              <label className="mc-form-label">Date de début *</label>
+              <input className="mc-input" type="date" value={values.startDate}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // Si la date de fin précède le nouveau début, on l'aligne.
+                  setValues((s) => ({ ...s, startDate: v, endDate: s.endDate < v ? v : s.endDate }));
+                }} />
+            </div>
+            <div className="mc-form-group">
+              <label className="mc-form-label">Heure début *</label>
               <input className="mc-input" type="time" value={values.startTime}
                 onChange={(e) => set("startTime", e.target.value)} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] gap-3">
             <div className="mc-form-group">
-              <label className="mc-form-label">Fin *</label>
+              <label className="mc-form-label">Date de fin *</label>
+              <input className="mc-input" type="date" value={values.endDate} min={values.startDate}
+                onChange={(e) => set("endDate", e.target.value)} />
+            </div>
+            <div className="mc-form-group">
+              <label className="mc-form-label">Heure fin *</label>
               <input className="mc-input" type="time" value={values.endTime}
                 onChange={(e) => set("endTime", e.target.value)} />
             </div>

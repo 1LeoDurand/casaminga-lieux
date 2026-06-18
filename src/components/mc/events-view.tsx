@@ -109,8 +109,8 @@ export function EventsView({ evenements, spaces, establishments = [], orgSlug, o
   function openEdit(e: Evenement) { setEditing(e); setFormOpen(true); }
 
   function submitForm(values: EventFormValues) {
-    const start = new Date(`${values.date}T${values.startTime}`);
-    const end = new Date(`${values.date}T${values.endTime}`);
+    const start = new Date(`${values.startDate}T${values.startTime}`);
+    const end = new Date(`${values.endDate}T${values.endTime}`);
     const payload = {
       space_id: values.spaceId || null,
       title: values.title,
