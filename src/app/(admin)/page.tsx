@@ -433,7 +433,10 @@ export default function TestAccueilPage() {
           <div className="amb" style={{ flex: "0 0 auto", width: "clamp(340px,46vw,640px)", position: "relative", animation: "cmFloatA 7s ease-in-out infinite" }}>
             <span style={{ position: "absolute", left: "-64px", right: "-30px", top: "50%", height: "2px", background: ACCENT, transform: "translateY(-50%)", zIndex: 0 }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/accueil/p-equipe.jpg" alt="Photo de l'équipe" style={{ position: "relative", zIndex: 1, width: "100%", height: "auto", aspectRatio: "5/4", display: "block", objectFit: "cover", borderRadius: "24px", boxShadow: "0 32px 64px -28px rgba(44,45,45,.45)" }} />
+            <img src="/accueil/p-equipe.jpg" alt="Ouverture du Tiers-lieu Bernard Kohn" style={{ position: "relative", zIndex: 1, width: "100%", height: "auto", aspectRatio: "5/4", display: "block", objectFit: "cover", borderRadius: "24px", boxShadow: "0 32px 64px -28px rgba(44,45,45,.45)" }} />
+            <figcaption style={{ position: "relative", zIndex: 1, marginTop: "12px", fontFamily: "'DM Mono', monospace", fontSize: "11px", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(44,45,45,.45)", textAlign: "center" }}>
+              Ouverture du Tiers-lieu Bernard Kohn
+            </figcaption>
           </div>
         </section>
 
