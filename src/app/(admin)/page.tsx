@@ -345,6 +345,8 @@ export default function TestAccueilPage() {
 
       {/* ── FIXED CHROME ── */}
       <div style={{ position: "fixed", top: 0, left: 0, display: "flex", alignItems: "center", gap: "13px", padding: "26px 0 0 clamp(28px,5vw,64px)", zIndex: 50, pointerEvents: "none" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-maloka.png" alt="Casa Minga" style={{ height: "42px", width: "auto", display: "block" }} />
         <div ref={wordmarkRef} style={{ lineHeight: 1, color: "#FFF9EC", transition: "color .5s ease" }}>
           <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: "18px", letterSpacing: "-.02em" }}>Casa Minga</div>
           <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "10px", letterSpacing: ".22em", textTransform: "uppercase", opacity: .6, marginTop: "3px" }}>Lieux</div>
