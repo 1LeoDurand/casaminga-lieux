@@ -10,7 +10,6 @@ import {
   type EventTicket, type WaitlistEntry,
 } from "@/lib/registrations";
 import { getOrCreateScanLink } from "@/lib/tickets";
-import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
 import type { Evenement } from "@/lib/types";
 
 function fmtTime(iso: string) {
@@ -56,7 +55,7 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
     startTransition(async () => {
       const res = await getOrCreateScanLink(orgSlug, orgId, event.id);
       if (res.ok && res.token) {
-        await navigator.clipboard.writeText(`${PUBLIC_SITE_BASE}/scan/${res.token}`);
+        await navigator.clipboard.writeText(`${window.location.origin}/scan/${res.token}`);
         toast.success("Lien de scan copié — partagez-le aux bénévoles");
       } else toast.error(res.error ?? "Erreur");
     });
