@@ -630,9 +630,9 @@ export default function TestAccueilPage() {
 
         {/* PANEL 6 · LES 4 PILIERS */}
         <section style={{ ...panelBase, background: "linear-gradient(90deg,#F2BE9E,#EC9E72)", display: "flex", flexDirection: "column", justifyContent: "center", ...pad }}>
-          <div className="rv" style={{ "--d": ".05s", marginBottom: "34px", maxWidth: "760px" } as CS}>
-            <div style={{ ...monoTag, color: "#7a3d28", marginBottom: "16px" }}>La promesse</div>
-            <h2 style={{ margin: 0, fontFamily: displayFont, fontWeight: 400, fontSize: "clamp(30px,4.4vw,64px)", lineHeight: 1, letterSpacing: "-.01em", color: "#2C2D2D" }}>
+          <div className="rv" style={{ "--d": ".05s", marginBottom: "clamp(16px,2.4vh,28px)", maxWidth: "760px" } as CS}>
+            <div style={{ ...monoTag, color: "#7a3d28", marginBottom: "12px" }}>La promesse</div>
+            <h2 style={{ margin: 0, fontFamily: displayFont, fontWeight: 400, fontSize: "clamp(28px,3.8vw,56px)", lineHeight: 1, letterSpacing: "-.01em", color: "#2C2D2D" }}>
               Tout relier, sans tout <span style={{ fontStyle: "italic", color: "#7a3d28" }}>complexifier.</span>
             </h2>
           </div>
@@ -640,7 +640,7 @@ export default function TestAccueilPage() {
             {PILIERS.map(p => (
               <div key={p.num} className="rv" style={{ "--d": p.delay } as CS}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.img} alt={p.t} style={{ width: "100%", height: "auto", aspectRatio: "3/4", display: "block", objectFit: "cover", borderRadius: "16px" }} />
+                <img src={p.img} alt={p.t} style={{ width: "100%", height: "clamp(150px,28vh,260px)", display: "block", objectFit: "cover", borderRadius: "16px" }} />
                 <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "12px 0 6px" }}>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", color: "#7a3d28" }}>{p.num}</span>
                   <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: "clamp(18px,1.7vw,26px)", color: "#2C2D2D" }}>{p.t}</span>
