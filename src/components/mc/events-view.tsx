@@ -356,7 +356,9 @@ export function EventsView({ evenements, spaces, establishments = [], orgSlug, o
               <button type="button" disabled={pending} onClick={() => openEdit(selected)} className="mc-btn mc-btn-lime flex-1"><Pencil className="size-4" /> Modifier</button>
               <button type="button" disabled={pending} onClick={() => setConfirmDelete(selected)} className="mc-btn mc-btn-outline"><Trash2 className="size-4" /> Supprimer</button>
             </div>
-            <EventRegistrationsPanel event={selected} orgSlug={orgSlug} orgId={orgId} />
+            <div className="px-6 pb-6">
+              <EventRegistrationsPanel event={selected} orgSlug={orgSlug} orgId={orgId} />
+            </div>
           </aside>
         </>
       ) : null}
