@@ -54,11 +54,16 @@ export function formatPrice(value: number | null): string {
   return Number.isInteger(n) ? `${n} €` : `${n.toFixed(2)} €`;
 }
 
-/** Résumé tarifaire court (h / j) pour les cartes. */
-export function priceSummary(hour: number | null, day: number | null): string {
+/** Résumé tarifaire court (h / j / pers.) pour les cartes. */
+export function priceSummary(
+  hour: number | null,
+  day: number | null,
+  person: number | null = null,
+): string {
   const parts: string[] = [];
   if (hour !== null && hour !== undefined) parts.push(`${formatPrice(hour)}/h`);
   if (day !== null && day !== undefined) parts.push(`${formatPrice(day)}/j`);
+  if (person !== null && person !== undefined) parts.push(`${formatPrice(person)}/pers.`);
   return parts.length ? parts.join(" · ") : "Tarif sur demande";
 }
 

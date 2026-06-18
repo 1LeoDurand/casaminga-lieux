@@ -13,6 +13,7 @@ export interface SpaceFormValues {
   area: string;
   priceHour: string;
   priceDay: string;
+  pricePerson: string;
   description: string;
   photos: string[];
   establishmentId: string;
@@ -27,6 +28,7 @@ function fromSpace(s: Space | null): SpaceFormValues {
     area: s?.area != null ? String(s.area) : "",
     priceHour: s?.price_hour != null ? String(s.price_hour) : "",
     priceDay: s?.price_day != null ? String(s.price_day) : "",
+    pricePerson: s?.price_person != null ? String(s.price_person) : "",
     description: s?.description ?? "",
     photos: s?.photos ? [...s.photos] : [],
     establishmentId: s?.establishment_id ?? "",
@@ -95,6 +97,7 @@ export function SpaceForm({
       ["La surface", values.area],
       ["Le tarif horaire", values.priceHour],
       ["Le tarif journalier", values.priceDay],
+      ["Le tarif par personne", values.pricePerson],
     ] as const) {
       if (numericOrError(label, raw) === "error") return;
     }
@@ -203,7 +206,7 @@ export function SpaceForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="mc-form-group">
               <label className="mc-form-label">Tarif / heure (€)</label>
               <input
@@ -222,6 +225,16 @@ export function SpaceForm({
                 value={values.priceDay}
                 onChange={(e) => set("priceDay", e.target.value)}
                 placeholder="ex. 150"
+              />
+            </div>
+            <div className="mc-form-group">
+              <label className="mc-form-label">Tarif / pers. (€)</label>
+              <input
+                className="mc-input"
+                inputMode="decimal"
+                value={values.pricePerson}
+                onChange={(e) => set("pricePerson", e.target.value)}
+                placeholder="ex. 12"
               />
             </div>
           </div>

@@ -155,6 +155,7 @@ export function SpacesView({
         area: toNum(values.area),
         price_hour: toNum(values.priceHour),
         price_day: toNum(values.priceDay),
+        price_person: toNum(values.pricePerson),
         description: values.description.trim() || null,
         photos: values.photos,
         establishment_id: values.establishmentId || null,
@@ -374,7 +375,7 @@ export function SpacesView({
                       <Ruler className="size-3.5" /> {formatArea(s.area)}
                     </span>
                   </div>
-                  <div className="mc-space-price">{priceSummary(s.price_hour, s.price_day)}</div>
+                  <div className="mc-space-price">{priceSummary(s.price_hour, s.price_day, s.price_person)}</div>
                 </div>
               </button>
             ))}
@@ -464,6 +465,10 @@ export function SpacesView({
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-wide text-warmgray">Tarif / jour</dt>
                   <dd className="mt-0.5 font-medium">{formatPrice(selected.price_day)}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-warmgray">Tarif / pers.</dt>
+                  <dd className="mt-0.5 font-medium">{formatPrice(selected.price_person)}</dd>
                 </div>
               </dl>
 

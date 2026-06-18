@@ -448,6 +448,7 @@ export interface SpaceInput {
   area: number | null;
   price_hour: number | null;
   price_day: number | null;
+  price_person: number | null;
   description: string | null;
   photos: string[];
   status: Space["status"];
