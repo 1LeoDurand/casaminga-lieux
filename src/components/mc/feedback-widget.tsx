@@ -345,10 +345,11 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
       <button
         onClick={() => setOpen((v) => !v)}
         title="Signaler un bug ou une amélioration"
-        className={`fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${
+        aria-label="Signaler un bug"
+        className={`fixed bottom-4 right-4 z-50 flex h-12 items-center justify-center gap-2 rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 ${
           open
-            ? "bg-slate-700 text-white"
-            : "bg-slate-900 text-white hover:bg-slate-700"
+            ? "w-12 bg-slate-700 text-white"
+            : "px-5 bg-slate-900 text-white hover:bg-slate-700"
         }`}
       >
         {open ? (
@@ -356,9 +357,12 @@ export function FeedbackWidget({ orgSlug }: { orgSlug?: string }) {
             <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
         ) : (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 4v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0">
+              <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 4v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="whitespace-nowrap text-sm font-medium">Signaler un bug</span>
+          </>
         )}
       </button>
     </>
