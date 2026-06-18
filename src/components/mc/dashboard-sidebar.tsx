@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Inbox, Users, ListChecks, MapPin, Home, CalendarDays, Package,
   Receipt, TrendingDown, Landmark, HandHeart, ShieldCheck, FileSignature, FileText,
   Scale, Sprout, Globe, AtSign, Send, Zap, UserCog, SlidersHorizontal,
-  PanelLeft, ChevronsLeft, ChevronRight, ArrowLeft, X, Menu,
+  ChevronsLeft, ChevronsRight, ChevronRight, ArrowLeft, X, Menu,
   Lock, Sparkles, LogOut,
   type LucideIcon,
 } from "lucide-react";
@@ -328,7 +328,10 @@ export function DashboardSidebar({
         aria-label={collapsed ? "Déployer le panneau" : "Réduire le panneau"}
         className="flex shrink-0 cursor-pointer items-center justify-center border-t border-white/[0.08] py-3.5 text-white/50 transition-colors hover:text-white/80"
       >
-        <PanelLeft className="size-[19px]" strokeWidth={1.8} style={{ transform: collapsed ? "scaleX(-1)" : undefined }} />
+        {collapsed
+          ? <ChevronsRight className="size-[19px]" strokeWidth={1.8} />
+          : <ChevronsLeft className="size-[19px]" strokeWidth={1.8} />
+        }
       </button>
       {/* Avatar */}
       <RailUserMenu orgSlug={orgSlug} initials={initials} userName={userName} />
