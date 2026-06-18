@@ -11,6 +11,8 @@ export const SPACE_TYPES: {
   { value: "bureau", label: "Bureau", badge: "mc-badge-green" },
   { value: "exterieur", label: "Extérieur", badge: "mc-badge-golden" },
   { value: "commun", label: "Espace commun", badge: "mc-badge-gray" },
+  { value: "dortoir", label: "Dortoir", badge: "mc-badge-blue" },
+  { value: "chambre", label: "Chambre", badge: "mc-badge-purple" },
 ];
 
 const TYPE_MAP = Object.fromEntries(SPACE_TYPES.map((t) => [t.value, t]));

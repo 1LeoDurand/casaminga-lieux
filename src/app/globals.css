@@ -233,6 +233,8 @@
 .mc-badge-gray { background: #f2ede9; color: #6b6460; border: 1px solid var(--peach); }
 .mc-badge-lime { background: var(--peach-pale); color: var(--coral-dark); border: 1px solid var(--peach); }
 .mc-badge-golden { background: var(--golden); color: #2c2c2c; border: 1px solid rgba(255, 213, 79, 0.4); }
+.mc-badge-blue { background: #e8f1fb; color: #1a5fa5; border: 1px solid #b9d6f2; }
+.mc-badge-purple { background: #f1ecfb; color: #6a4bb5; border: 1px solid #d6c9f0; }
 
 /* ─── Carte ─── */
 .mc-card {

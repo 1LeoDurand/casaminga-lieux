@@ -113,7 +113,9 @@ export type SpaceType =
   | "atelier"
   | "bureau"
   | "exterieur"
-  | "commun";
+  | "commun"
+  | "dortoir"
+  | "chambre";
 
 export type SpaceStatus = "disponible" | "maintenance" | "masque";
 
