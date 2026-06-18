@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { UserCheck, Plus, X, Download, QrCode, Copy, ExternalLink, Trash2, RotateCcw } from "lucide-react";
+import { UserCheck, Plus, X, Download, QrCode, Copy, ExternalLink, Trash2, RotateCcw, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import {
   getTicketsForEvent, addRegistrationManual,
@@ -130,8 +130,9 @@ export function EventRegistrationsPanel({ event, orgSlug, orgId }: {
   return (
     <div className="mt-4 border-t border-border pt-4">
       {!loaded ? (
-        <button onClick={load} disabled={loading} className="text-[13px] font-semibold text-coral-dark hover:underline">
-          {loading ? "Chargement…" : `🎟️ Voir les billets${event.capacity ? ` (${event.capacity} places)` : ""}`}
+        <button onClick={load} disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-coral/40 bg-peach-pale px-4 py-3 text-[13.5px] font-semibold text-coral-dark transition-colors hover:border-coral hover:bg-coral hover:text-white disabled:opacity-60">
+          <Ticket className="size-4" />
+          {loading ? "Chargement…" : `Voir les billets${event.capacity ? ` · ${event.capacity} places` : ""}`}
         </button>
       ) : (
         <div className="flex flex-col gap-3">
