@@ -542,8 +542,8 @@ export default function TestAccueilPage() {
             {PILIERS.map(p => (
               <div key={p.num} className="rv" style={{ "--d": p.delay } as CS}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.img} alt={p.t} style={{ width: "100%", height: "auto", aspectRatio: "4/5", display: "block", objectFit: "cover", borderRadius: "16px" }} />
-                <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "18px 0 8px" }}>
+                <img src={p.img} alt={p.t} style={{ width: "100%", height: "auto", aspectRatio: "3/4", display: "block", objectFit: "cover", borderRadius: "16px" }} />
+                <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "12px 0 6px" }}>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", color: "#7a3d28" }}>{p.num}</span>
                   <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: "clamp(18px,1.7vw,26px)", color: "#2C2D2D" }}>{p.t}</span>
                 </div>
