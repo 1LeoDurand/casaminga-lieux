@@ -152,6 +152,13 @@ function RailUserMenu({ orgSlug, initials, userName }: { orgSlug: string; initia
       {open && (
         <div className="fixed bottom-[62px] left-3 z-[70] w-52 overflow-hidden rounded-xl border border-white/10 bg-[#1e1e22] shadow-xl">
           <Link
+            href={`/dashboard/${orgSlug}/compte`}
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
+          >
+            <UserCog className="size-4 shrink-0" /> Mon compte
+          </Link>
+          <Link
             href={`/dashboard/${orgSlug}/parametres`}
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"

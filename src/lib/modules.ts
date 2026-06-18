@@ -168,5 +168,6 @@ export function moduleLabelForSegment(segment: string | null): string {
     if (found) return found.label;
   }
   if (segment === "modules") return "Modules";
+  if (segment === "compte") return "Mon compte";
   return "Tableau de bord";
 }

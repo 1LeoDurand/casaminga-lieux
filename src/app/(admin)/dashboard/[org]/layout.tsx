@@ -59,19 +59,24 @@ export default async function DashboardLayout({
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Compte de notifications non lues
+  // Compte de notifications non lues + nom de l'utilisateur connecté (avatar)
   let unreadNotifCount = 0;
+  let userName = "Compte";
   if (isSupabaseConfigured()) {
     const supabase2 = await createClient();
     const { data: { user: u2 } } = await supabase2.auth.getUser();
     if (u2) {
-      const { count } = await supabase2
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", organization.id)
-        .or(`user_id.eq.${u2.id},user_id.is.null`)
-        .is("read_at", null);
+      const [{ count }, { data: profile }] = await Promise.all([
+        supabase2
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", organization.id)
+          .or(`user_id.eq.${u2.id},user_id.is.null`)
+          .is("read_at", null),
+        supabase2.from("profiles").select("full_name").eq("id", u2.id).maybeSingle(),
+      ]);
       unreadNotifCount = count ?? 0;
+      userName = profile?.full_name?.trim() || u2.email?.split("@")[0] || "Compte";
     }
   }
 
@@ -100,6 +105,7 @@ export default async function DashboardLayout({
             orgSlug={organization.slug}
             orgName={organization.name}
             openRequests={openRequests}
+            userName={userName}
             isDemo={!isSupabaseConfigured()}
             enabledModules={enabledModules}
             orgTier={orgTier}
