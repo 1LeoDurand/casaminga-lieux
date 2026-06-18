@@ -465,7 +465,7 @@ export default function TestAccueilPage() {
 
         {/* PANEL 3 · LA PLATEFORME */}
         <section style={{ ...panelBase, background: "linear-gradient(90deg,#FDF2E7,#FAE6D5)", display: "flex", alignItems: "center", ...pad }}>
-          <h2 className="line-reveal" style={{ margin: 0, maxWidth: "1100px", fontFamily: displayFont, fontWeight: 400, fontSize: "clamp(40px,8.2vw,128px)", lineHeight: .96, letterSpacing: "-.015em", color: "#2C2D2D" }}>
+          <h2 className="line-reveal" style={{ margin: 0, maxWidth: "1100px", fontFamily: displayFont, fontWeight: 400, fontSize: "clamp(32px,6.2vw,98px)", lineHeight: .96, letterSpacing: "-.015em", color: "#2C2D2D" }}>
             Le système de pilotage des <span style={{ fontStyle: "italic", color: ACCENT }}>tiers-lieux</span> et lieux collectifs.
           </h2>
         </section>
