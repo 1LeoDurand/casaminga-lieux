@@ -1,0 +1,777 @@
+import Link from "next/link";
+import Image from "next/image";
+import { Inbox, LayoutGrid, BarChart2, Send } from "lucide-react";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/server";
+
+const DEMO_SLUG = "bernard-kohn";
+
+/** Récupère le slug du premier org de l'utilisateur connecté, ou null. */
+async function getUserDashboardSlug(): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // 1. Cherche via organization_members (cas normal)
+    const { data } = await supabase
+      .from("organization_members")
+      .select("organizations(slug)")
+      .eq("user_id", user.id)
+      .eq("status", "actif")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const org = data?.organizations as unknown as { slug: string } | null;
+    if (org?.slug) return org.slug;
+
+    // 2. Fallback super-admin : pas dans organization_members → première org disponible
+    const { isSuperAdminEmail } = await import("@/lib/admin/guard");
+    if (isSuperAdminEmail(user.email)) {
+      const { data: firstOrg } = await supabase
+        .from("organizations")
+        .select("slug")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return firstOrg?.slug ?? null;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function Eyebrow({ children, variant = "coral" }: { children: React.ReactNode; variant?: "coral" | "mint" | "blue" | "gold" | "white" }) {
+  const cls = {
+    coral: "bg-[#FFF0EB] text-[#E8714D] border-[#FFB4A2]",
+    mint:  "bg-[#E8F3E9] text-[#2f8a4c] border-[#bfe0c5]",
+    blue:  "bg-[#E6F4F7] text-[#0e6e7a] border-[#B3D4DE]",
+    gold:  "bg-[#FFF8E0] text-[#a06800] border-[#FFE4A8]",
+    white: "bg-white/10 text-white border-white/20",
+  }[variant];
+  return (
+    <div className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-[11px] font-bold uppercase tracking-widest mb-4 ${cls}`}>
+      {children}
+    </div>
+  );
+}
+
+export default async function LandingPage() {
+  // Vérifie si l'utilisateur est déjà connecté pour adapter la nav
+  const userOrgSlug = await getUserDashboardSlug();
+
+  return (
+    <main style={{ fontFamily: "'Poppins', sans-serif", background: "#FFFBF0", color: "#2C2C2C" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+      {/* ══ NAV ══ */}
+      <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,251,240,0.92)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,180,162,0.28)" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", gap: 32 }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 11, fontWeight: 800, fontSize: 17, color: "#2C2C2C", textDecoration: "none" }}>
+            <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 36, height: 36, objectFit: "contain" }} />
+            Casa Minga Lieux
+          </Link>
+          <div className="lp-nav-cta">
+            {userOrgSlug ? (
+              /* Utilisateur connecté → bouton retour dashboard */
+              <Link href={`/dashboard/${userOrgSlug}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>
+                Mon dashboard →
+              </Link>
+            ) : (
+              /* Non connecté → liens classiques */
+              <>
+                <Link href="/login" style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#2C2C2C", textDecoration: "none", borderRadius: 100, border: "1.5px solid #E5DDD6", background: "#fff" }}>Connexion</Link>
+                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>Voir le dashboard démo →</Link>
+              </>
+            )}
+          </div>
+          {/* CTA compacte mobile — la barre complète (lp-nav-cta) est masquée < 960px ;
+              sans ça, la nav mobile n'affichait que le logo, sans accès connexion. */}
+          <div className="lp-nav-cta-m" style={{ marginLeft: "auto" }}>
+            <Link
+              href={userOrgSlug ? `/dashboard/${userOrgSlug}` : "/login"}
+              style={{ padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65", whiteSpace: "nowrap" }}
+            >
+              {userOrgSlug ? "Dashboard →" : "Connexion"}
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* ══ 1. HERO ══ */}
+      <header style={{ padding: "clamp(40px,7vw,80px) 0 clamp(60px,8vw,96px)", position: "relative", overflow: "hidden" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-hero-grid">
+            <div>
+              <Eyebrow>★ Le système de pilotage des tiers-lieux &amp; lieux collectifs</Eyebrow>
+              <h1 style={{ fontSize: "clamp(36px,5.4vw,60px)", fontWeight: 800, lineHeight: 1.05, letterSpacing: -1, marginBottom: 20 }}>
+                Le <span style={{ background: "linear-gradient(180deg, transparent 62%, rgba(255,138,101,0.28) 62%, rgba(255,138,101,0.28) 92%, transparent 92%)", padding: "0 4px" }}>système de pilotage</span><br />des tiers-lieux et lieux collectifs.
+              </h1>
+              <p style={{ fontSize: "clamp(15px,1.7vw,18.5px)", color: "#6B6460", lineHeight: 1.65, marginBottom: 30, maxWidth: "58ch" }}>
+                Casa Minga Lieux relie votre site public, vos demandes, vos espaces, vos événements, vos documents, vos finances et votre gouvernance dans un seul outil simple et vivant.
+              </p>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "16px 30px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 15.5, textDecoration: "none", boxShadow: "0 8px 20px rgba(255,138,101,0.22)" }}>Voir le dashboard démo →</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "16px 30px", borderRadius: 100, background: "#fff", color: "#2C2C2C", fontWeight: 600, fontSize: 15.5, textDecoration: "none", border: "1.5px solid #E5DDD6" }}>Voir un site généré</Link>
+              </div>
+              <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid #E5DDD6", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: "#6B6460" }}>
+                {["Pensé depuis le terrain", "Adapté aux associations loi 1901", "Sobriété numérique"].map((t) => (
+                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#81C784", display: "inline-block" }} />{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {/* Photo hero */}
+            <div className="lp-photo-hero">
+              <Image
+                src="/images/hero-lieu.webp"
+                alt="Vie du lieu — espace collectif Casa Minga"
+                width={900}
+                height={1350}
+                priority
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ══ 2. PROBLÈME ══ */}
+      <section style={{ background: "#fff", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 780, marginLeft: "auto", marginRight: "auto" }}>
+            <Eyebrow>Le constat</Eyebrow>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, lineHeight: 1.15 }}>Un tiers-lieu ne se gère pas comme une entreprise classique.</h2>
+            <p style={{ color: "#6B6460", lineHeight: 1.7, marginTop: 14, fontSize: "clamp(15px,1.6vw,18px)" }}>Pas de ressources humaines dédiées, beaucoup de bénévoles, peu de continuité, de la mémoire collective qui se perd, et trop d'outils éparpillés qui ne se parlent pas.</p>
+          </div>
+          <div className="lp-prob-grid">
+            {[
+              { ic: "📁", t: "Trop de fichiers, partout", d: "Drive, mails, ordinateurs personnels : impossible de retrouver la dernière version d'un document." },
+              { ic: "✉", t: "Trop de mails à trier", d: "Demandes de résidences, devis, partenariats, presse — tout arrive dans la même boîte." },
+              { ic: "📝", t: "Trop de formulaires", d: "Un Google Form par usage, jamais reliés, qui finissent en exports CSV sans suite." },
+              { ic: "📅", t: "Réservations à l'aveugle", d: "Calendrier partagé, post-it, tableau Excel : qui occupe quel espace, à quel moment ?" },
+              { ic: "💾", t: "Mémoire fragile", d: "Un·e bénévole part avec son ordinateur, et toute une partie du lieu disparaît avec elle." },
+              { ic: "🎭", t: "Événements & résidences en parallèle", d: "Programmation, conventions, communication, bilans : à chaque fois, tout est à reconstruire." },
+              { ic: "💶", t: "Suivi financier flottant", d: "Factures en retard oubliées, dons non tracés, subventions à justifier sans données." },
+              { ic: "📊", t: "Impact difficile à mesurer", d: "Rendre compte aux financeurs prend des semaines parce que rien n'est centralisé." },
+            ].map((c) => (
+              <div key={c.t} style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 18, padding: "22px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: "#FFF0EB", border: "1px solid #FFB4A2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{c.ic}</div>
+                <h4 style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.35 }}>{c.t}</h4>
+                <p style={{ fontSize: 13, color: "#6B6460", lineHeight: 1.55 }}>{c.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 3. HISTOIRE ══ */}
+      <section style={{ background: "linear-gradient(180deg, #FFFBF0, #FFF0EB)", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-story-grid">
+            <div>
+              <Eyebrow variant="mint">Depuis le terrain</Eyebrow>
+              <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, marginBottom: 18 }}>Un outil né depuis un lieu réel.</h2>
+              <p style={{ fontSize: 16, color: "#3A3A3A", lineHeight: 1.75, marginBottom: 14 }}>Casa Minga Lieux est né dans le cadre de la structuration du <strong>tiers-lieu Bernard Kohn</strong>, à Saint-Mandé, dans l'ancienne maison et atelier de l'architecte Bernard Kohn. Un lieu à la fois <strong>patrimonial, collectif, vivant et expérimental</strong>.</p>
+              <p style={{ fontSize: 16, color: "#3A3A3A", lineHeight: 1.75, marginBottom: 14 }}>Un lieu où l'on croise, dans la même journée, une résidence d'artiste, une réunion de CA, un atelier ouvert au quartier, une visite presse, un partenaire institutionnel, et une demande de location de salle.</p>
+              <p style={{ fontSize: 16, color: "#3A3A3A", lineHeight: 1.75, marginBottom: 0 }}>Très vite, le constat est devenu évident : <strong>aucun outil existant ne pouvait coordonner cette diversité.</strong></p>
+              <blockquote style={{ background: "linear-gradient(135deg, #FFF0EB, #FFFBF0)", borderLeft: "4px solid #FF8A65", padding: "18px 22px", borderRadius: "0 18px 18px 0", marginTop: 22, fontStyle: "italic", fontSize: 15, lineHeight: 1.65, color: "#2C2C2C" }}>
+                <span style={{ color: "#FF8A65", fontWeight: 700, fontStyle: "normal" }}>« </span>
+                Le lieu nous parlait, mais nous n'avions pas d'outil pour l'écouter. Casa Minga Lieux, c'est notre façon de lui répondre.
+                <span style={{ color: "#FF8A65", fontWeight: 700, fontStyle: "normal" }}> »</span>
+              </blockquote>
+            </div>
+            {/* Photo grid 2×2 */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 10, height: "clamp(340px,50vw,460px)" }}>
+              {/* Façade — image réelle, span 2 lignes */}
+              <div style={{ borderRadius: 18, overflow: "hidden", gridRow: "1 / span 2", position: "relative" }}>
+                <Image
+                  src="/images/facade.webp"
+                  alt="Façade extérieure — Bernard Kohn"
+                  width={800}
+                  height={1067}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              {/* Détail architectural */}
+              <div style={{ borderRadius: 18, overflow: "hidden", position: "relative" }}>
+                <Image
+                  src="/images/detail-architectural.webp"
+                  alt="Détail architectural — Bernard Kohn"
+                  width={800}
+                  height={1067}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              {/* Jardin / lumière */}
+              <div style={{ borderRadius: 18, overflow: "hidden", position: "relative" }}>
+                <Image
+                  src="/images/jardin.webp"
+                  alt="Jardin et lumière — Bernard Kohn"
+                  width={800}
+                  height={600}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 3b. FONDATEUR ══ */}
+      <section style={{ background: "#fff", padding: "clamp(56px,8vw,96px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-founder-grid">
+
+            {/* Colonne gauche — photos */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Portrait principal */}
+              <div style={{ borderRadius: 20, overflow: "hidden" }}>
+                <Image
+                  src="/images/leo-portrait.webp"
+                  alt="Léo — coordinateur du tiers-lieu Bernard Kohn"
+                  width={800}
+                  height={1422}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+              </div>
+              {/* Photo Léo dans le tiers-lieu */}
+              <div style={{ borderRadius: 20, overflow: "hidden" }}>
+                <Image
+                  src="/images/leo-tiers-lieu.webp"
+                  alt="Léo dans le tiers-lieu Bernard Kohn"
+                  width={900}
+                  height={676}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+              </div>
+            </div>
+
+            {/* Colonne droite — texte */}
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Eyebrow variant="blue">Né dans un tiers-lieu</Eyebrow>
+              <h2 style={{ fontSize: "clamp(30px,3.8vw,46px)", fontWeight: 800, lineHeight: 1.08, marginBottom: 20 }}>
+                Né dans un lieu, pensé pour les lieux.
+              </h2>
+              <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", color: "#2C2C2C", lineHeight: 1.75, marginBottom: 16 }}>
+                <strong>Léo</strong> coordonne au quotidien le{" "}
+                <strong>tiers-lieu Bernard Kohn</strong> — la Manufacture des Pays, à Lodève. C'est en
+                faisant tourner ce lieu, dans le sillage de l'architecte{" "}
+                <strong>Bernard Kohn</strong>, qu'est née l'envie d'un outil vraiment adapté au terrain.
+              </p>
+              <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", color: "#2C2C2C", lineHeight: 1.75, marginBottom: 16 }}>
+                Il accompagne aussi d'autres lieux et structures associatives sur{" "}
+                <span style={{ color: "#E8714D" }}>la communication</span>,{" "}
+                <span style={{ color: "#E8714D" }}>le numérique</span>, les sites web, les événements,
+                la gouvernance et la documentation.
+              </p>
+              <p style={{ fontSize: "clamp(14px,1.5vw,16.5px)", lineHeight: 1.75, marginBottom: 24 }}>
+                <span style={{ color: "#E8714D" }}>Casa Minga Lieux part d'une conviction simple :{" "}</span>
+                <strong>des outils sobres, utiles, ancrés dans le réel.</strong>{" "}
+                Pas une vitrine technologique — un outil pour celles et ceux qui font tourner les lieux.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {["Coordination de tiers-lieu", "Communication associative", "Sites web", "Gouvernance partagée", "Outils numériques sobres"].map((tag) => (
+                  <span key={tag} style={{ background: "#fff", border: "1.5px solid #E5DDD6", color: "#2C2C2C", fontSize: 12.5, fontWeight: 500, padding: "6px 14px", borderRadius: 100 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 4. PROMESSE — 4 piliers ══ */}
+      <section style={{ padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 780, marginLeft: "auto", marginRight: "auto" }}>
+            <Eyebrow>La promesse</Eyebrow>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,44px)", fontWeight: 800, marginBottom: 14 }}>Tout relier, sans tout complexifier.</h2>
+            <p style={{ color: "#6B6460", lineHeight: 1.75 }}>
+              Quatre piliers qui couvrent la vie réelle d'un tiers-lieu. Pas plus, pas moins.<br />
+              Chaque module est pensé pour s'effacer derrière l'action concrète.
+            </p>
+          </div>
+          <div className="lp-pillars-grid">
+            {([
+              {
+                Icon: Inbox,
+                num: "01",
+                h: "Accueillir",
+                p: "Demandes entrantes, personnes, résidences, événements : tous les flux d'arrivée passent par un même point d'entrée.",
+                ex: "Une demande arrive depuis le site → fiche créée → assignée à Mathilde → réponse en 36h chrono.",
+                color: "#E8714D",
+                iconBg: "#FFF0EB",
+                numColor: "#F4B49E",
+                exBg: "#FFF5F2",
+                exBorder: "#F4C4B4",
+              },
+              {
+                Icon: LayoutGrid,
+                num: "02",
+                h: "Organiser",
+                p: "Espaces, réservations, documents, tâches : le quotidien opérationnel sans réinventer Excel à chaque fois.",
+                ex: "L'atelier sérigraphie réservé pour vendredi → le contrat se génère seul → le client reçoit le PDF en 1 clic.",
+                color: "#6B7280",
+                iconBg: "#F4F4F5",
+                numColor: "#C5C5CA",
+                exBg: "#F4F4F6",
+                exBorder: "#DDDDE2",
+              },
+              {
+                Icon: BarChart2,
+                num: "03",
+                h: "Piloter",
+                p: "Finances, impact, partenaires, gouvernance : la vue stratégique du lieu, pour l'équipe et les financeurs.",
+                ex: "À la fin du trimestre, le rapport d'impact se construit tout seul à partir des données déjà saisies.",
+                color: "#2a7d6e",
+                iconBg: "#E6F4F1",
+                numColor: "#9ACFC6",
+                exBg: "#EDF7F5",
+                exBorder: "#B8DDD8",
+              },
+              {
+                Icon: Send,
+                num: "04",
+                h: "Publier",
+                p: "Site public, formulaires, communication, médiathèque : ce que le lieu produit sort à l'extérieur sans double saisie.",
+                ex: "Un événement créé en interne → automatiquement visible sur le site et l'agenda public.",
+                color: "#E8714D",
+                iconBg: "#FFF0EB",
+                numColor: "#F4B49E",
+                exBg: "#FFF5F2",
+                exBorder: "#F4C4B4",
+              },
+            ] as const).map((p) => (
+              <div key={p.h} style={{ background: "#fff", border: "1.5px solid #EDE8E3", borderRadius: 20, padding: "26px 26px 22px", display: "flex", flexDirection: "column", boxShadow: "0 2px 14px rgba(44,44,44,0.05)" }}>
+                {/* Ligne haut : icône + numéro */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: p.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <p.Icon size={20} color={p.color} strokeWidth={1.8} />
+                  </div>
+                  <span style={{ fontSize: 34, fontWeight: 800, color: p.numColor, lineHeight: 1, letterSpacing: -1 }}>{p.num}</span>
+                </div>
+                {/* Titre */}
+                <h3 style={{ fontSize: 20, fontWeight: 700, color: "#2C2C2C", marginBottom: 8 }}>{p.h}</h3>
+                {/* Description */}
+                <p style={{ fontSize: 13.5, color: p.color, lineHeight: 1.65, marginBottom: 16, flexGrow: 1 }}>{p.p}</p>
+                {/* Bloc exemple — badge inline à gauche */}
+                <div style={{ background: p.exBg, border: `1px solid ${p.exBorder}`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ flexShrink: 0, background: "#fff", border: `1px solid ${p.exBorder}`, color: p.color, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", padding: "3px 8px", borderRadius: 100, marginTop: 1 }}>Exemple</span>
+                  <p style={{ fontSize: 13, color: p.color, lineHeight: 1.55, margin: 0 }}>{p.ex}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 5. PRODUIT (mockup) ══ */}
+      <section style={{ background: "#fff", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-product-grid">
+            <div>
+              <Eyebrow>Le produit</Eyebrow>
+              <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, marginBottom: 14 }}>Une plateforme pensée pour les lieux collectifs.</h2>
+              <p style={{ color: "#6B6460", lineHeight: 1.7, marginBottom: 18 }}>17 modules métier articulés autour des usages réels d'un tiers-lieu.</p>
+              <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: 9 }}>
+                {["Demandes — boîte de réception unifiée, statuts, assignation", "Espaces & réservations — fiches, calendriers, conflits évités", "Résidences — conventions, suivi, bilans pour vos résident·e·s", "Événements — programmation, billetterie simple, publication", "Documents — versions, signatures, expirations suivies", "Finances — factures, paiements, dons, prévisionnel", "Impact — indicateurs, rapports trimestriels pour financeurs", "Site public connecté — votre vitrine, mise à jour automatiquement"].map((li) => (
+                  <li key={li} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14.5, lineHeight: 1.55 }}>
+                    <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: "#FFF0EB", border: "1px solid #FFB4A2", backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='none' stroke='%23FF6D4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.5l2.5 2.5 4.5-5'/></svg>\")", backgroundRepeat: "no-repeat", backgroundPosition: "center", marginTop: 1 }} />
+                    <span dangerouslySetInnerHTML={{ __html: li.replace(/^([^—]+)/, "<strong>$1</strong>") }} />
+                  </li>
+                ))}
+              </ul>
+              <div style={{ marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Explorer le dashboard démo →</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, border: "1.5px solid #E5DDD6", color: "#2C2C2C", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Voir le site public généré</Link>
+              </div>
+            </div>
+            {/* Mockup — desktop-shaped. Sur mobile, le conteneur .lp-mockup-wrap
+                le rend swipeable (sinon le côté droit était rogné par overflow:hidden). */}
+            <div className="lp-mockup-wrap">
+            <div className="lp-mockup" style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 14, overflow: "hidden", boxShadow: "0 24px 56px rgba(28,28,28,0.10), 0 6px 16px rgba(255,138,101,0.08)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", background: "#fafaf7", borderBottom: "1px solid #E5DDD6" }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#ff5f57", display: "inline-block" }} />
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#febc2e", display: "inline-block" }} />
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#28c840", display: "inline-block" }} />
+                <span style={{ marginLeft: 14, fontSize: 11, color: "#6B6460", background: "#fff", padding: "3px 12px", borderRadius: 100, border: "1px solid #E5DDD6" }}>admin.casaminga.com/dashboard/bernard-kohn</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", minHeight: 280 }}>
+                <div style={{ background: "#2C2C2C", color: "rgba(255,255,255,0.85)", padding: "12px 8px", fontSize: 11, display: "flex", flexDirection: "column", gap: 3 }}>
+                  {[["Pilotage", null], [null, "⬚ Dashboard"], [null, "📥 Demandes"], [null, "✓ Tâches"], ["Lieu", null], [null, "🛋 Espaces"], [null, "🎭 Événements"], [null, "🏡 Résidences"], ["Structure", null], [null, "💶 Finances"], [null, "🏛 Gouvernance"], [null, "📊 Impact"]].map(([label, item], i) =>
+                    label
+                      ? <div key={i} style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", padding: "8px 6px 4px" }}>{label}</div>
+                      : <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", borderRadius: 6, fontSize: 11, background: item?.startsWith("✓") ? "#FF8A65" : "transparent", color: item?.startsWith("✓") ? "#fff" : "rgba(255,255,255,0.85)" }}>{item}</div>
+                  )}
+                </div>
+                <div style={{ padding: "20px 22px", background: "#FFFBF0" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 }}>
+                    <span style={{ fontSize: 16, fontWeight: 700 }}>Tâches &amp; alertes</span>
+                    <span style={{ background: "#FF8A65", color: "#fff", fontSize: 10, fontWeight: 600, padding: "4px 10px", borderRadius: 100 }}>+ Nouvelle tâche</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 14 }}>
+                    {[["12", "Ouvertes"], ["3", "Urgentes"], ["5", "Alertes auto"]].map(([v, l]) => (
+                      <div key={l} style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 9, padding: "9px 11px" }}>
+                        <div style={{ fontSize: 18, fontWeight: 700 }}>{v}</div>
+                        <div style={{ fontSize: 9.5, color: "#6B6460", textTransform: "uppercase", letterSpacing: "0.05em" }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {[
+                    { tag: "URGENTE", t: "Relancer Studio Petite Lune · facture 290 €", cat: "Finances", tc: "#E8714D", bg: "#FFF0EB" },
+                    { tag: "EN COURS", t: "Préparer dossier subvention Région", cat: "Gouvernance", tc: "#2f8a4c", bg: "#E8F3E9" },
+                    { tag: "À FAIRE", t: "Commander affiches portes ouvertes", cat: "Communication", tc: "#6B6460", bg: "#f1f5f9" },
+                  ].map((r) => (
+                    <div key={r.t} style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 9, padding: "9px 11px", display: "flex", alignItems: "center", gap: 10, marginBottom: 5, fontSize: 11.5 }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: r.bg, color: r.tc, whiteSpace: "nowrap" }}>{r.tag}</span>
+                      <span style={{ flex: 1 }}>{r.t}</span>
+                      <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: "#f1f5f9", color: "#64748b", whiteSpace: "nowrap" }}>{r.cat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 5b. IMPACT ══ */}
+      <section style={{ background: "#fff", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-impact-grid">
+            {/* Colonne gauche */}
+            <div>
+              <Eyebrow variant="mint">L'impact</Eyebrow>
+              <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 16 }}>
+                Rendre visible ce que le lieu produit vraiment.
+              </h2>
+              <p style={{ fontSize: "clamp(15px,1.6vw,18px)", color: "#6B6460", lineHeight: 1.7, marginBottom: 28 }}>
+                Pour les financeurs, pour vos partenaires, pour vos adhérent·e·s, et pour vous. Tous les indicateurs renseignés au fil de l'eau, exportables en un clic.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 18px", marginBottom: 32 }}>
+                {[
+                  "Fréquentation", "Événements organisés",
+                  "Heures d'occupation", "Heures de bénévolat",
+                  "Résidences accueillies", "Partenaires actifs",
+                  "Revenus propres", "Rapports financeurs",
+                  "Mixité du public", "Narratif d'impact",
+                ].map((item) => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 10, padding: "10px 14px", fontSize: 13.5, fontWeight: 500, color: "#2C2C2C" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#2f8a4c", flexShrink: 0 }} />
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <Link href="/dashboard/bernard-kohn/impact" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "16px 28px", borderRadius: 100, border: "2px solid #2C2C2C", background: "#fff", color: "#2C2C2C", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
+                Voir le module Impact dans le dashboard démo →
+              </Link>
+            </div>
+
+            {/* Colonne droite — carte rapport */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 22, padding: "28px 30px", width: "100%", maxWidth: 430, boxShadow: "0 4px 28px rgba(44,44,44,0.07)" }}>
+                {/* En-tête carte */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 17, color: "#2C2C2C" }}>Rapport d'impact · T2 2026</div>
+                    <div style={{ fontSize: 12.5, color: "#6B6460", marginTop: 2 }}>Tiers-lieu Bernard Kohn · auto-généré</div>
+                  </div>
+                  <span style={{ background: "#FFF0EB", border: "1.5px solid #FFB4A2", color: "#E8714D", fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 100 }}>2026</span>
+                </div>
+                <div style={{ borderTop: "1px solid #F0EBE3", margin: "16px 0" }} />
+
+                {/* Lignes métriques */}
+                {[
+                  { label: "Personnes accueillies", value: "1 240", pct: 85 },
+                  { label: "Événements organisés",  value: "38",    pct: 55 },
+                  { label: "Heures de bénévolat",   value: "2 180", pct: 78 },
+                  { label: "Résidences accueillies", value: "9",    pct: 65 },
+                  { label: "Partenaires actifs",     value: "14",   pct: 48 },
+                  { label: "Revenus propres",        value: "28k €", pct: 38 },
+                ].map((row, i, arr) => (
+                  <div key={row.label}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", gap: 12 }}>
+                      <span style={{ fontSize: 13.5, color: "#2C2C2C", flexShrink: 0 }}>{row.label}</span>
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end" }}>
+                        <div style={{ flex: 1, height: 6, background: "#F0EBE3", borderRadius: 99, overflow: "hidden", maxWidth: 120 }}>
+                          <div style={{ height: "100%", width: `${row.pct}%`, background: "#FF8A65", borderRadius: 99 }} />
+                        </div>
+                        <span style={{ fontWeight: 800, fontSize: 15, color: "#2C2C2C", minWidth: 44, textAlign: "right" }}>{row.value}</span>
+                      </div>
+                    </div>
+                    {i < arr.length - 1 && <div style={{ borderTop: "1px solid #F0EBE3" }} />}
+                  </div>
+                ))}
+
+                <div style={{ borderTop: "1px solid #F0EBE3", marginTop: 6, paddingTop: 14, display: "flex", gap: 16, fontSize: 12.5, color: "#2f8a4c", fontWeight: 600 }}>
+                  <span>↓ Export PDF</span>
+                  <span>· partage aux financeurs</span>
+                  <span>· narratif commenté</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 5c. SITE PUBLIC ══ */}
+      <section style={{ background: "linear-gradient(180deg, #FFFBF0, #FFF5EC)", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          {/* En-tête centré */}
+          <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 720, marginLeft: "auto", marginRight: "auto" }}>
+            <Eyebrow>Spécificité Casa Minga Lieux</Eyebrow>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,44px)", fontWeight: 800, lineHeight: 1.1, marginBottom: 16 }}>
+              Votre site public devient<br />une vraie porte d'entrée.
+            </h2>
+            <p style={{ fontSize: "clamp(14px,1.5vw,17px)", color: "#6B6460", lineHeight: 1.75 }}>
+              Pas un simple site vitrine isolé : un site relié à la plateforme. Ce qui se passe à l'intérieur du lieu se voit immédiatement à l'extérieur. Et ce qui arrive de l'extérieur entre directement dans le pilotage.
+            </p>
+          </div>
+
+          {/* Mockup deux colonnes reliées */}
+          {/* NB : pas de gridTemplateColumns inline ici — il écraserait la media
+              query de .lp-sitepub-grid et empêcherait le passage à 1 colonne
+              sous 900px (cause d'un scroll horizontal sur mobile). */}
+          <div style={{ position: "relative", marginBottom: 32 }} className="lp-sitepub-grid">
+            {/* Colonne gauche — Site public */}
+            <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                <span style={{ background: "#FFF0EB", border: "1.5px solid #FFB4A2", color: "#E8714D", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 100 }}>Site public</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C" }}>casaminga.com/bernard-kohn</span>
+              </div>
+              {[
+                { ic: "📅", bold: "Atelier sérigraphie · 12 juin", sub: "Événement publié · inscriptions ouvertes" },
+                { ic: "📋", bold: "Formulaire de location de salle", sub: "Reçu par le site public" },
+                { ic: "🎨", bold: "Résidence Léa Bertin", sub: "Mise en valeur dans la page Résidences" },
+                { ic: "🤝", bold: "Partenaires affichés", sub: "Mairie 20e · Fondation Habitat" },
+              ].map((row, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 12px", borderRadius: 12, border: "1px solid #F0EBE3", marginBottom: i < 3 ? 8 : 0, background: "#FAFAF7" }}>
+                  <span style={{ fontSize: 17, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{row.ic}</span>
+                  <span style={{ fontSize: 13, color: "#2C2C2C" }}>
+                    <strong style={{ fontWeight: 700 }}>{row.bold}</strong>
+                    <span style={{ color: "#6B6460", fontWeight: 400 }}>{row.sub}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Bouton ↔ centré entre les deux colonnes */}
+            <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 2, width: 40, height: 40, borderRadius: "50%", background: "#FF8A65", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 18, boxShadow: "0 4px 16px rgba(255,138,101,0.35)" }} className="lp-sitepub-arrow">
+              ↔
+            </div>
+
+            {/* Colonne droite — Plateforme */}
+            <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+                <span style={{ background: "#E8F3E9", border: "1.5px solid #bfe0c5", color: "#2f8a4c", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 100 }}>Plateforme</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C" }}>Pilotage interne</span>
+              </div>
+              {[
+                { ic: "📣", bold: "Événement créé + publié", sub: "Apparaît instantanément côté site" },
+                { ic: "📥", bold: "Demande de salle reçue", sub: "Fiche auto · à traiter sous 36h" },
+                { ic: "📊", bold: "Bilan résidence à compléter", sub: "Tâche auto-générée" },
+                { ic: "🖼", bold: "Médias partagés", sub: "Réutilisés pour site + presse + bilan" },
+              ].map((row, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 12px", borderRadius: 12, border: "1px solid #F0EBE3", marginBottom: i < 3 ? 8 : 0, background: "#FAFAF7" }}>
+                  <span style={{ fontSize: 17, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{row.ic}</span>
+                  <span style={{ fontSize: 13, color: "#2C2C2C" }}>
+                    <strong style={{ fontWeight: 700 }}>{row.bold}</strong>
+                    <span style={{ color: "#6B6460", fontWeight: 400 }}>{row.sub}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chips flux en bas */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+            {[
+              { from: "SITE", to: "PLATEFORME", fromColor: "#E8714D", toColor: "#2f8a4c", text: "Une demande devient une fiche" },
+              { from: "PLATEFORME", to: "SITE", fromColor: "#2f8a4c", toColor: "#E8714D", text: "Un événement devient public" },
+              { from: "PLATEFORME", to: "SITE", fromColor: "#2f8a4c", toColor: "#E8714D", text: "Les médias circulent sans double saisie", both: true },
+            ].map((chip, i) => (
+              <div key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 100, padding: "9px 16px", fontSize: 12.5 }}>
+                <span style={{ background: chip.from === "SITE" ? "#FFF0EB" : "#E8F3E9", color: chip.fromColor, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 100, border: `1px solid ${chip.fromColor}44` }}>{chip.from}</span>
+                <span style={{ color: "#6B6460" }}>{chip.both ? "↔" : "→"}</span>
+                <span style={{ background: chip.to === "SITE" ? "#FFF0EB" : "#E8F3E9", color: chip.toColor, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 100, border: `1px solid ${chip.toColor}44` }}>{chip.to}</span>
+                <span style={{ color: "#2C2C2C", fontWeight: 500 }}>{chip.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 6. POUR QUI ══ */}
+      <section style={{ padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 780, marginLeft: "auto", marginRight: "auto" }}>
+            <Eyebrow variant="mint">Pour qui</Eyebrow>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700 }}>Pour les lieux qui veulent se structurer sans perdre leur âme.</h2>
+            <p style={{ color: "#6B6460", marginTop: 14, lineHeight: 1.7 }}>Pensé pour les structures hybrides, à gouvernance collective, ancrées dans leur territoire.</p>
+          </div>
+          <div className="lp-pourqui-grid">
+            {[
+              { ic: "🏛", t: "Tiers-lieux associatifs", d: "Maisons de quartier, friches reconverties, fabriques de territoire." },
+              { ic: "🎨", t: "Lieux culturels", d: "Centres d'art, fabriques, scènes indépendantes, ateliers d'artistes." },
+              { ic: "💼", t: "Coworking engagés", d: "Coworkings solidaires, espaces de l'ESS, lieux à modèle hybride." },
+              { ic: "🏡", t: "Résidences artistiques", d: "Lieux de résidence, ateliers partagés, lieux de création." },
+              { ic: "🗳", t: "Collectifs en gouvernance partagée", d: "Coopératives, SCIC, SCOP, collectifs auto-organisés." },
+              { ic: "⛪", t: "Associations avec un lieu", d: "Maisons des associations, locaux mutualisés, MJC." },
+              { ic: "🏚", t: "Lieux patrimoniaux", d: "Bâtiments anciens en transformation, monuments en reconversion." },
+              { ic: "🌱", t: "Lieux écologiques", d: "Fermes urbaines, lieux de transition, écovillages." },
+            ].map((t) => (
+              <div key={t.t} style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 18, padding: "22px 18px", textAlign: "center", display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+                <div style={{ width: 54, height: 54, borderRadius: "50%", background: "linear-gradient(135deg, #FFF0EB, #FFFBF0)", border: "1px solid #FFB4A2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 4 }}>{t.ic}</div>
+                <h4 style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.35 }}>{t.t}</h4>
+                <p style={{ fontSize: 12, color: "#6B6460", lineHeight: 1.5 }}>{t.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 7. DIFFÉRENCIATION ══ */}
+      <section style={{ background: "#FAF6E8", padding: "clamp(64px,9vw,108px) 0" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div style={{ textAlign: "center", marginBottom: "clamp(36px,5vw,56px)", maxWidth: 780, marginLeft: "auto", marginRight: "auto" }}>
+            <Eyebrow variant="gold">Le positionnement</Eyebrow>
+            <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700 }}>Ni Drive, ni Notion, ni simple logiciel de coworking.</h2>
+            <p style={{ color: "#6B6460", marginTop: 14, lineHeight: 1.7 }}>Chacun a sa force. Casa Minga Lieux relie ce qu'ils n'arrivent pas à relier.</p>
+          </div>
+          <div style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 14px rgba(255,138,101,0.10)" }}>
+            {[
+              { ic: "📁", name: "Drive · Dropbox", sub: "Stockage de fichiers", vs: "Drive range les fichiers. Casa Minga Lieux relie les actions autour de ces fichiers : la convention est liée à une résidence, qui est liée à une personne, qui paie via une facture." },
+              { ic: "📄", name: "Notion · Coda", sub: "Espace de travail libre", vs: "Notion structure des pages. Casa Minga Lieux structure la vie du lieu : pas de page blanche à construire, les modules sont déjà pensés pour un tiers-lieu." },
+              { ic: "🪑", name: "Cobot · Nexudus", sub: "Logiciels de coworking", vs: "Un logiciel de coworking gère des bureaux. Casa Minga Lieux gère un écosystème : résidences artistiques, gouvernance, partenariats, impact." },
+              { ic: "🌐", name: "Site vitrine simple", sub: "Webflow · WordPress", vs: "Un site vitrine montre le lieu. Casa Minga Lieux connecte le site à la gestion : les demandes du site entrent directement dans le pilotage." },
+            ].map((r, i) => (
+              <div key={r.name} className="lp-diff-row" style={{ padding: "18px 22px", borderBottom: i < 3 ? "1px solid #E5DDD6" : "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "#FFFBF0", border: "1px solid #E5DDD6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{r.ic}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</div>
+                    <div style={{ fontSize: 11.5, color: "#6B6460", marginTop: 1 }}>{r.sub}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 14, color: "#3A3A3A", lineHeight: 1.55 }}>{r.vs}</div>
+              </div>
+            ))}
+            <div className="lp-diff-row" style={{ padding: "18px 22px", background: "linear-gradient(135deg, #FFF0EB, #FFFBF0)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #FF8A65, #FF6D4D)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#fff", flexShrink: 0, boxShadow: "0 4px 10px rgba(255,138,101,0.32)" }}>★</div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#E8714D" }}>Casa Minga Lieux</div>
+                  <div style={{ fontSize: 11.5, color: "#6B6460" }}>Le SaaS des tiers-lieux</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 14, color: "#3A3A3A", lineHeight: 1.55 }}>Casa Minga Lieux est <strong>spécifiquement conçu pour la diversité d'un tiers-lieu</strong> — accueil, organisation, pilotage, publication — dans un seul outil cohérent.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 8. CTA FINAL ══ */}
+      <section id="contact" style={{ background: "linear-gradient(135deg, #2C2C2C, #1a1a1a)", color: "#fff", padding: "clamp(64px,9vw,108px) 0", position: "relative", overflow: "hidden" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px", position: "relative", zIndex: 1 }}>
+          <div className="lp-cta-grid">
+            <div>
+              <Eyebrow variant="white">Parlons-en</Eyebrow>
+              <h2 style={{ fontSize: "clamp(28px,3.8vw,42px)", fontWeight: 700, color: "#fff", marginBottom: 14 }}>Vous portez un lieu collectif ? Parlons-en.</h2>
+              <p style={{ color: "rgba(255,255,255,0.78)", lineHeight: 1.7, marginBottom: 24 }}>Démo guidée, échanges sur votre lieu, ou candidature pour rejoindre les premiers lieux pilotes. Pas de pression commerciale, juste une conversation.</p>
+              <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {["Démo personnalisée en visio (30 min)", "Échange sur votre lieu et vos besoins", "Accès anticipé pour les lieux pilotes", "Aucune carte bancaire demandée"].map((li) => (
+                  <li key={li} style={{ display: "flex", alignItems: "center", gap: 11, fontSize: 14, color: "rgba(255,255,255,0.92)" }}>
+                    <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: "rgba(255,138,101,0.22)", border: "1px solid rgba(255,138,101,0.55)", backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='none' stroke='%23FFB4A2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.5l2.5 2.5 4.5-5'/></svg>\")", backgroundRepeat: "no-repeat", backgroundPosition: "center" }} />
+                    {li}
+                  </li>
+                ))}
+              </ul>
+              <div style={{ marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>▶ Voir le dashboard démo</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#fff", color: "#2C2C2C", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Voir un site public généré</Link>
+              </div>
+            </div>
+            {/* Formulaire */}
+            <div style={{ background: "#fff", color: "#2C2C2C", borderRadius: 28, padding: "28px 28px 22px", boxShadow: "0 24px 56px rgba(0,0,0,0.18)" }}>
+              <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Demander une démo</h3>
+              <p style={{ fontSize: 13, color: "#6B6460", lineHeight: 1.55, marginBottom: 18 }}>Nous reviendrons vers vous sous 48h. Vos données restent strictement chez nous.</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {[
+                  { id: "f-nom", label: "Nom complet *", type: "text", placeholder: "" },
+                  { id: "f-structure", label: "Structure *", type: "text", placeholder: "Nom du lieu / collectif" },
+                  { id: "f-email", label: "Email *", type: "email", placeholder: "" },
+                ].map((f) => (
+                  <div key={f.id} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                    <label htmlFor={f.id} style={{ fontSize: 12, fontWeight: 600 }}>{f.label}</label>
+                    <input id={f.id} type={f.type} placeholder={f.placeholder} style={{ width: "100%", padding: "12px 14px", fontFamily: "inherit", fontSize: 14, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 11, color: "#2C2C2C" }} />
+                  </div>
+                ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <label htmlFor="f-type" style={{ fontSize: 12, fontWeight: 600 }}>Type de lieu</label>
+                  <select id="f-type" style={{ width: "100%", padding: "12px 14px", fontFamily: "inherit", fontSize: 14, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 11, color: "#2C2C2C" }}>
+                    <option value="">— Précisez —</option>
+                    {["Tiers-lieu associatif", "Lieu culturel", "Coworking engagé", "Résidence artistique", "Collectif / gouvernance partagée", "Association avec lieu", "Lieu patrimonial", "Lieu écologique", "Autre"].map((o) => <option key={o}>{o}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 5 }}>
+                <label htmlFor="f-message" style={{ fontSize: 12, fontWeight: 600 }}>Quelques mots sur votre lieu (facultatif)</label>
+                <textarea id="f-message" placeholder="Quelques lignes sur le lieu, son fonctionnement, ce qui vous bloque aujourd'hui…" style={{ width: "100%", padding: "12px 14px", fontFamily: "inherit", fontSize: 14, background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 11, color: "#2C2C2C", minHeight: 90, resize: "vertical" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "#6B6460", lineHeight: 1.5 }}>🔒 Données conservées localement</span>
+                <button type="button" style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer" }}>Envoyer la demande →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ FOOTER ══ */}
+      <footer style={{ background: "#1A1A1A", color: "rgba(255,255,255,0.7)", padding: "60px 0 28px", fontSize: 13 }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 28px" }}>
+          <div className="lp-footer-grid">
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14, fontWeight: 800, fontSize: 17, color: "#fff" }}>
+                <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 34, height: 34, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+                Casa Minga Lieux
+              </div>
+              <p style={{ lineHeight: 1.6, marginBottom: 10, maxWidth: "34ch", color: "rgba(255,255,255,0.65)" }}>Le système de pilotage des tiers-lieux, résidences et lieux collectifs. Pensé depuis le terrain.</p>
+              <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>Inspiré de l'ESS. Made with ❤ pour les communs.</p>
+            </div>
+            {[
+              { title: "Produit", links: [["Notre approche", "/approche"], ["Dashboard démo", `/dashboard/${DEMO_SLUG}`], ["Site public généré", `/site/${DEMO_SLUG}`]] },
+              { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Centre d'aide", "/aide"], ["S'inscrire", "/signup"]] },
+              { title: "Contact", links: [["Demander une démo", "#contact"], ["Se connecter", "/login"], ["contact@casaminga.com", "mailto:contact@casaminga.com"]] },
+            ].map((col) => (
+              <div key={col.title}>
+                <h4 style={{ color: "#fff", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>{col.title}</h4>
+                <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {col.links.map(([label, href]) => (
+                    <li key={label}><Link href={href} style={{ color: "rgba(255,255,255,0.65)", textDecoration: "none" }}>{label}</Link></li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 44, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap", fontSize: 11.5, color: "rgba(255,255,255,0.5)" }}>
+            <span>© {new Date().getFullYear()} Casa Minga Lieux — Pensé depuis le terrain · Sobriété numérique</span>
+            <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+              <Link href="/mentions-legales" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Mentions légales</Link>
+              <Link href="/confidentialite" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Confidentialité</Link>
+              <Link href="/cgu" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>CGU</Link>
+              <Link href="/cgv" style={{ color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>CGV</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
