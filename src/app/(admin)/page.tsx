@@ -451,8 +451,11 @@ export default function TestAccueilPage() {
               <p style={{ margin: "0 0 18px", fontSize: "clamp(15px,1.35vw,19px)", lineHeight: 1.62, color: "rgba(44,45,45,.78)" }}>
                 <strong style={{ color: "#2C2D2D", fontWeight: 700 }}>Une minga</strong> — du quechua <em>mink&apos;a</em> — est une tradition sud-américaine de travail collectif, festif et convivial, mis au service d&apos;une communauté.
               </p>
-              <p style={{ margin: 0, fontSize: "clamp(15px,1.35vw,19px)", lineHeight: 1.62, color: "rgba(44,45,45,.78)" }}>
+              <p style={{ margin: "0 0 18px", fontSize: "clamp(15px,1.35vw,19px)", lineHeight: 1.62, color: "rgba(44,45,45,.78)" }}>
                 On s&apos;y retrouve quand un effort compte vraiment : récoltes, constructions, grands moments de la vie d&apos;un lieu. <strong style={{ color: "#2C2D2D", fontWeight: 700 }}>Casa</strong>, c&apos;est la maison qui abrite ce commun.
+              </p>
+              <p style={{ margin: 0, fontSize: "clamp(15px,1.35vw,19px)", lineHeight: 1.62, color: "#2C2D2D", fontStyle: "italic" }}>
+                Léo a créé Casa Minga pour faciliter le vivre ensemble. <span style={{ color: "#b5572f", fontStyle: "normal", fontWeight: 600 }}>Contribuons ensemble à développer cette philosophie.</span>
               </p>
             </div>
             <div className="rv" style={{ "--d": ".36s", marginTop: "30px", display: "flex", alignItems: "center", gap: "14px", fontFamily: "'DM Mono', monospace", fontSize: "12px", letterSpacing: ".08em", textTransform: "uppercase", color: "#9a8d7e" } as CS}>
