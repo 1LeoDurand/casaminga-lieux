@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Syne, DM_Sans, Geist_Mono, Fraunces, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import { CookieBanner } from "@/components/mc/cookie-banner";
+import { GlobalFeedback } from "@/components/mc/global-feedback";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import "./globals.css";
 
@@ -87,6 +88,7 @@ export default function RootLayout({
         {children}
         <Toaster position="top-center" offset={{ top: "76px" }} richColors closeButton />
         <CookieBanner />
+        <GlobalFeedback />
         <GoogleAnalytics />
       </body>
     </html>
