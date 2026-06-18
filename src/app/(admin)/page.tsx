@@ -521,9 +521,12 @@ export default function TestAccueilPage() {
               </a>
             </div>
           </div>
-          <div className="amb" style={{ flex: "0 0 auto", animation: "cmFloatB 8s ease-in-out infinite" }}>
+          <div className="amb" style={{ flex: "0 0 auto", animation: "cmFloatB 8s ease-in-out infinite", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/accueil/p-portrait.jpg" alt="Portrait / photo du lieu" style={{ width: "clamp(200px,24vw,340px)", height: "clamp(260px,32vw,440px)", objectFit: "cover", borderRadius: "20px", display: "block" }} />
+            <img src="/accueil/p-portrait.jpg" alt="Léo et Bernard" style={{ width: "clamp(200px,24vw,340px)", height: "clamp(260px,32vw,440px)", objectFit: "cover", borderRadius: "20px", display: "block" }} />
+            <figcaption style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(44,45,45,.45)" }}>
+              Léo et Bernard
+            </figcaption>
           </div>
         </section>
 
