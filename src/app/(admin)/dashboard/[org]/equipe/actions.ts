@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { updateTeamMemberRole, removeTeamMember } from "@/lib/data";
 import { humanError } from "@/lib/errors";
-import type { OrgRole } from "@/lib/types";
+import { assertOrgAdmin } from "@/lib/admin/guard";
+import { roleLabel } from "@/lib/roles";
+import type { OrgRole } from "@/lib/roles";
 
 type AR = { ok: boolean; error?: string };
 
@@ -17,6 +19,8 @@ function refresh(orgSlug: string) {
 export async function updateMemberRoleAction(
   orgSlug: string, orgId: string, userId: string, role: OrgRole, zones: string[]
 ): Promise<AR> {
+  const guard = await assertOrgAdmin(orgId);
+  if (!guard.ok) return guard;
   const ok = await updateTeamMemberRole(orgId, userId, role, zones);
   if (ok) refresh(orgSlug);
   return { ok };
@@ -72,6 +76,8 @@ export async function inviteMemberAction(
   orgSlug: string, orgId: string, email: string, role: OrgRole
 ): Promise<AR> {
   if (!isSupabaseConfigured()) return { ok: false, error: "Non configuré." };
+  const guard = await assertOrgAdmin(orgId);
+  if (!guard.ok) return guard;
   const supabase = await createClient();
 
   // Générer un token hex 32 octets via Postgres
@@ -103,22 +109,15 @@ export async function inviteMemberAction(
   try {
     const { sendMail } = await import("@/lib/mail");
     const { getOrganizationBySlug } = await import("@/lib/data");
+    const { tplInvitationCompte } = await import("@/lib/mail-templates");
     const org = await getOrganizationBySlug(orgSlug);
+    const orgName = org?.name ?? "l'espace";
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com"}/rejoindre/${token}`;
     await sendMail({
       to: email,
-      subject: `Invitation à rejoindre ${org?.name ?? "l'espace"} sur Casa Minga`,
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
-          <h2 style="color:#2c2c2c">Vous êtes invité(e) 🎉</h2>
-          <p>Vous avez été invité(e) à rejoindre <strong>${org?.name ?? "l'espace"}</strong> en tant que <strong>${role}</strong>.</p>
-          <p>Cliquez sur le bouton ci-dessous pour créer votre compte et rejoindre l'espace :</p>
-          <a href="${inviteUrl}" style="display:inline-block;background:#FF8A65;color:#fff;padding:14px 28px;border-radius:100px;text-decoration:none;font-weight:700;margin:16px 0">
-            Rejoindre l&rsquo;espace →
-          </a>
-          <p style="color:#9c9590;font-size:12px">Ce lien est valable 7 jours. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
-        </div>`,
-      category: "bienvenue",
+      subject: `Invitation à rejoindre ${orgName} sur Casa Minga`,
+      html: tplInvitationCompte({ orgName, inviteUrl, roleLabelStr: roleLabel(role) }),
+      category: "invitation",
       organizationId: orgId,
     });
   } catch (e) {

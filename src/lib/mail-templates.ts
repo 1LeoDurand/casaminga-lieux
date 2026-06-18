@@ -930,6 +930,35 @@ export function tplPaiementConfirme(opts: {
   );
 }
 
+// ── Invitation compte admin ───────────────────────────────────────────────────
+
+export function tplInvitationCompte(opts: {
+  orgName: string;
+  inviteUrl: string;
+  roleLabelStr: string;
+}) {
+  return base(
+    `
+    ${badge("Invitation", "#6366f1")}
+    <div style="height:12px;"></div>
+    ${h1(`Rejoignez l'espace de gestion`)}
+    ${p(`<strong>${opts.orgName}</strong> vous invite à rejoindre son espace de gestion sur <strong>Casa Minga Lieux</strong>, en tant que <strong>${opts.roleLabelStr}</strong>.`)}
+    <div style="background:#FAFAF7;border:1px solid #E5DDD6;border-radius:12px;padding:16px 20px;margin:20px 0;">
+      <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#2C2C2C;">Casa Minga Lieux, c'est quoi ?</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;color:#4A4540;line-height:1.9;">
+        <tr><td>👥&nbsp;&nbsp;Gérer les <strong>membres et adhésions</strong> de l'association</td></tr>
+        <tr><td>📅&nbsp;&nbsp;Planifier et publier des <strong>événements</strong></td></tr>
+        <tr><td>🔑&nbsp;&nbsp;Suivre les <strong>réservations d'espaces</strong></td></tr>
+        <tr><td>💬&nbsp;&nbsp;Communiquer avec les membres et partenaires</td></tr>
+      </table>
+    </div>
+    ${btn("Créer mon compte →", opts.inviteUrl)}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Ce lien est valable 7 jours. Si vous n'êtes pas concerné(e) par cette invitation, ignorez simplement cet email.</span>`)}
+  `,
+    opts.orgName
+  );
+}
+
 // ── Facture ecommunication (superadmin / Léo Durand EI) ─────────────────────
 
 export function tplFactureEcommunication(opts: {

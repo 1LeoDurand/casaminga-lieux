@@ -2,14 +2,165 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { KeyRound, ShieldCheck, RotateCcw, ShieldOff } from "lucide-react";
+import { KeyRound, ShieldCheck, RotateCcw, ShieldOff, Send, RefreshCw, X } from "lucide-react";
 import {
   updatePermissionsAction,
   sendPasswordResetAction,
 } from "@/app/(admin)/dashboard/[org]/personnes/access-actions";
+import {
+  inviteMemberAction,
+  revokeInvitationAction,
+  resendInvitationAction,
+  type Invitation,
+} from "@/app/(admin)/dashboard/[org]/equipe/actions";
 import type { TeamMember } from "@/lib/types";
-import { ROLE_PERMS, roleLabel } from "@/lib/roles";
+import { ROLES, ROLE_META, ROLE_PERMS, roleLabel } from "@/lib/roles";
 import type { OrgRole, PermissionSet } from "@/lib/roles";
+
+// ── Panneau "pas de compte" avec invitation ───────────────────────────────────
+
+function NoAccountPanel({
+  personEmail,
+  orgSlug,
+  orgId,
+  canManageAccess,
+  pendingInvitation,
+}: {
+  personEmail: string | null;
+  orgSlug: string;
+  orgId: string;
+  canManageAccess: boolean;
+  pendingInvitation: Invitation | null;
+}) {
+  const [selectedRole, setSelectedRole] = useState<OrgRole>("coord");
+  const [, startTransition] = useTransition();
+
+  function fmtDate(iso: string) {
+    return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+  }
+
+  function invite() {
+    if (!personEmail) return;
+    startTransition(async () => {
+      const res = await inviteMemberAction(orgSlug, orgId, personEmail, selectedRole);
+      if (res.ok) toast.success("Invitation envoyée ✓");
+      else toast.error(res.error ?? "Erreur lors de l'envoi");
+    });
+  }
+
+  function revoke(id: string) {
+    startTransition(async () => {
+      const res = await revokeInvitationAction(orgSlug, id);
+      if (res.ok) toast.success("Invitation révoquée");
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  function resend(id: string) {
+    startTransition(async () => {
+      const res = await resendInvitationAction(orgSlug, orgId, id);
+      if (res.ok) toast.success("Invitation relancée ✓");
+      else toast.error(res.error ?? "Erreur");
+    });
+  }
+
+  // Invitation déjà en attente
+  if (pendingInvitation) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-2.5">
+          <ShieldOff className="mt-0.5 size-4 shrink-0 text-amber-600" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-amber-800">Invitation en attente</p>
+            <p className="text-[11.5px] text-amber-700/80">
+              Envoyée le {fmtDate(pendingInvitation.created_at)} · expire le {fmtDate(pendingInvitation.expires_at)}
+            </p>
+            <div className="mt-2.5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => resend(pendingInvitation.id)}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[12px] font-medium text-amber-700 hover:bg-amber-50"
+              >
+                <RefreshCw className="size-3" /> Relancer
+              </button>
+              <button
+                type="button"
+                onClick={() => revoke(pendingInvitation.id)}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-[12px] font-medium text-red-600 hover:bg-red-50"
+              >
+                <X className="size-3" /> Révoquer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pas d'email → ne peut pas inviter
+  if (!personEmail) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-white p-4">
+        <div className="flex items-center gap-2.5">
+          <ShieldOff className="size-4 shrink-0 text-warmgray" />
+          <div>
+            <p className="text-[13px] font-semibold text-warmgray">Pas d&apos;accès au logiciel</p>
+            <p className="text-[11.5px] text-warmgray/70">
+              Ajoutez d&apos;abord un email à la fiche pour pouvoir inviter cette personne.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin → peut inviter
+  if (canManageAccess) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-white p-4 space-y-3">
+        <div className="flex items-center gap-2.5">
+          <ShieldOff className="size-4 shrink-0 text-warmgray" />
+          <p className="text-[13px] font-semibold text-warmgray">Pas d&apos;accès au logiciel</p>
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-ink">Rôle à attribuer</label>
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value as OrgRole)}
+            className="w-full rounded-xl border border-border bg-[#FAFAF7] px-3 py-2 text-sm outline-none focus:border-coral"
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>{ROLE_META[r].label}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-warmgray/70">{ROLE_META[selectedRole].desc}</p>
+        </div>
+        <button
+          type="button"
+          onClick={invite}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-coral py-2 text-[13px] font-bold text-white transition hover:bg-coral-dark"
+        >
+          <Send className="size-3.5" /> Inviter à créer un compte
+        </button>
+      </div>
+    );
+  }
+
+  // Non-admin → lecture seule
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-white p-4">
+      <div className="flex items-center gap-2.5">
+        <ShieldOff className="size-4 shrink-0 text-warmgray" />
+        <div>
+          <p className="text-[13px] font-semibold text-warmgray">Pas d&apos;accès au logiciel</p>
+          <p className="text-[11.5px] text-warmgray/70">
+            Pour lui donner accès, un administrateur peut l&apos;inviter depuis l&apos;onglet Équipe ou depuis cette fiche.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Définition des 5 permissions ─────────────────────────────────────────────
 
@@ -62,30 +213,27 @@ export function PersonAccessPanel({
   personEmail,
   orgSlug,
   orgId,
+  canManageAccess = false,
+  pendingInvitation = null,
 }: {
   member: TeamMember | null;
   personName: string;
   personEmail: string | null;
   orgSlug: string;
   orgId: string;
+  canManageAccess?: boolean;
+  pendingInvitation?: Invitation | null;
 }) {
   // ── Pas de compte ────────────────────────────────────────────
   if (!member) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-white p-4">
-        <div className="flex items-center gap-2.5">
-          <ShieldOff className="size-4 shrink-0 text-warmgray" />
-          <div>
-            <p className="text-[13px] font-semibold text-warmgray">Pas d&apos;accès au logiciel</p>
-            <p className="text-[11.5px] text-warmgray/70">
-              Cette personne n&apos;a pas de compte actif.
-              {personEmail
-                ? " Pour lui donner accès, invitez-la depuis l'onglet Équipe."
-                : " Ajoutez d'abord un email à sa fiche, puis invitez-la depuis l'onglet Équipe."}
-            </p>
-          </div>
-        </div>
-      </div>
+      <NoAccountPanel
+        personEmail={personEmail}
+        orgSlug={orgSlug}
+        orgId={orgId}
+        canManageAccess={canManageAccess}
+        pendingInvitation={pendingInvitation}
+      />
     );
   }
 

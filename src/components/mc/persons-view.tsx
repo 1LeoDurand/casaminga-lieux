@@ -40,6 +40,7 @@ import {
 } from "@/app/(admin)/dashboard/[org]/personnes/actions";
 import { PersonAccessPanel } from "@/components/mc/person-access-panel";
 import type { Person, TeamMember, Establishment } from "@/lib/types";
+import type { Invitation } from "@/app/(admin)/dashboard/[org]/equipe/actions";
 import { LieuBadge } from "@/components/mc/lieu-badge";
 
 type View = "cards" | "table";
@@ -120,6 +121,8 @@ export function PersonsView({
   teamMembers = [],
   establishments = [],
   selectedLieuId = null,
+  canManageAccess = false,
+  invitations = [],
 }: {
   persons: Person[];
   orgSlug: string;
@@ -127,6 +130,8 @@ export function PersonsView({
   teamMembers?: TeamMember[];
   establishments?: Establishment[];
   selectedLieuId?: string | null;
+  canManageAccess?: boolean;
+  invitations?: Invitation[];
 }) {
   const [view, setView] = useState<View>("cards");
   const [search, setSearch] = useState("");
@@ -560,19 +565,35 @@ export function PersonsView({
                   personEmail={selected.email}
                   orgSlug={orgSlug}
                   orgId={orgId}
+                  canManageAccess={canManageAccess}
+                  pendingInvitation={
+                    selected.email
+                      ? (invitations.find(
+                          (i) => i.email.toLowerCase() === selected.email!.toLowerCase()
+                        ) ?? null)
+                      : null
+                  }
                 />
               </div>
 
-              {/* Section Espace adhérent */}
+              {/* Section Espace adhérent (portail membre) */}
               {selected.email && !selected.anonymized_at && (
-                <PortalLinkButtons
-                  email={selected.email}
-                  name={selected.name}
-                  orgSlug={orgSlug}
-                  establishmentName={
-                    establishments.find((e) => e.id === selected.establishment_id)?.name ?? null
-                  }
-                />
+                <div>
+                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-warmgray">
+                    Espace adhérent (portail membre)
+                  </h3>
+                  <p className="mb-2.5 text-[11.5px] text-warmgray/70">
+                    Lien personnel vers le portail public (adhésion, billets, reçus). Ce n&apos;est <strong>pas</strong> un accès à l&apos;outil de gestion.
+                  </p>
+                  <PortalLinkButtons
+                    email={selected.email}
+                    name={selected.name}
+                    orgSlug={orgSlug}
+                    establishmentName={
+                      establishments.find((e) => e.id === selected.establishment_id)?.name ?? null
+                    }
+                  />
+                </div>
               )}
 
               {/* Section RGPD */}

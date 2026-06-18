@@ -8,6 +8,8 @@ import { getOrganizationBySlug, getPersonsForOrg, getTeamMembers } from "@/lib/d
 import { getMemberGroups } from "@/lib/member-groups";
 import { getActiveEstablishments } from "@/lib/establishments";
 import { getSelectedLieuId } from "@/lib/establishment-scope";
+import { getCallerOrgRole } from "@/lib/admin/guard";
+import { listInvitationsAction } from "@/app/(admin)/dashboard/[org]/equipe/actions";
 
 export default async function PersonnesPage({
   params,
@@ -18,13 +20,16 @@ export default async function PersonnesPage({
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const [persons, groups, teamMembers, establishments] = await Promise.all([
+  const [persons, groups, teamMembers, establishments, callerRole, invitations] = await Promise.all([
     getPersonsForOrg(organization.id),
     getMemberGroups(organization.id),
     getTeamMembers(organization.id),
     getActiveEstablishments(organization.id),
+    getCallerOrgRole(organization.id),
+    listInvitationsAction(organization.id),
   ]);
   const selectedLieuId = await getSelectedLieuId(organization.slug, establishments);
+  const canManageAccess = callerRole === "admin" || callerRole === "super";
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,6 +67,8 @@ export default async function PersonnesPage({
         teamMembers={teamMembers}
         establishments={establishments}
         selectedLieuId={selectedLieuId}
+        canManageAccess={canManageAccess}
+        invitations={invitations}
       />
     </div>
   );

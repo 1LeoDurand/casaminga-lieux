@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient as createServiceClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/env";
+import type { OrgRole } from "@/lib/roles";
 
 /**
  * Liste des emails super-admin (propriétaires de la plateforme).
@@ -46,6 +47,37 @@ export async function requireSuperAdmin(): Promise<{ email: string; demo: boolea
   }
 
   return { email: email as string, demo: false };
+}
+
+/**
+ * Retourne le rôle de l'utilisateur courant dans une organisation donnée.
+ * "super" = super-admin plateforme, null = non connecté ou pas membre.
+ */
+export async function getCallerOrgRole(orgId: string): Promise<OrgRole | "super" | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  const email = data.user?.email ?? null;
+  if (!email) return null;
+  if (isSuperAdminEmail(email)) return "super";
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", orgId)
+    .eq("user_id", data.user!.id)
+    .eq("status", "actif")
+    .maybeSingle();
+  return (member?.role as OrgRole) ?? null;
+}
+
+/**
+ * Vérifie que l'appelant est admin de l'org ou super-admin plateforme.
+ * À utiliser dans les server actions sensibles (invitations, changement de rôle…).
+ */
+export async function assertOrgAdmin(orgId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const role = await getCallerOrgRole(orgId);
+  if (role === "admin" || role === "super") return { ok: true };
+  return { ok: false, error: "Action réservée aux administrateurs de l'organisation." };
 }
 
 /**
