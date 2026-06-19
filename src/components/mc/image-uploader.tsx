@@ -4,9 +4,10 @@ import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Upload, X, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage } from "@/lib/compress-image";
 
 const BUCKET = "public-assets";
-const MAX_SIZE = 5 * 1024 * 1024; // 5 Mo
+const MAX_SIZE = 15 * 1024 * 1024; // 15 Mo (l'original ; compressé avant envoi)
 
 /**
  * Upload d'une image vers Supabase Storage (bucket public-assets/{orgId}/...).
@@ -34,17 +35,19 @@ export function ImageUploader({
       return;
     }
     if (file.size > MAX_SIZE) {
-      toast.error("Image trop lourde (5 Mo maximum). Compressez-la avant.");
+      toast.error("Image trop lourde (15 Mo maximum).");
       return;
     }
 
     setUploading(true);
     try {
       const supabase = createClient();
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      // Niveau 1 : compression WebP ~2000px avant envoi (allège fortement les sites).
+      const optimized = await compressImage(file);
+      const ext = optimized.name.split(".").pop()?.toLowerCase() || "webp";
       const path = `${orgId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+      const { error } = await supabase.storage.from(BUCKET).upload(path, optimized, {
         cacheControl: "3600",
         upsert: false,
       });
@@ -94,7 +97,7 @@ export function ImageUploader({
           <span className="text-[13px] font-semibold text-ink">
             {uploading ? "Envoi…" : "Ajouter une image"}
           </span>
-          <span className="text-[11px] text-warmgray">JPG, PNG ou WebP · 5 Mo max</span>
+          <span className="text-[11px] text-warmgray">JPG, PNG ou WebP · optimisée automatiquement</span>
         </button>
       )}
       <input
