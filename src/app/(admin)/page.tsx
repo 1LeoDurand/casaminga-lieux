@@ -21,7 +21,7 @@ const MENU_GROUPS = [
   {
     title: "Essayer",
     items: [
-      { num: "06", l: "Dashboard démo", href: "/dashboard/bernard-kohn" },
+      { num: "06", l: "Dashboard démo", href: "https://admin.casaminga.com/dashboard/test/" },
       { num: "07", l: "Connexion", href: "/login" },
       { num: "08", l: "S'inscrire", href: "/signup" },
     ],
@@ -318,7 +318,6 @@ export default function TestAccueilPage() {
     document.querySelectorAll<HTMLAnchorElement>(".cm-menu-item").forEach(b => {
       b.addEventListener("click", closeMenu);
     });
-    if (demo) demo.addEventListener("click", (e) => { e.preventDefault(); goTo(7); });
 
     return () => {
       scroller.removeEventListener("wheel", handleWheel);
@@ -364,9 +363,9 @@ export default function TestAccueilPage() {
         Connexion
       </a>
 
-      <a ref={demoBtnRef} id="cm-demo-btn" href="#" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>
+      <a ref={demoBtnRef} id="cm-demo-btn" href="https://admin.casaminga.com/dashboard/test/" target="_blank" rel="noopener noreferrer" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>
         <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: "rgba(44,45,45,.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>✦</span>
-        Demander une démo
+        Voir la démo
       </a>
 
       <div style={{ position: "fixed", left: 0, bottom: 0, width: "100vw", height: "3px", background: "rgba(0,0,0,.10)", zIndex: 50 }}>
@@ -659,8 +658,8 @@ export default function TestAccueilPage() {
               <span style={{ fontStyle: "italic" }}>Parlons-en.</span>
             </h2>
             <div className="rv" style={{ "--d": ".28s", marginTop: "36px", display: "flex", alignItems: "center", gap: "28px", flexWrap: "wrap" } as CS}>
-              <a href="#" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
-                Demander une démo →
+              <a href="https://admin.casaminga.com/dashboard/test/" target="_blank" rel="noopener noreferrer" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
+                Voir la démo →
                 {DRAW_SVG}
               </a>
               <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", color: "#7a3d28" }}>Démo guidée · sans pression commerciale · aucune CB</span>
