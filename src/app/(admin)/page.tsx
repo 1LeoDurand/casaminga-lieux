@@ -585,10 +585,10 @@ export default function TestAccueilPage() {
                 </div>
               ))}
             </div>
-            <a href="#" className="cm-draw rv" style={{ "--d": ".4s", position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "16px 34px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "14px", letterSpacing: ".04em", color: "#2C2D2D" } as CS}>
+            <Link href="/approche" className="cm-draw rv" style={{ "--d": ".4s", position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "16px 34px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "14px", letterSpacing: ".04em", color: "#2C2D2D" } as CS}>
               Notre impact
               {DRAW_SVG}
-            </a>
+            </Link>
           </div>
           <div style={{ flex: "0 0 auto", position: "relative", width: "clamp(260px,34vw,460px)", height: "clamp(260px,34vw,460px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: "1px dashed rgba(181,87,47,.45)" }} />
@@ -612,10 +612,10 @@ export default function TestAccueilPage() {
             </blockquote>
             <div className="rv" style={{ "--d": ".3s", marginTop: "34px", display: "flex", alignItems: "center", gap: "22px" } as CS}>
               <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".06em", color: "#6b4a35" }}>— Léo · coordination, tiers-lieu Bernard Kohn</span>
-              <a href="#" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "14px 28px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", color: "#2C2D2D" }}>
+              <Link href="/histoire" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "14px 28px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", color: "#2C2D2D" }}>
                 Notre histoire
                 {DRAW_SVG}
-              </a>
+              </Link>
             </div>
           </div>
           <div className="amb" style={{ flex: "0 0 auto", animation: "cmFloatB 8s ease-in-out infinite", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
