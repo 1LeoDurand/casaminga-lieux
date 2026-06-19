@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { HelpCircle, X, BookOpen, Calendar, Mail } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * Bouton d'aide flottant.
@@ -11,10 +12,10 @@ import { HelpCircle, X, BookOpen, Calendar, Mail } from "lucide-react";
 export function HelpWidget() {
   const [open, setOpen] = useState(false);
 
-  const links = [
+  const links: { icon: ReactNode; label: string; desc: string; href: string; event?: string }[] = [
     { icon: <BookOpen className="size-4" />, label: "Centre d'aide", desc: "Guides et tutoriels", href: "/aide" },
-    { icon: <Calendar className="size-4" />, label: "Réserver une démo", desc: "30 min avec un expert", href: "https://casaminga.com/demo" },
-    { icon: <Mail className="size-4" />, label: "Nous contacter", desc: "support@casaminga.com", href: "mailto:support@casaminga.com" },
+    { icon: <Calendar className="size-4" />, label: "Réserver une démo", desc: "30 min avec un expert", href: "https://casaminga.com/demo", event: "demo_request" },
+    { icon: <Mail className="size-4" />, label: "Nous contacter", desc: "support@casaminga.com", href: "mailto:support@casaminga.com", event: "contact_click" },
   ];
 
   return (
@@ -36,6 +37,7 @@ export function HelpWidget() {
                 href={l.href}
                 target={l.href.startsWith("http") ? "_blank" : undefined}
                 rel="noopener noreferrer"
+                onClick={() => l.event && trackEvent(l.event, { location: "help_widget" })}
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-cream"
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-peach-pale text-coral-dark">

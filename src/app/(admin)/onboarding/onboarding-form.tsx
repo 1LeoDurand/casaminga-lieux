@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ORG_ARCHETYPES } from "@/lib/modules";
+import { trackEvent } from "@/lib/analytics";
 import { createOrgAndMember } from "../signup/actions";
 
 function slugify(s: string) {
@@ -56,6 +57,8 @@ export function OnboardingForm({
       return;
     }
     setDone(true);
+    // Conversion : espace finalisé depuis un compte existant.
+    trackEvent("sign_up", { method: "onboarding", structure: lieuStructure, org_type: selectedOrgType });
     setTimeout(() => router.push(`/dashboard/${orgSlug}`), 1000);
   }
 

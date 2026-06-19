@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { ORG_ARCHETYPES } from "@/lib/modules";
+import { trackEvent } from "@/lib/analytics";
 import { createOrgAndMember } from "./actions";
 
 function slugify(s: string) {
@@ -97,6 +98,12 @@ export default function SignupPage() {
       return;
     }
     setDone(true);
+    // Conversion : nouvel espace lieu créé.
+    trackEvent("sign_up", {
+      method: recoverUser ? "recover" : "email",
+      structure: lieuStructure,
+      org_type: selectedOrgType,
+    });
     // Session active (auto-confirmation ou compte déjà connecté) → on entre direct.
     if (hasSession) {
       setTimeout(() => router.push(`/dashboard/${orgSlug}`), 1200);
