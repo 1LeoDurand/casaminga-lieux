@@ -122,6 +122,78 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
     setPayMethod("");
   }
 
+  // Morceaux partagés entre la carte mobile et la ligne de table desktop
+  // (logique calculée une seule fois — seul le markup diffère).
+  function rowParts(inv: Invoice) {
+    const sm = STATUS_META[inv.status as InvoiceStatus];
+    const isBusy = busyId === inv.id && pending;
+    const isPaid = inv.status === "payee";
+    const isUnpaid = Boolean(inv.number) && !isPaid && inv.status !== "annulee";
+
+    const actionButtons = (
+      <div className="flex items-center justify-end gap-1.5">
+        <Link href={`/dashboard/${orgSlug}/factures/${inv.id}`}
+          className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-ink hover:border-coral/40">
+          <Eye className="size-3.5" /> Voir
+        </Link>
+        {inv.validation_status === "a_valider" && (
+          <>
+            <button disabled={isBusy} onClick={() => doValidate(inv.id, "valide")}
+              title="Valider (direction)"
+              className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+              <ShieldCheck className="size-3.5" />
+            </button>
+            <button disabled={isBusy} onClick={() => doValidate(inv.id, "refuse")}
+              title="Refuser (direction)"
+              className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
+              <ShieldX className="size-3.5" />
+            </button>
+          </>
+        )}
+        {isOverdue(inv) && (
+          <button disabled={isBusy} onClick={() => doRelance(inv.id)}
+            title="Relancer par email"
+            className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
+            <BellRing className="size-3.5" />
+          </button>
+        )}
+        {inv.status === "emise" && (
+          <button disabled={isBusy} onClick={() => changeStatus(inv.id, "envoyee", "Marquée envoyée")}
+            title="Marquer envoyée"
+            className="inline-flex items-center rounded-lg border border-border p-1.5 text-indigo-600 hover:border-indigo-300 disabled:opacity-40">
+            <Send className="size-3.5" />
+          </button>
+        )}
+        {inv.number && !isPaid && inv.status !== "annulee" && (
+          <button disabled={isBusy} onClick={() => { setPayModal({ id: inv.id, name: inv.client_name }); setPayMethod(""); }}
+            title="Marquer payée"
+            className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+            <Check className="size-3.5" />
+          </button>
+        )}
+        {inv.number && inv.status !== "annulee" && !isPaid && (
+          <button disabled={isBusy} onClick={() => changeStatus(inv.id, "annulee", "Facture annulée")}
+            title="Annuler"
+            className="inline-flex items-center rounded-lg border border-border p-1.5 text-warmgray hover:border-red-300 hover:text-red-600 disabled:opacity-40">
+            <Ban className="size-3.5" />
+          </button>
+        )}
+      </div>
+    );
+
+    const statusBadges = (
+      <div className="flex flex-wrap gap-1">
+        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span>
+        {inv.validation_status === "a_valider" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⏳ À valider</span>}
+        {inv.validation_status === "valide" && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Validée</span>}
+        {inv.validation_status === "refuse" && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">✗ Refusée</span>}
+        {isOverdue(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
+      </div>
+    );
+
+    return { actionButtons, statusBadges, isPaid, isUnpaid };
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* KPIs */}
@@ -207,125 +279,85 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-white">
-          {/* En-tête desktop */}
-          <div className="hidden grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)_220px] items-center gap-4 border-b border-border bg-cream px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-warmgray md:grid">
-            <span>Numéro</span><span>Client</span><span>Date</span><span>Montant TTC</span><span>Statut</span><span>Règlement</span><span></span>
-          </div>
-          <ul className="divide-y divide-border">
+          {/* ══ MOBILE : cartes avec étiquettes ══ */}
+          <ul className="divide-y divide-border md:hidden">
             {filtered.map((inv) => {
-              const sm = STATUS_META[inv.status as InvoiceStatus];
-              const isBusy = busyId === inv.id && pending;
-              const isPaid = inv.status === "payee";
-              const isUnpaid = inv.number && !isPaid && inv.status !== "annulee";
-
-              const actionButtons = (
-                <div className="flex items-center gap-1.5">
-                  <Link href={`/dashboard/${orgSlug}/factures/${inv.id}`}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-semibold text-ink hover:border-coral/40">
-                    <Eye className="size-3.5" /> Voir
-                  </Link>
-                  {inv.validation_status === "a_valider" && (
-                    <>
-                      <button disabled={isBusy} onClick={() => doValidate(inv.id, "valide")}
-                        title="Valider (direction)"
-                        className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
-                        <ShieldCheck className="size-3.5" />
-                      </button>
-                      <button disabled={isBusy} onClick={() => doValidate(inv.id, "refuse")}
-                        title="Refuser (direction)"
-                        className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
-                        <ShieldX className="size-3.5" />
-                      </button>
-                    </>
-                  )}
-                  {isOverdue(inv) && (
-                    <button disabled={isBusy} onClick={() => doRelance(inv.id)}
-                      title="Relancer par email"
-                      className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
-                      <BellRing className="size-3.5" />
-                    </button>
-                  )}
-                  {inv.status === "emise" && (
-                    <button disabled={isBusy} onClick={() => changeStatus(inv.id, "envoyee", "Marquée envoyée")}
-                      title="Marquer envoyée"
-                      className="inline-flex items-center rounded-lg border border-border p-1.5 text-indigo-600 hover:border-indigo-300 disabled:opacity-40">
-                      <Send className="size-3.5" />
-                    </button>
-                  )}
-                  {inv.number && !isPaid && inv.status !== "annulee" && (
-                    <button disabled={isBusy} onClick={() => { setPayModal({ id: inv.id, name: inv.client_name }); setPayMethod(""); }}
-                      title="Marquer payée"
-                      className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
-                      <Check className="size-3.5" />
-                    </button>
-                  )}
-                  {inv.number && inv.status !== "annulee" && !isPaid && (
-                    <button disabled={isBusy} onClick={() => changeStatus(inv.id, "annulee", "Facture annulée")}
-                      title="Annuler"
-                      className="inline-flex items-center rounded-lg border border-border p-1.5 text-warmgray hover:border-red-300 hover:text-red-600 disabled:opacity-40">
-                      <Ban className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-
-              const statusBadges = (
-                <div className="flex flex-wrap gap-1">
-                  <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span>
-                  {inv.validation_status === "a_valider" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⏳ À valider</span>}
-                  {inv.validation_status === "valide" && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Validée</span>}
-                  {inv.validation_status === "refuse" && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">✗ Refusée</span>}
-                  {isOverdue(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
-                </div>
-              );
-
+              const { actionButtons, statusBadges, isPaid, isUnpaid } = rowParts(inv);
               return (
-                <li key={inv.id}>
-                  {/* Vue mobile : carte avec étiquettes */}
-                  <div className="flex flex-col gap-3 px-5 py-4 md:hidden">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
-                        <div className="mt-0.5 text-[13px] text-warmgray">{inv.client_name}</div>
-                        {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray/70">{inv.pole}</div>}
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-[14px] font-bold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
-                          {formatEuros(inv.total_ttc)}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      {statusBadges}
-                      {actionButtons}
-                    </div>
-                  </div>
-
-                  {/* Vue desktop : grille alignée */}
-                  <div className="hidden grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)_220px] items-center gap-4 px-5 py-3.5 md:grid">
+                <li key={inv.id} className="flex flex-col gap-3 px-5 py-4">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
-                      {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray">{inv.pole}</div>}
-                      <LieuBadge establishmentId={inv.establishment_id} establishments={establishments} className="mt-0.5" />
+                      <div className="mt-0.5 text-[13px] text-warmgray">{inv.client_name}</div>
+                      {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray/70">{inv.pole}</div>}
                     </div>
-                    <span className="truncate text-[13px] text-ink">{inv.client_name}</span>
-                    <span className="text-[12px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</span>
-                    <div>
-                      <div className={`text-[13px] font-semibold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
+                    <div className="text-right">
+                      <div className={`text-[14px] font-bold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
                         {formatEuros(inv.total_ttc)}
                       </div>
+                      <div className="mt-0.5 text-[11px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</div>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
                     {statusBadges}
-                    <span className="text-[12px] text-warmgray">
-                      {inv.payment_method ? PM_LABEL[inv.payment_method] ?? inv.payment_method : "—"}
-                    </span>
                     {actionButtons}
                   </div>
                 </li>
               );
             })}
           </ul>
+
+          {/* ══ DESKTOP : table à colonnes fixes (alignement garanti par <colgroup>) ══ */}
+          <table className="hidden w-full table-fixed md:table">
+            <colgroup>
+              <col className="w-[14%]" />{/* Numéro */}
+              <col className="w-[18%]" />{/* Client */}
+              <col className="w-[10%]" />{/* Date */}
+              <col className="w-[12%]" />{/* Montant TTC */}
+              <col className="w-[14%]" />{/* Statut */}
+              <col className="w-[12%]" />{/* Règlement */}
+              <col className="w-[20%]" />{/* Actions */}
+            </colgroup>
+            <thead>
+              <tr className="border-b border-border bg-cream text-left text-[11px] font-bold uppercase tracking-wide text-warmgray">
+                <th className="px-5 py-3 font-bold">Numéro</th>
+                <th className="px-5 py-3 font-bold">Client</th>
+                <th className="px-5 py-3 font-bold">Date</th>
+                <th className="px-5 py-3 font-bold">Montant TTC</th>
+                <th className="px-5 py-3 font-bold">Statut</th>
+                <th className="px-5 py-3 font-bold">Règlement</th>
+                <th className="px-5 py-3 font-bold"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((inv) => {
+                const { actionButtons, statusBadges, isPaid, isUnpaid } = rowParts(inv);
+                return (
+                  <tr key={inv.id} className="align-middle">
+                    <td className="px-5 py-3.5">
+                      <div className="truncate font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
+                      {inv.pole && <div className="mt-0.5 truncate text-[11px] text-warmgray">{inv.pole}</div>}
+                      <LieuBadge establishmentId={inv.establishment_id} establishments={establishments} className="mt-0.5" />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="block truncate text-[13px] text-ink">{inv.client_name}</span>
+                    </td>
+                    <td className="px-5 py-3.5 text-[12px] text-warmgray">{fmtDate(inv.issue_date ?? inv.created_at)}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`text-[13px] font-semibold ${isPaid ? "text-emerald-700" : isUnpaid ? "text-red-600" : "text-ink"}`}>
+                        {formatEuros(inv.total_ttc)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">{statusBadges}</td>
+                    <td className="px-5 py-3.5 text-[12px] text-warmgray">
+                      <span className="block truncate">{inv.payment_method ? PM_LABEL[inv.payment_method] ?? inv.payment_method : "—"}</span>
+                    </td>
+                    <td className="px-5 py-3.5">{actionButtons}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
