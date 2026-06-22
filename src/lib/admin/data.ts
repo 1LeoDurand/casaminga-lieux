@@ -432,6 +432,108 @@ export async function getModerationPendingCount(): Promise<number> {
   return (lieux.count ?? 0) + (events.count ?? 0);
 }
 
+// ── Connexions ────────────────────────────────────────────────────────────────
+
+export interface LoginSummaryRow {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  org_name: string | null;
+  org_slug: string | null;
+  last_login: string;
+  logins_30d: number;
+}
+
+export interface LoginEventRow {
+  id: string;
+  user_id: string;
+  email: string;
+  created_at: string;
+}
+
+/** Résumé par utilisateur : dernière connexion + nb connexions 30 j. */
+export async function getUserLoginSummary(): Promise<LoginSummaryRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+
+  const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Tous les événements de connexion
+  const { data: events } = await admin
+    .from("login_events")
+    .select("user_id, email, created_at")
+    .order("created_at", { ascending: false });
+
+  if (!events || events.length === 0) return [];
+
+  // Agréger par user_id
+  const userMap = new Map<string, { email: string; last_login: string; logins_30d: number }>();
+  for (const ev of events) {
+    const existing = userMap.get(ev.user_id);
+    if (!existing) {
+      userMap.set(ev.user_id, {
+        email: ev.email ?? "",
+        last_login: ev.created_at,
+        logins_30d: ev.created_at >= since30d ? 1 : 0,
+      });
+    } else {
+      if (ev.created_at > existing.last_login) existing.last_login = ev.created_at;
+      if (ev.created_at >= since30d) existing.logins_30d += 1;
+    }
+  }
+
+  const userIds = [...userMap.keys()];
+
+  // Profils et orgs
+  const [profilesRes, membersRes] = await Promise.all([
+    admin.from("profiles").select("id, full_name").in("id", userIds),
+    admin
+      .from("organization_members")
+      .select("user_id, organizations(name, slug)")
+      .in("user_id", userIds)
+      .eq("status", "actif"),
+  ]);
+
+  const profileMap = new Map(
+    (profilesRes.data ?? []).map((p) => [p.id, p.full_name as string | null])
+  );
+  const orgMap = new Map<string, { name: string; slug: string }>();
+  for (const m of membersRes.data ?? []) {
+    if (!orgMap.has(m.user_id)) {
+      const org = m.organizations as unknown as { name: string; slug: string } | null;
+      if (org) orgMap.set(m.user_id, org);
+    }
+  }
+
+  return [...userMap.entries()]
+    .map(([user_id, agg]) => {
+      const org = orgMap.get(user_id);
+      return {
+        user_id,
+        email: agg.email,
+        full_name: profileMap.get(user_id) ?? null,
+        org_name: org?.name ?? null,
+        org_slug: org?.slug ?? null,
+        last_login: agg.last_login,
+        logins_30d: agg.logins_30d,
+      };
+    })
+    .sort((a, b) => b.last_login.localeCompare(a.last_login));
+}
+
+/** Historique complet d'un utilisateur (pour le drill-down). */
+export async function getUserLoginHistory(userId: string, limit = 100): Promise<LoginEventRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+  const { data } = await admin
+    .from("login_events")
+    .select("id, user_id, email, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data as LoginEventRow[]) ?? [];
+}
+
 /** Tous les tickets feedback, plus récents en premier. */
 export async function getAllFeedback(): Promise<FeedbackRow[]> {
   const admin = createAdminClient();
