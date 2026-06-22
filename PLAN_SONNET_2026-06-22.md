@@ -172,6 +172,9 @@ côté requête `fetchLieuBySlug` ET côté admin `/site/[slug]`).
 ---
 
 ## LOT C — Gros chantier : Responsive de l'espace admin  — nouveau ticket, prio haute
+> 📄 **Plan détaillé écran par écran : [PLAN_RESPONSIVE_ADMIN_2026-06-22.md](PLAN_RESPONSIVE_ADMIN_2026-06-22.md)**
+> (phases formulaires/modales → tables en cartes ; patron = `invoices-view.tsx` commit `d4056a8`).
+
 **Besoin Léo (22/06)** : rendre tout `admin.casaminga.com/dashboard` confortable sur
 mobile/tablette (aujourd'hui pensé desktop).
 **État** : la coquille a DÉJÀ des fondations responsive (sidebar off-canvas + tab bar
