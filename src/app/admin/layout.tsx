@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireSuperAdmin } from "@/lib/admin/guard";
 import { getPlatformStats, getModerationPendingCount } from "@/lib/admin/data";
-import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminShell } from "@/components/admin/admin-shell";
 
 export const metadata: Metadata = {
   title: "Administration — Casa Minga Lieux",
@@ -13,9 +13,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const [stats, moderationPending] = await Promise.all([getPlatformStats(), getModerationPendingCount()]);
 
   return (
-    <div className="grid h-screen grid-cols-[232px_1fr] overflow-hidden bg-cream">
-      <AdminSidebar email={email} feedbackOpen={stats.feedbackOpen} moderationPending={moderationPending} />
-      <main className="overflow-y-auto p-8">{children}</main>
-    </div>
+    <AdminShell email={email} feedbackOpen={stats.feedbackOpen} moderationPending={moderationPending}>
+      {children}
+    </AdminShell>
   );
 }
