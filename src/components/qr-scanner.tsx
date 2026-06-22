@@ -11,6 +11,7 @@ const STATUS_UI: Record<string, { bg: string; emoji: string; label: string }> = 
   invalid:    { bg: "#dc2626", emoji: "❌", label: "Billet inconnu" },
   wrong_event:{ bg: "#dc2626", emoji: "❌", label: "Billet d'un autre événement" },
   cancelled:  { bg: "#dc2626", emoji: "❌", label: "Inscription annulée" },
+  unpaid:     { bg: "#dc2626", emoji: "💳", label: "Billet non réglé" },
   error:      { bg: "#dc2626", emoji: "⚠️", label: "Erreur — réessayez" },
 };
 

@@ -38,6 +38,9 @@ export async function createEventRegistration(
     .map((p) => `${p.prenom} ${p.nom}`.trim())
     .filter(Boolean);
 
+  // Détermine le mode de paiement pour gater la livraison des QR
+  const willPayOnline = !!(payload.online && payload.montantTotal > 0 && isStripeConfigured());
+
   const res = await registerForEvent({
     eventId: payload.eventId,
     fullName: `${payload.prenom} ${payload.nom}`.trim(),
@@ -46,6 +49,7 @@ export async function createEventRegistration(
     participants,
     source: "public",
     amountTtc: payload.montantTotal,
+    paymentMode: willPayOnline ? "online" : payload.montantTotal > 0 ? "onsite" : "free",
   });
 
   if (!res.ok) return { ok: false, error: res.error };

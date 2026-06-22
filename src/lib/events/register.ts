@@ -23,6 +23,12 @@ export interface RegisterInput {
   notes?: string | null;
   source: "public" | "manuel";
   amountTtc?: number;
+  /**
+   * free   = gratuit → billets valides d'emblée, QR immédiat.
+   * online = payant en ligne → billets créés 'pending', email SANS QR.
+   * onsite = payant au guichet → billets créés 'paid', QR immédiat.
+   */
+  paymentMode?: "free" | "online" | "onsite";
 }
 
 export type RegisterResult =
@@ -63,15 +69,44 @@ async function buildTicketsBlock(tickets: TicketRow[]): Promise<string> {
     En cas d'empêchement, ouvrez un billet pour annuler la place.</p>`;
 }
 
-async function sendTicketsEmail(opts: {
+/**
+ * Envoie l'email de confirmation avec (ou sans) les QR billets.
+ * Exporté pour être réutilisé depuis le webhook Stripe (passage pending→paid).
+ */
+export async function issueTicketsEmail(opts: {
   to: string; fullName: string; eventTitle: string; startAt: string;
   organizationId: string; tickets: TicketRow[]; waiting: boolean; seats: number;
   subjectPrefix?: string;
+  /** Si true : email de réservation sans QR (paiement en attente). */
+  pendingPayment?: boolean;
 }) {
   const { sendMail } = await import("@/lib/mail");
   const eventDate = new Date(opts.startAt).toLocaleDateString("fr-FR", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
+
+  if (opts.pendingPayment) {
+    await sendMail({
+      to: opts.to,
+      subject: `Réservation en attente de paiement — ${opts.eventTitle}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#2c2c2c">
+          <h2>Réservation enregistrée — finalisez votre paiement 💳</h2>
+          <p>Bonjour ${opts.fullName},</p>
+          <p>Votre réservation pour <strong>${opts.eventTitle}</strong> est bien enregistrée
+          (${opts.seats} ${opts.seats > 1 ? "places" : "place"}).</p>
+          <p><strong>📅 ${eventDate}</strong></p>
+          <p style="margin-top:16px;padding:12px 16px;background:#fff8f0;border:1px solid #f5c180;border-radius:10px;font-size:14px">
+            ⏳ Vos billets QR vous seront envoyés dès confirmation de votre paiement.
+            Si vous avez été redirigé vers Stripe, complétez le paiement pour recevoir vos billets.
+          </p>
+        </div>`,
+      category: "billetterie",
+      organizationId: opts.organizationId,
+    });
+    return;
+  }
+
   const ticketsBlock = !opts.waiting && opts.tickets.length
     ? await buildTicketsBlock(opts.tickets)
     : "";
@@ -94,6 +129,9 @@ async function sendTicketsEmail(opts: {
     organizationId: opts.organizationId,
   });
 }
+
+/** @internal Alias pour les appels internes au fichier. */
+const sendTicketsEmail = issueTicketsEmail;
 
 /** Inscription à un événement — capacité, liste d'attente, billets, email. */
 export async function registerForEvent(input: RegisterInput): Promise<RegisterResult> {
@@ -153,6 +191,10 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
     .single();
   if (error) return { ok: false, error: error.message };
 
+  const mode = input.paymentMode ?? "free";
+  // 'online' = paiement Stripe en cours → billets pending (place tenue, QR pas encore livré)
+  const ticketPaymentStatus = mode === "online" ? "pending" : mode === "onsite" ? "paid" : "free";
+
   let tickets: TicketRow[] = [];
   if (status === "inscrit") {
     const { data: created } = await admin
@@ -162,6 +204,7 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
         event_id: input.eventId,
         registration_id: reg.id,
         holder_name: name,
+        payment_status: ticketPaymentStatus,
       })))
       .select("holder_name, ticket_token");
     tickets = (created ?? []) as TicketRow[];
@@ -171,6 +214,7 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
     await sendTicketsEmail({
       to: email, fullName, eventTitle: event.title, startAt: event.start_at,
       organizationId: event.organization_id, tickets, waiting: status === "liste_attente", seats,
+      pendingPayment: mode === "online" && status === "inscrit",
     });
   } catch (e) {
     console.error("registerForEvent: email non envoyé", e);

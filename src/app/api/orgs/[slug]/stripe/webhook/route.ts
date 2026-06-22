@@ -5,6 +5,7 @@ import { constructWebhookEvent } from "@/lib/stripe";
 import { generatePaymentReceiptPdf } from "@/lib/payment-receipt-pdf";
 import { sendMail } from "@/lib/mail";
 import { tplPaiementConfirme } from "@/lib/mail-templates";
+import { issueTicketsEmail } from "@/lib/events/register";
 
 /**
  * Webhook Stripe Connect — POST /api/orgs/[slug]/stripe/webhook
@@ -155,6 +156,14 @@ export async function POST(request: Request) {
       })
       .eq("id", eventRegistrationId);
 
+    // Basculer les billets pending→paid (idempotent : ne touche que les pending)
+    const { data: flippedTickets } = await admin
+      .from("event_tickets")
+      .update({ payment_status: "paid" })
+      .eq("registration_id", eventRegistrationId)
+      .eq("payment_status", "pending")
+      .select("holder_name, ticket_token");
+
     // Reçu PDF + email de confirmation
     const { data: reg } = await admin
       .from("event_registrations")
@@ -163,7 +172,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (reg?.email) {
       const { data: org } = await admin.from("organizations").select("name").eq("id", reg.organization_id).maybeSingle();
-      const { data: evt } = await admin.from("evenements").select("title").eq("id", reg.event_id).maybeSingle();
+      const { data: evt } = await admin.from("evenements").select("title, start_at").eq("id", reg.event_id).maybeSingle();
       const description = evt?.title ? `Billet — ${evt.title}` : "Billet événement";
       const receiptData = {
         orgName: org?.name ?? "Casa Minga",
@@ -194,6 +203,25 @@ export async function POST(request: Request) {
         });
       } catch (e) {
         console.error("[webhook] Erreur génération reçu événement:", e);
+      }
+
+      // Envoyer les QR uniquement si des billets viennent de passer pending→paid
+      if (flippedTickets && flippedTickets.length > 0 && evt?.start_at) {
+        try {
+          await issueTicketsEmail({
+            to: reg.email,
+            fullName: reg.full_name,
+            eventTitle: evt.title,
+            startAt: evt.start_at,
+            organizationId: reg.organization_id,
+            tickets: flippedTickets as { holder_name: string; ticket_token: string }[],
+            waiting: false,
+            seats: flippedTickets.length,
+            subjectPrefix: "Paiement confirmé — vos billets",
+          });
+        } catch (e) {
+          console.error("[webhook] Erreur envoi QR billets:", e);
+        }
       }
     }
 

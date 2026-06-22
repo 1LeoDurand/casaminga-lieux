@@ -18,7 +18,7 @@ export interface ScanLink {
   created_at: string;
 }
 
-export type CheckInStatus = "ok" | "already" | "invalid" | "wrong_event" | "cancelled" | "error";
+export type CheckInStatus = "ok" | "already" | "invalid" | "wrong_event" | "cancelled" | "unpaid" | "error";
 
 export interface CheckInResult {
   status: CheckInStatus;
@@ -107,13 +107,16 @@ export async function checkInByTicket(linkToken: string, ticketToken: string): P
   const clean = ticketToken.trim().split("/").filter(Boolean).pop() ?? ticketToken.trim();
   const { data: ticket } = await admin
     .from("event_tickets")
-    .select("id, event_id, holder_name, checked_in_at")
+    .select("id, event_id, holder_name, checked_in_at, payment_status")
     .eq("ticket_token", clean)
     .maybeSingle();
   if (!ticket) return { status: "invalid" };
   if (ticket.event_id !== link.event_id) return { status: "wrong_event", fullName: ticket.holder_name };
   if (ticket.checked_in_at) {
     return { status: "already", fullName: ticket.holder_name, checkedAt: ticket.checked_in_at };
+  }
+  if (ticket.payment_status === "pending") {
+    return { status: "unpaid", fullName: ticket.holder_name };
   }
 
   // 3. Marquer la présence
