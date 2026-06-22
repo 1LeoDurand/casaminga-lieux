@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,7 +25,7 @@ export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0 }:
     <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto bg-[#1a1a1a] text-white/90">
       {/* En-tête */}
       <div className="flex shrink-0 items-center gap-2.5 border-b border-white/10 px-5 pb-4 pt-5">
-        <img src="/logo.png" alt="Casa Minga" className="size-[34px] shrink-0 rounded-lg bg-white object-contain p-0.5" />
+        <img src="/logo-icon.webp" alt="Casa Minga" className="size-[34px] shrink-0 rounded-lg bg-white object-contain p-0.5" />
         <div className="min-w-0">
           <div className="truncate font-heading text-[15px] font-extrabold text-white">Administration</div>
           <div className="truncate text-[10px] text-white/40">Plateforme Casa Minga</div>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export default function HistoirePage() {
       <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,251,240,0.94)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,180,162,0.28)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", gap: 20 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 16, color: "#2C2C2C", textDecoration: "none" }}>
-            <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 34, height: 34, objectFit: "contain" }} />
+            <img src="/logo-icon.webp" alt="Casa Minga Lieux" style={{ width: 34, height: 34, objectFit: "contain" }} />
             Casa Minga Lieux
           </Link>
           <span style={{ color: "#E5DDD6", fontSize: 18 }}>·</span>
@@ -316,7 +316,7 @@ export default function HistoirePage() {
       <footer style={{ background: "#1A1A1A", color: "rgba(255,255,255,0.7)", padding: "40px 0 24px", fontSize: 13 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 14, color: "#fff", textDecoration: "none" }}>
-            <img src="/logo.png" alt="" style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+            <img src="/logo-icon.webp" alt="" style={{ width: 28, height: 28, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
             Casa Minga Lieux
           </Link>
           <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)" }}>© {new Date().getFullYear()} — Pensé depuis le terrain · Sobriété numérique</span>

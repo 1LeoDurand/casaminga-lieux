@@ -657,12 +657,17 @@ export default function TestAccueilPage() {
               Vous portez un lieu collectif&nbsp;?{" "}
               <span style={{ fontStyle: "italic" }}>Parlons-en.</span>
             </h2>
-            <div className="rv" style={{ "--d": ".28s", marginTop: "36px", display: "flex", alignItems: "center", gap: "28px", flexWrap: "wrap" } as CS}>
-              <a href="https://admin.casaminga.com/dashboard/test/" target="_blank" rel="noopener noreferrer" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
-                Voir la démo →
+            <div className="rv" style={{ "--d": ".28s", marginTop: "36px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" } as CS}>
+              <a href="/signup" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: ACCENT, color: "#FFF9EC", borderRadius: "44px" }}>
+                Créer mon espace gratuit →
                 {DRAW_SVG}
               </a>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", color: "#7a3d28" }}>Démo guidée · sans pression commerciale · aucune CB</span>
+              <a href="https://admin.casaminga.com/dashboard/test/" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
+                Voir la démo →
+              </a>
+            </div>
+            <div className="rv" style={{ "--d": ".40s", marginTop: "14px" } as CS}>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", color: "#7a3d28" }}>Gratuit · sans carte bancaire · votre lieu en ligne en 5 minutes</span>
             </div>
           </div>
           <div className="amb" style={{ position: "absolute", right: "clamp(20px,5vw,90px)", bottom: "clamp(20px,6vh,80px)", zIndex: 1, animation: "cmDrift 9s ease-in-out infinite" }}>

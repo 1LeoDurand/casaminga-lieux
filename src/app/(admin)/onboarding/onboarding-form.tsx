@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -82,7 +82,7 @@ export function OnboardingForm({
       <div style={{ maxWidth: step === "archetype" ? 580 : 460, width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", color: "#2C2C2C", fontWeight: 800, fontSize: 18 }}>
-            <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 40, height: 40, objectFit: "contain" }} />
+            <img src="/logo-icon.webp" alt="Casa Minga Lieux" style={{ width: 40, height: 40, objectFit: "contain" }} />
             Casa Minga Lieux
           </Link>
         </div>

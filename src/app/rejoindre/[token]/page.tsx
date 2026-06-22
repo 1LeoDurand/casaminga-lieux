@@ -192,7 +192,7 @@ export default function RejoindreTokenPage({ params }: { params: Promise<{ token
 function Logo() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
-      <img src="/logo.png" alt="Casa Minga Lieux" style={{ width: 40, height: 40, objectFit: "contain" }} />
+      <img src="/logo-icon.webp" alt="Casa Minga Lieux" style={{ width: 40, height: 40, objectFit: "contain" }} />
       <span style={{ fontWeight: 800, fontSize: 17, color: "#2C2C2C" }}>Casa Minga Lieux</span>
     </div>
   );

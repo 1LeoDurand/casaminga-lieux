@@ -306,7 +306,7 @@ export function DashboardSidebar({
     <>
       {/* Logo */}
       <div className="flex shrink-0 items-center justify-center border-b border-white/[0.07] px-0 pb-3.5 pt-[18px]">
-        <img src="/logo.png" alt={orgName} className="size-9 rounded-[10px] bg-white object-contain p-0.5" />
+        <img src="/logo-icon.webp" alt={orgName} className="size-9 rounded-[10px] bg-white object-contain p-0.5" width={36} height={36} loading="eager" />
       </div>
       {/* Sections */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-[7px] py-2.5">
@@ -382,7 +382,7 @@ export function DashboardSidebar({
         {/* Flyout flottant (replié + section ouverte) */}
         {collapsed && flyoutSection && (
           <div
-            className="fixed left-[88px] top-[60px] z-[60] flex max-h-[480px] w-[214px] flex-col overflow-hidden rounded-r-2xl border border-l-0 border-white/10"
+            className="fixed left-[88px] top-[60px] z-[80] flex max-h-[480px] w-[214px] flex-col overflow-hidden rounded-r-2xl border border-l-0 border-white/10"
             style={{ background: PANEL_BG, boxShadow: "0 24px 50px -12px rgba(0,0,0,0.55)" }}
           >
             <div className="border-b border-white/[0.07] px-4 pb-3 pt-4 text-[10.5px] font-bold uppercase tracking-[0.12em] text-coral">
@@ -403,7 +403,7 @@ export function DashboardSidebar({
           <>
             {/* En-tête */}
             <div className="flex items-center gap-2.5 px-4 pb-3 pt-4">
-              <img src="/logo.png" alt={orgName} className="size-[34px] shrink-0 rounded-[10px] bg-white object-contain p-0.5" />
+              <img src="/logo-icon.webp" alt={orgName} className="size-[34px] shrink-0 rounded-[10px] bg-white object-contain p-0.5" width={34} height={34} loading="eager" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="truncate font-heading text-[14px] font-extrabold text-white">{orgName}</span>

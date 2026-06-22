@@ -208,7 +208,7 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-white">
           {/* En-tête desktop */}
-          <div className="hidden grid-cols-[1.1fr_1.3fr_0.9fr_0.9fr_1fr_0.8fr_auto] items-center gap-4 border-b border-border bg-cream px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-warmgray md:grid">
+          <div className="hidden grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)_220px] items-center gap-4 border-b border-border bg-cream px-5 py-3 text-[11px] font-bold uppercase tracking-wide text-warmgray md:grid">
             <span>Numéro</span><span>Client</span><span>Date</span><span>Montant TTC</span><span>Statut</span><span>Règlement</span><span></span>
           </div>
           <ul className="divide-y divide-border">
@@ -303,7 +303,7 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
                   </div>
 
                   {/* Vue desktop : grille alignée */}
-                  <div className="hidden grid-cols-[1.1fr_1.3fr_0.9fr_0.9fr_1fr_0.8fr_auto] items-center gap-4 px-5 py-3.5 md:grid">
+                  <div className="hidden grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.8fr)_220px] items-center gap-4 px-5 py-3.5 md:grid">
                     <div>
                       <div className="font-mono text-[13px] font-semibold text-ink">{inv.number ?? "— brouillon"}</div>
                       {inv.pole && <div className="mt-0.5 text-[11px] text-warmgray">{inv.pole}</div>}

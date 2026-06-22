@@ -439,7 +439,7 @@ export function NewsletterEditor({
         {/* Blocs */}
         {!isSent && (
           <>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 pb-28">
               {blocs.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-border bg-white py-10 text-center text-sm text-warmgray">
                   Ajoutez votre premier bloc ci-dessous
