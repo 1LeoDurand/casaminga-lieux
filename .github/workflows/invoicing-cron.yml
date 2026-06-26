@@ -48,3 +48,11 @@ jobs:
             -H "Content-Type: application/json" \
             "https://admin.casaminga.com/api/cron/onboarding-followup" \
             -w "\nHTTP %{http_code}\n"
+
+      - name: Veille subventions — Aides-Territoires (nouvelles aides + rafraîchissement)
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://admin.casaminga.com/api/cron/aides-territoires" \
+            -w "\nHTTP %{http_code}\n"

@@ -1,0 +1,18 @@
+name: Billetterie — cron horaire
+
+on:
+  schedule:
+    - cron: "5 * * * *" # toutes les heures à HH:05
+  workflow_dispatch: {} # déclenchable manuellement
+
+jobs:
+  run-crons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge des paniers abandonnés (billets pending > 1h) + promotion liste d'attente
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://admin.casaminga.com/api/cron/expire-pending-tickets" \
+            -w "\nHTTP %{http_code}\n"
