@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight, FolderOpen } from "lucide-react";
+import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight, FolderOpen, Search } from "lucide-react";
 import {
   type GrantOpportunity,
   type OrgGrantProfile,
@@ -127,6 +127,15 @@ export function VeilleView({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  // Filtres utilisateur (catalogue volumineux → indispensables)
+  const PAGE = 40;
+  const [query, setQuery] = useState("");
+  const [funderFilter, setFunderFilter] = useState("");
+  const [themeFilter, setThemeFilter] = useState("");
+  const [limit, setLimit] = useState(PAGE);
+  // Repart du début quand un filtre change
+  useEffect(() => { setLimit(PAGE); }, [query, funderFilter, themeFilter, onlyEligible]);
+
   // Optimistic local state: opportunity_id → { status, linked_grant_id }
   type LocalApp = { status: ApplicationStatus | null; linked_grant_id?: string | null };
   const [localApps, setLocalApps] = useState<Map<string, LocalApp>>(new Map());
@@ -137,7 +146,28 @@ export function VeilleView({
       .sort((a, b) => b.score - a.score);
   }, [opportunities, profile]);
 
-  const visible = onlyEligible ? scored.filter((s) => s.score >= 50) : scored;
+  // Thématiques réellement présentes dans le catalogue (pour le sélecteur)
+  const allThemes = useMemo(() => {
+    const s = new Set<string>();
+    for (const o of opportunities) for (const t of o.themes) s.add(t);
+    return [...s].sort((a, b) => a.localeCompare(b, "fr"));
+  }, [opportunities]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return scored.filter(({ opp, score }) => {
+      if (onlyEligible && score < 50) return false;
+      if (funderFilter && opp.funder_type !== funderFilter) return false;
+      if (themeFilter && !opp.themes.includes(themeFilter)) return false;
+      if (q) {
+        const hay = `${opp.title} ${opp.funder ?? ""} ${opp.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [scored, onlyEligible, funderFilter, themeFilter, query]);
+
+  const shown = filtered.slice(0, limit);
   const hasProfile = Boolean(profile?.region || profile?.structure_type || (profile?.themes.length ?? 0) > 0);
 
   function getApp(oppId: string): { status: ApplicationStatus | null; linked_grant_id: string | null } {
@@ -226,14 +256,52 @@ export function VeilleView({
         </div>
       </div>
 
+      {/* Barre de filtres */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white px-4 py-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-warmgray" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher une aide, un financeur, un mot-clé…"
+            className="w-full rounded-xl border border-border bg-[#FAFAF7] py-2.5 pl-9 pr-3 text-sm text-ink outline-none focus:border-coral"
+          />
+        </div>
+        <select value={funderFilter} onChange={(e) => setFunderFilter(e.target.value)} className="rounded-xl border border-border bg-[#FAFAF7] px-3 py-2.5 text-sm text-ink outline-none focus:border-coral">
+          <option value="">Tous les financeurs</option>
+          {Object.entries(FUNDER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        {allThemes.length > 0 && (
+          <select value={themeFilter} onChange={(e) => setThemeFilter(e.target.value)} className="max-w-[220px] rounded-xl border border-border bg-[#FAFAF7] px-3 py-2.5 text-sm text-ink outline-none focus:border-coral">
+            <option value="">Toutes les thématiques</option>
+            {allThemes.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* Compteur */}
+      <div className="px-1 text-[12.5px] text-warmgray">
+        {filtered.length} aide{filtered.length > 1 ? "s" : ""}
+        {filtered.length !== opportunities.length ? ` sur ${opportunities.length}` : ""}
+        {(query || funderFilter || themeFilter || onlyEligible) && (
+          <button
+            onClick={() => { setQuery(""); setFunderFilter(""); setThemeFilter(""); setOnlyEligible(false); }}
+            className="ml-2 font-semibold text-coral-dark hover:underline"
+          >
+            réinitialiser
+          </button>
+        )}
+      </div>
+
       {/* Liste */}
-      {visible.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-white px-5 py-12 text-center text-sm text-warmgray">
-          Aucune opportunité {onlyEligible ? "compatible " : ""}pour le moment.
+          Aucune opportunité {onlyEligible || query || funderFilter || themeFilter ? "ne correspond à votre recherche" : "pour le moment"}.
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
-          {visible.map(({ opp, score }) => {
+          {shown.map(({ opp, score }) => {
             const { status: currentStatus, linked_grant_id } = getApp(opp.id);
             const isBusy = busyId === opp.id;
             return (
@@ -304,6 +372,16 @@ export function VeilleView({
             );
           })}
         </ul>
+      )}
+
+      {/* Pagination */}
+      {filtered.length > shown.length && (
+        <button
+          onClick={() => setLimit((l) => l + PAGE)}
+          className="mx-auto rounded-full border border-border bg-white px-6 py-2.5 text-[13px] font-semibold text-ink hover:border-coral/40"
+        >
+          Afficher plus ({filtered.length - shown.length} restantes)
+        </button>
       )}
 
       {showProfile && (
