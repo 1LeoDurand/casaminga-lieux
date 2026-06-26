@@ -40,8 +40,15 @@ interface AtAid {
   perimeter?: string | null;
   categories?: string[];
   targeted_audiences?: string[];
+  // Taux de subvention en % — l'API expose les deux nominations selon la version.
+  subvention_rate_min?: number | null;
+  subvention_rate_max?: number | null;
   subvention_rate_lower_bound?: number | null;
   subvention_rate_upper_bound?: number | null;
+  subvention_comment?: string | null;      // détail des montants/plafonds (texte)
+  loan_amount?: number | null;             // montant d'un prêt (€)
+  recoverable_advance_amount?: number | null; // avance récupérable (€)
+  other_financial_aid_comment?: string | null;
   submission_deadline?: string | null;
   recurrence?: string | null;
   origin_url?: string | null;
@@ -50,6 +57,8 @@ interface AtAid {
   description?: string | null;
   aid_types?: string[];
 }
+
+const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
 /** Retire les balises HTML d'une description AT (texte brut pour notre champ). */
 function stripHtml(html: string | null | undefined): string | null {
@@ -72,8 +81,7 @@ function guessFunderType(financer: string | null): FunderType | null {
 
 /**
  * Phrase « Taux de subvention » à partir des bornes AT.
- * ⚠️ `subvention_rate_lower/upper_bound` sont des TAUX en % (ex. 50, 80, 90),
- * PAS des montants en euros — on ne les met donc jamais dans amount_min/max.
+ * ⚠️ Le taux est en % (ex. 50, 80, 90), PAS un montant en euros.
  */
 function subventionRateLine(lower?: number | null, upper?: number | null): string | null {
   if (lower != null && upper != null) {
@@ -86,13 +94,38 @@ function subventionRateLine(lower?: number | null, upper?: number | null): strin
   return null;
 }
 
+/**
+ * Construit une description riche réunissant TOUTES les infos financières utiles :
+ * taux, plafonds/conditions (subvention_comment), prêt, avance récupérable,
+ * puis le descriptif de l'aide. C'est là que vit l'info « montant » côté AT.
+ */
+function buildDescription(aid: AtAid): string | null {
+  const lines: string[] = [];
+
+  const rate = subventionRateLine(
+    aid.subvention_rate_min ?? aid.subvention_rate_lower_bound,
+    aid.subvention_rate_max ?? aid.subvention_rate_upper_bound,
+  );
+  if (rate) lines.push(rate);
+
+  const comment = stripHtml(aid.subvention_comment);
+  if (comment) lines.push(`💬 Montants & conditions : ${comment}`);
+
+  if (aid.loan_amount != null) lines.push(`🏦 Prêt : jusqu'à ${EUR.format(aid.loan_amount)}`);
+  if (aid.recoverable_advance_amount != null) lines.push(`↩️ Avance récupérable : jusqu'à ${EUR.format(aid.recoverable_advance_amount)}`);
+
+  const other = stripHtml(aid.other_financial_aid_comment);
+  if (other) lines.push(`ℹ️ Autres aides : ${other}`);
+
+  const body = stripHtml(aid.description);
+  if (body) lines.push(body);
+
+  const joined = lines.join("\n\n").trim();
+  return joined.length ? joined.slice(0, 4000) : null;
+}
+
 function mapAid(aid: AtAid): ImportedOpportunity {
   const financer = aid.financers?.[0] ?? null;
-  const rateLine = subventionRateLine(aid.subvention_rate_lower_bound, aid.subvention_rate_upper_bound);
-  const body = stripHtml(aid.description);
-  const description = rateLine
-    ? [rateLine, body].filter(Boolean).join("\n\n").slice(0, 2000)
-    : body;
   return {
     external_id: String(aid.id),
     title: aid.name,
@@ -101,14 +134,15 @@ function mapAid(aid: AtAid): ImportedOpportunity {
     themes: aid.categories ?? [],
     regions: aid.perimeter ? [aid.perimeter] : [],
     structure_types: [],
-    // AT ne fournit pas de montant € fixe pour ces aides (seulement un taux) → null.
+    // Subventions AT = taux %, pas de montant € fixe → amount null.
+    // Les montants réels (prêt, avance, plafonds) vivent dans la description.
     amount_min: null,
     amount_max: null,
     deadline: aid.submission_deadline ?? null,
     recurring: !!aid.recurrence && aid.recurrence !== "oneoff",
     application_url: aid.application_url ?? aid.origin_url ?? aid.url ?? null,
     required_documents: [],
-    description,
+    description: buildDescription(aid),
   };
 }
 
