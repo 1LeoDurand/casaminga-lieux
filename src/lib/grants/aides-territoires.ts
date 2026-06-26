@@ -70,8 +70,29 @@ function guessFunderType(financer: string | null): FunderType | null {
   return "autre";
 }
 
+/**
+ * Phrase « Taux de subvention » à partir des bornes AT.
+ * ⚠️ `subvention_rate_lower/upper_bound` sont des TAUX en % (ex. 50, 80, 90),
+ * PAS des montants en euros — on ne les met donc jamais dans amount_min/max.
+ */
+function subventionRateLine(lower?: number | null, upper?: number | null): string | null {
+  if (lower != null && upper != null) {
+    return lower === upper
+      ? `💶 Taux de subvention : ${upper} %`
+      : `💶 Taux de subvention : de ${lower} à ${upper} %`;
+  }
+  if (upper != null) return `💶 Taux de subvention : jusqu'à ${upper} %`;
+  if (lower != null) return `💶 Taux de subvention : à partir de ${lower} %`;
+  return null;
+}
+
 function mapAid(aid: AtAid): ImportedOpportunity {
   const financer = aid.financers?.[0] ?? null;
+  const rateLine = subventionRateLine(aid.subvention_rate_lower_bound, aid.subvention_rate_upper_bound);
+  const body = stripHtml(aid.description);
+  const description = rateLine
+    ? [rateLine, body].filter(Boolean).join("\n\n").slice(0, 2000)
+    : body;
   return {
     external_id: String(aid.id),
     title: aid.name,
@@ -80,13 +101,14 @@ function mapAid(aid: AtAid): ImportedOpportunity {
     themes: aid.categories ?? [],
     regions: aid.perimeter ? [aid.perimeter] : [],
     structure_types: [],
-    amount_min: aid.subvention_rate_lower_bound ?? null,
-    amount_max: aid.subvention_rate_upper_bound ?? null,
+    // AT ne fournit pas de montant € fixe pour ces aides (seulement un taux) → null.
+    amount_min: null,
+    amount_max: null,
     deadline: aid.submission_deadline ?? null,
     recurring: !!aid.recurrence && aid.recurrence !== "oneoff",
     application_url: aid.application_url ?? aid.origin_url ?? aid.url ?? null,
     required_documents: [],
-    description: stripHtml(aid.description),
+    description,
   };
 }
 
