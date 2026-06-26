@@ -132,10 +132,12 @@ export type FetchResult =
   | { ok: false; error: string };
 
 /**
- * Récupère jusqu'à `maxAids` aides ouvertes depuis Aides-Territoires.
- * Filtrées sur les structures associatives par défaut (audience).
+ * Récupère jusqu'à `maxAids` aides ouvertes depuis Aides-Territoires en
+ * suivant TOUTE la pagination. Filtrées sur les structures associatives.
+ * Défaut volontairement haut : on veut un catalogue exhaustif (le filtrage
+ * fin se fait côté lieu via le profil + le score de pertinence).
  */
-export async function fetchAidesTerritoires(maxAids = 50): Promise<FetchResult> {
+export async function fetchAidesTerritoires(maxAids = 2000): Promise<FetchResult> {
   const apiKey = process.env.AIDES_TERRITOIRES_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "Clé API Aides-Territoires non configurée (AIDES_TERRITOIRES_API_KEY)." };
@@ -147,24 +149,34 @@ export async function fetchAidesTerritoires(maxAids = 50): Promise<FetchResult> 
   }
 
   const collected: ImportedOpportunity[] = [];
+  const seen = new Set<string>(); // anti-doublon inter-pages (même external_id)
   let url: string | null =
     `${AT_BASE}/api/aids/?targeted_audiences=association&order_by=submission_deadline`;
 
   try {
-    while (url && collected.length < maxAids) {
+    // Garde-fou : au pire ~60 pages (l'API pagine par ~50/100 résultats).
+    for (let page = 0; url && collected.length < maxAids && page < 60; page++) {
       const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${bearer}` } });
       if (!res.ok) {
+        // On garde ce qu'on a déjà collecté plutôt que tout perdre sur une page KO.
+        if (collected.length > 0) break;
         return { ok: false, error: `Aides-Territoires a répondu ${res.status}.` };
       }
-      const page = (await res.json()) as { results?: AtAid[]; next?: string | null };
-      for (const aid of page.results ?? []) {
-        if (aid?.id && aid?.name) collected.push(mapAid(aid));
+      const body = (await res.json()) as { results?: AtAid[]; next?: string | null };
+      for (const aid of body.results ?? []) {
+        if (!aid?.id || !aid?.name) continue;
+        const ext = String(aid.id);
+        if (seen.has(ext)) continue;
+        seen.add(ext);
+        collected.push(mapAid(aid));
         if (collected.length >= maxAids) break;
       }
-      url = page.next ?? null;
+      url = body.next ?? null;
     }
   } catch {
-    return { ok: false, error: "Erreur réseau lors de l'appel à Aides-Territoires." };
+    if (collected.length === 0) {
+      return { ok: false, error: "Erreur réseau lors de l'appel à Aides-Territoires." };
+    }
   }
 
   return { ok: true, opportunities: collected };
@@ -180,44 +192,62 @@ export type SyncResult =
  * `published: false` (relecture super-admin avant publication), les
  * existantes voient leurs champs volatils rafraîchis sans toucher published.
  */
-export async function syncAidesTerritoires(maxAids = 50): Promise<SyncResult> {
+export async function syncAidesTerritoires(maxAids = 2000): Promise<SyncResult> {
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "service role manquant" };
 
   const res = await fetchAidesTerritoires(maxAids);
   if (!res.ok) return { ok: false, error: res.error };
+  if (res.opportunities.length === 0) return { ok: true, imported: 0, updated: 0 };
 
+  const now = new Date().toISOString();
+
+  // Quels external_id existent déjà ? (pour distinguer import vs rafraîchissement)
   const externalIds = res.opportunities.map((o) => o.external_id);
-  const { data: existing } = await admin
-    .from("grant_opportunities")
-    .select("id, external_id")
-    .eq("source", "aides-territoires")
-    .in("external_id", externalIds);
-  const byExtId = new Map((existing ?? []).map((r) => [r.external_id as string, r.id as string]));
+  const existingSet = new Set<string>();
+  // `.in()` borné : on découpe par paquets de 300 pour ne pas faire une URL géante.
+  for (let i = 0; i < externalIds.length; i += 300) {
+    const slice = externalIds.slice(i, i + 300);
+    const { data } = await admin
+      .from("grant_opportunities")
+      .select("external_id")
+      .eq("source", "aides-territoires")
+      .in("external_id", slice);
+    for (const r of data ?? []) existingSet.add(r.external_id as string);
+  }
+
+  const newRows = res.opportunities.filter((o) => !existingSet.has(o.external_id));
+  const updRows = res.opportunities.filter((o) => existingSet.has(o.external_id));
 
   let imported = 0;
   let updated = 0;
-  for (const o of res.opportunities) {
-    const existingId = byExtId.get(o.external_id);
-    if (existingId) {
-      const { error } = await admin
-        .from("grant_opportunities")
-        .update({
-          title: o.title, funder: o.funder, funder_type: o.funder_type,
-          themes: o.themes, regions: o.regions, amount_min: o.amount_min,
-          amount_max: o.amount_max, deadline: o.deadline, recurring: o.recurring,
-          application_url: o.application_url, description: o.description,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingId);
-      if (!error) updated++;
-    } else {
-      const { error } = await admin.from("grant_opportunities").insert({
-        ...o, source: "aides-territoires", published: false,
-        updated_at: new Date().toISOString(),
-      });
-      if (!error) imported++;
-    }
+
+  // Nouveaux → insert par lot, non publiés (relecture super-admin).
+  if (newRows.length) {
+    const { error } = await admin.from("grant_opportunities").insert(
+      newRows.map((o) => ({ ...o, source: "aides-territoires", published: false, updated_at: now })),
+    );
+    if (error) return { ok: false, error: error.message };
+    imported = newRows.length;
+  }
+
+  // Existants → upsert par lot SANS `published` : ON CONFLICT DO UPDATE ne
+  // touche que les colonnes fournies, donc le statut publié est préservé.
+  if (updRows.length) {
+    const { error } = await admin.from("grant_opportunities").upsert(
+      updRows.map((o) => ({
+        source: "aides-territoires" as const, external_id: o.external_id,
+        title: o.title, funder: o.funder, funder_type: o.funder_type,
+        themes: o.themes, regions: o.regions, structure_types: o.structure_types,
+        amount_min: o.amount_min, amount_max: o.amount_max, deadline: o.deadline,
+        recurring: o.recurring, application_url: o.application_url,
+        required_documents: o.required_documents, description: o.description,
+        updated_at: now,
+      })),
+      { onConflict: "source,external_id" },
+    );
+    if (error) return { ok: false, error: error.message };
+    updated = updRows.length;
   }
 
   return { ok: true, imported, updated };

@@ -55,7 +55,7 @@ export async function importAidesTerritoires(): Promise<
 > {
   await requireSuperAdmin();
   const { syncAidesTerritoires } = await import("@/lib/grants/aides-territoires");
-  const res = await syncAidesTerritoires(50);
+  const res = await syncAidesTerritoires(2000);
   if (!res.ok) return res;
   revalidatePath("/admin/subventions-veille");
   return res;

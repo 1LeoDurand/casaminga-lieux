@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { logCronRun } from "@/lib/cron-logger";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * Actualisation automatique du catalogue de subventions depuis
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   }
 
   const { syncAidesTerritoires } = await import("@/lib/grants/aides-territoires");
-  const res = await syncAidesTerritoires(50);
+  const res = await syncAidesTerritoires(2000);
 
   if (!res.ok) {
     await logCronRun("aides-territoires", "error", { errorMsg: res.error });
