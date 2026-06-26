@@ -184,20 +184,29 @@ export async function fetchAidesTerritoires(maxAids = 2000): Promise<FetchResult
 
   const collected: ImportedOpportunity[] = [];
   const seen = new Set<string>(); // anti-doublon inter-pages (même external_id)
-  let url: string | null =
-    `${AT_BASE}/api/aids/?targeted_audiences=association&order_by=submission_deadline`;
+  const base = `${AT_BASE}/api/aids/?targeted_audiences=association&order_by=submission_deadline`;
+  let apiTotal: number | null = null;
 
   try {
-    // Garde-fou : au pire ~60 pages (l'API pagine par ~50/100 résultats).
-    for (let page = 0; url && collected.length < maxAids && page < 60; page++) {
-      const res: Response = await fetch(url, { headers: { Authorization: `Bearer ${bearer}` } });
+    // Pagination par numéro de page explicite (DRF `?page=N`) — robuste : ne
+    // dépend pas du champ `next`. On s'arrête sur page vide, 404 (au-delà de la
+    // dernière page DRF renvoie 404) ou quand on a atteint maxAids.
+    for (let pageNum = 1; collected.length < maxAids && pageNum <= 80; pageNum++) {
+      const res: Response = await fetch(`${base}&page=${pageNum}`, {
+        headers: { Authorization: `Bearer ${bearer}` },
+      });
+      if (res.status === 404) break; // fin de pagination (DRF)
       if (!res.ok) {
-        // On garde ce qu'on a déjà collecté plutôt que tout perdre sur une page KO.
-        if (collected.length > 0) break;
+        if (collected.length > 0) break; // garde ce qui est déjà collecté
         return { ok: false, error: `Aides-Territoires a répondu ${res.status}.` };
       }
-      const body = (await res.json()) as { results?: AtAid[]; next?: string | null };
-      for (const aid of body.results ?? []) {
+      const body = (await res.json()) as { results?: AtAid[]; next?: string | null; count?: number };
+      if (apiTotal === null && typeof body.count === "number") apiTotal = body.count;
+
+      const results = body.results ?? [];
+      if (results.length === 0) break; // plus rien à paginer
+
+      for (const aid of results) {
         if (!aid?.id || !aid?.name) continue;
         const ext = String(aid.id);
         if (seen.has(ext)) continue;
@@ -205,7 +214,6 @@ export async function fetchAidesTerritoires(maxAids = 2000): Promise<FetchResult
         collected.push(mapAid(aid));
         if (collected.length >= maxAids) break;
       }
-      url = body.next ?? null;
     }
   } catch {
     if (collected.length === 0) {
@@ -213,6 +221,7 @@ export async function fetchAidesTerritoires(maxAids = 2000): Promise<FetchResult
     }
   }
 
+  console.warn(`[aides-territoires] total API=${apiTotal ?? "?"} · collectées=${collected.length}`);
   return { ok: true, opportunities: collected };
 }
 
