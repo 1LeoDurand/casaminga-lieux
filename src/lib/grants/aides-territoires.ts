@@ -266,10 +266,11 @@ export async function syncAidesTerritoires(maxAids = 2000): Promise<SyncResult> 
   let imported = 0;
   let updated = 0;
 
-  // Nouveaux → insert par lot, non publiés (relecture super-admin).
+  // Nouveaux → insert par lot, publiés d'emblée (catalogue visible par tous les
+  // lieux ; le tri/filtrage se fait côté lieu via le profil + la recherche).
   if (newRows.length) {
     const { error } = await admin.from("grant_opportunities").insert(
-      newRows.map((o) => ({ ...o, source: "aides-territoires", published: false, updated_at: now })),
+      newRows.map((o) => ({ ...o, source: "aides-territoires", published: true, updated_at: now })),
     );
     if (error) return { ok: false, error: error.message };
     imported = newRows.length;

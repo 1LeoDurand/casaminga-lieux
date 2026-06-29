@@ -215,11 +215,20 @@ import type { GrantOpportunity } from "@/lib/grants/types";
 export async function getAllOpportunities(): Promise<GrantOpportunity[]> {
   const admin = createAdminClient();
   if (!admin) return [];
-  const { data } = await admin
-    .from("grant_opportunities")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return (data as GrantOpportunity[]) ?? [];
+  // PostgREST plafonne à 1000 lignes/requête → on pagine par tranches.
+  const PAGE = 1000;
+  const all: GrantOpportunity[] = [];
+  for (let from = 0; from < 50_000; from += PAGE) {
+    const { data } = await admin
+      .from("grant_opportunities")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE - 1);
+    const rows = (data as GrantOpportunity[]) ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
 }
 
 export interface EmailLogRow {

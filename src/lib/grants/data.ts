@@ -7,12 +7,21 @@ import type { GrantOpportunity, OrgGrantProfile, GrantApplication, ApplicationSt
 export async function getOpportunities(): Promise<GrantOpportunity[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("grant_opportunities")
-    .select("*")
-    .eq("published", true)
-    .order("deadline", { ascending: true, nullsFirst: false });
-  return (data as GrantOpportunity[]) ?? [];
+  // PostgREST plafonne à 1000 lignes/requête → on pagine par tranches.
+  const PAGE = 1000;
+  const all: GrantOpportunity[] = [];
+  for (let from = 0; from < 50_000; from += PAGE) {
+    const { data } = await supabase
+      .from("grant_opportunities")
+      .select("*")
+      .eq("published", true)
+      .order("deadline", { ascending: true, nullsFirst: false })
+      .range(from, from + PAGE - 1);
+    const rows = (data as GrantOpportunity[]) ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
 }
 
 /** Détail d'une opportunité par son ID. */
