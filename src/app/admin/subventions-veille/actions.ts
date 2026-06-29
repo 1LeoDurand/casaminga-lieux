@@ -51,7 +51,7 @@ export async function saveOpportunity(input: OpportunityInput): Promise<Result> 
  * rafraîchis (deadline, montants…) sans toucher leur statut `published`.
  */
 export async function importAidesTerritoires(): Promise<
-  Result & { imported?: number; updated?: number }
+  Result & { imported?: number; updated?: number; apiTotal?: number | null }
 > {
   await requireSuperAdmin();
   const { syncAidesTerritoires } = await import("@/lib/grants/aides-territoires");

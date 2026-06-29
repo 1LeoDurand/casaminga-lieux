@@ -162,7 +162,7 @@ async function getBearer(apiKey: string): Promise<string | null> {
 }
 
 export type FetchResult =
-  | { ok: true; opportunities: ImportedOpportunity[] }
+  | { ok: true; opportunities: ImportedOpportunity[]; apiTotal: number | null }
   | { ok: false; error: string };
 
 /**
@@ -222,11 +222,11 @@ export async function fetchAidesTerritoires(maxAids = 2000): Promise<FetchResult
   }
 
   console.warn(`[aides-territoires] total API=${apiTotal ?? "?"} · collectées=${collected.length}`);
-  return { ok: true, opportunities: collected };
+  return { ok: true, opportunities: collected, apiTotal };
 }
 
 export type SyncResult =
-  | { ok: true; imported: number; updated: number }
+  | { ok: true; imported: number; updated: number; apiTotal: number | null }
   | { ok: false; error: string };
 
 /**
@@ -241,7 +241,8 @@ export async function syncAidesTerritoires(maxAids = 2000): Promise<SyncResult> 
 
   const res = await fetchAidesTerritoires(maxAids);
   if (!res.ok) return { ok: false, error: res.error };
-  if (res.opportunities.length === 0) return { ok: true, imported: 0, updated: 0 };
+  const apiTotal = res.apiTotal;
+  if (res.opportunities.length === 0) return { ok: true, imported: 0, updated: 0, apiTotal };
 
   const now = new Date().toISOString();
 
@@ -293,5 +294,5 @@ export async function syncAidesTerritoires(maxAids = 2000): Promise<SyncResult> 
     updated = updRows.length;
   }
 
-  return { ok: true, imported, updated };
+  return { ok: true, imported, updated, apiTotal };
 }

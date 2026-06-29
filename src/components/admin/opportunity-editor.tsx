@@ -46,7 +46,7 @@ export function OpportunityEditor({ opportunities }: { opportunities: GrantOppor
     startImport(async () => {
       const res = await importAidesTerritoires();
       if (res.ok) {
-        toast.success(`Import terminé : ${res.imported ?? 0} nouvelle(s), ${res.updated ?? 0} mise(s) à jour. Les nouveautés sont en brouillon.`);
+        toast.success(`Import terminé : ${res.imported ?? 0} nouvelle(s), ${res.updated ?? 0} mise(s) à jour. API : ${res.apiTotal ?? "?"} aides disponibles. Les nouveautés sont en brouillon.`);
         router.refresh();
       } else {
         toast.error(res.error ?? "Erreur d'import");
