@@ -242,7 +242,7 @@ export function VeilleView({
               {profile?.themes.length ? <> · {profile.themes.length} thématique(s)</> : null}
             </span>
           ) : (
-            <span className="text-coral-dark">⚠ Renseignez votre profil pour un classement par pertinence.</span>
+            <span className="text-warmgray">Profil d&apos;éligibilité non renseigné.</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -255,6 +255,27 @@ export function VeilleView({
           </button>
         </div>
       </div>
+
+      {/* Encart profil vide — sans profil, le score de pertinence est neutre */}
+      {!hasProfile && (
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-coral/30 bg-peach-pale px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-heading text-[15px] font-bold text-ink">
+              Complétez le profil de votre lieu
+            </div>
+            <p className="mt-0.5 text-[13px] text-warmgray">
+              Région, type de structure, thématiques : 2 minutes pour classer ces{" "}
+              {opportunities.length.toLocaleString("fr-FR")} aides par pertinence pour vous.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowProfile(true)}
+            className="shrink-0 rounded-full bg-coral px-5 py-2.5 text-[13px] font-bold text-white transition hover:bg-coral-dark"
+          >
+            Compléter mon profil
+          </button>
+        </div>
+      )}
 
       {/* Barre de filtres */}
       <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white px-4 py-3 sm:flex-row sm:items-center">
