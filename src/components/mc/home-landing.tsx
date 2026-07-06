@@ -331,24 +331,24 @@ export default function HomeLanding() {
   }, []);
 
   const panelBase: CS = { flex: "0 0 100vw", width: "100vw", height: "100vh", position: "relative", overflow: "hidden" };
-  const monoTag: CS = { fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".2em", textTransform: "uppercase" };
-  const displayFont = "'DM Serif Display', Georgia, serif";
+  const monoTag: CS = { fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".2em", textTransform: "uppercase" };
+  const displayFont = "var(--font-dmserif), Georgia, serif";
   const pad: CS = { padding: "0 clamp(28px,5vw,64px)" };
 
   return (
     <div
       id="cm-root"
-      style={{ position: "fixed", inset: 0, zIndex: 100, background: "#222323", fontFamily: "'DM Sans', system-ui, sans-serif", "--accent": ACCENT, "--display": "'DM Serif Display'" } as CS}
+      style={{ position: "fixed", inset: 0, zIndex: 100, background: "#222323", fontFamily: "'DM Sans', system-ui, sans-serif", "--accent": ACCENT, "--display": "var(--font-dmserif)" } as CS}
     >
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       {/* ── FIXED CHROME ── */}
       <div style={{ position: "fixed", top: 0, left: 0, display: "flex", alignItems: "center", gap: "13px", padding: "26px 0 0 clamp(28px,5vw,64px)", zIndex: 50, pointerEvents: "none" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-maloka.png" alt="Casa Minga" style={{ height: "42px", width: "auto", display: "block" }} />
+        <img src="/logo-maloka.webp" alt="Casa Minga" style={{ height: "42px", width: "auto", display: "block" }} />
         <div ref={wordmarkRef} style={{ lineHeight: 1, color: "#FFF9EC", transition: "color .5s ease" }}>
           <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: "18px", letterSpacing: "-.02em" }}>Casa Minga</div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "10px", letterSpacing: ".22em", textTransform: "uppercase", opacity: .6, marginTop: "3px" }}>Lieux</div>
+          <div style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "10px", letterSpacing: ".22em", textTransform: "uppercase", opacity: .6, marginTop: "3px" }}>Lieux</div>
         </div>
       </div>
 
@@ -358,12 +358,12 @@ export default function HomeLanding() {
         <span style={{ width: "22px", height: "2px", background: "#2C2D2D", borderRadius: "2px" }} />
       </button>
 
-      <a ref={loginRef} id="cm-login" href="/login" style={{ position: "fixed", top: "31px", right: "calc(clamp(20px,4vw,52px) + 72px)", zIndex: 51, display: "flex", alignItems: "center", gap: "9px", padding: "13px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", border: "1.5px solid rgba(44,45,45,.28)", color: "#2C2D2D", background: "transparent", transition: "color .5s ease, border-color .5s ease, background .25s ease" }}>
+      <a ref={loginRef} id="cm-login" href="/login" style={{ position: "fixed", top: "31px", right: "calc(clamp(20px,4vw,52px) + 72px)", zIndex: 51, display: "flex", alignItems: "center", gap: "9px", padding: "13px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", border: "1.5px solid rgba(44,45,45,.28)", color: "#2C2D2D", background: "transparent", transition: "color .5s ease, border-color .5s ease, background .25s ease" }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>
         Connexion
       </a>
 
-      <a ref={demoBtnRef} id="cm-demo-btn" href="/site/bernard-kohn" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>
+      <a ref={demoBtnRef} id="cm-demo-btn" href="/site/bernard-kohn" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>
         <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: "rgba(44,45,45,.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>✦</span>
         Découvrir le lieu pilote
       </a>
@@ -385,10 +385,10 @@ export default function HomeLanding() {
         <div style={{ ...monoTag, color: ACCENT, marginBottom: "26px" }}>Navigation</div>
         {MENU_GROUPS.map((g, gi) => (
           <div key={g.title} style={{ marginTop: gi === 0 ? 0 : "28px" }}>
-            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "11.5px", letterSpacing: ".18em", textTransform: "uppercase", color: "rgba(255,249,236,.4)", marginBottom: "10px" }}>{g.title}</div>
+            <div style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "11.5px", letterSpacing: ".18em", textTransform: "uppercase", color: "rgba(255,249,236,.4)", marginBottom: "10px" }}>{g.title}</div>
             {g.items.map(m => (
               <Link key={m.href} href={m.href} className="cm-menu-item" style={{ display: "flex", alignItems: "baseline", gap: "20px", textDecoration: "none", padding: "6px 0", color: "#FFF9EC", fontFamily: displayFont, fontSize: "clamp(26px,4vw,50px)", lineHeight: 1, transition: "color .25s ease, padding-left .25s ease" }}>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".1em", opacity: .45 }}>{m.num}</span>
+                <span style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".1em", opacity: .45 }}>{m.num}</span>
                 {m.l}
               </Link>
             ))}
@@ -412,7 +412,7 @@ export default function HomeLanding() {
               <span style={{ display: "block" }}>les lieux</span>
               <span style={{ display: "block", fontStyle: "italic", color: ACCENT }}>collectifs.</span>
             </h1>
-            <div className="rv" style={{ "--d": ".4s", marginTop: "30px", fontFamily: "'DM Mono', monospace", fontSize: "clamp(13px,1.4vw,16px)", letterSpacing: ".2em", textTransform: "uppercase", color: "rgba(255,249,236,.85)" } as CS}>
+            <div className="rv" style={{ "--d": ".4s", marginTop: "30px", fontFamily: "var(--font-dmmono), monospace", fontSize: "clamp(13px,1.4vw,16px)", letterSpacing: ".2em", textTransform: "uppercase", color: "rgba(255,249,236,.85)" } as CS}>
               un lieu à la fois
             </div>
           </div>
@@ -422,7 +422,7 @@ export default function HomeLanding() {
         <section style={{ ...panelBase, background: "linear-gradient(90deg,#FFF9EC,#FDF2E7)", display: "flex", alignItems: "center", gap: "clamp(32px,5vw,80px)", ...pad }}>
           <div style={{ flex: 1, maxWidth: "560px" }}>
             <div className="rv" style={{ "--d": ".05s", display: "flex", alignItems: "center", gap: "16px", marginBottom: "34px" } as CS}>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".2em", textTransform: "uppercase", color: "#9a8d7e" }}>Né depuis le terrain</span>
+              <span style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".2em", textTransform: "uppercase", color: "#9a8d7e" }}>Né depuis le terrain</span>
               <svg width="60" height="22" viewBox="0 0 60 22" fill="none" style={{ color: ACCENT }}><path d="M1 4c20 2 38 6 46 14M40 18l8 1 1-9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </div>
             <p className="line-reveal" style={{ margin: 0, fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: "clamp(30px,4.4vw,62px)", lineHeight: 1.04, letterSpacing: "-.02em", color: "#2C2D2D" }}>
@@ -433,7 +433,7 @@ export default function HomeLanding() {
             <span style={{ position: "absolute", left: "-64px", right: "-30px", top: "50%", height: "2px", background: ACCENT, transform: "translateY(-50%)", zIndex: 0 }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/accueil/p-equipe.jpg" alt="Ouverture du Tiers-lieu Bernard Kohn" style={{ position: "relative", zIndex: 1, width: "100%", height: "auto", aspectRatio: "5/4", display: "block", objectFit: "cover", borderRadius: "24px", boxShadow: "0 32px 64px -28px rgba(44,45,45,.45)" }} />
-            <figcaption style={{ position: "relative", zIndex: 1, marginTop: "12px", fontFamily: "'DM Mono', monospace", fontSize: "11px", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(44,45,45,.45)", textAlign: "center" }}>
+            <figcaption style={{ position: "relative", zIndex: 1, marginTop: "12px", fontFamily: "var(--font-dmmono), monospace", fontSize: "11px", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(44,45,45,.45)", textAlign: "center" }}>
               Ouverture du Tiers-lieu Bernard Kohn
             </figcaption>
           </div>
@@ -442,7 +442,7 @@ export default function HomeLanding() {
         {/* PANEL 2 · LE NOM */}
         <section style={{ ...panelBase, background: "linear-gradient(90deg,#FDF2E7,#FBEADD)", display: "flex", alignItems: "center", gap: "clamp(28px,5vw,80px)", ...pad }}>
           <div style={{ flex: 1, maxWidth: "680px" }}>
-            <div className="rv" style={{ "--d": ".05s", fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".2em", textTransform: "uppercase", color: "#b5572f", marginBottom: "26px" } as CS}>D&apos;où vient le nom</div>
+            <div className="rv" style={{ "--d": ".05s", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".2em", textTransform: "uppercase", color: "#b5572f", marginBottom: "26px" } as CS}>D&apos;où vient le nom</div>
             <h2 className="line-reveal" style={{ margin: "0 0 32px", fontFamily: "'Poppins', sans-serif", fontWeight: 500, fontSize: "clamp(46px,6.4vw,104px)", lineHeight: .94, letterSpacing: "-.015em", color: "#2C2D2D" }}>
               Casa <span style={{ fontStyle: "italic", color: "#b5572f" }}>Minga.</span>
             </h2>
@@ -457,14 +457,14 @@ export default function HomeLanding() {
                 Léo a créé Casa Minga pour faciliter le vivre ensemble. <span style={{ color: "#b5572f", fontStyle: "normal", fontWeight: 600 }}>Contribuons ensemble à développer cette philosophie.</span>
               </p>
             </div>
-            <div className="rv" style={{ "--d": ".36s", marginTop: "30px", display: "flex", alignItems: "center", gap: "14px", fontFamily: "'DM Mono', monospace", fontSize: "12px", letterSpacing: ".08em", textTransform: "uppercase", color: "#9a8d7e" } as CS}>
+            <div className="rv" style={{ "--d": ".36s", marginTop: "30px", display: "flex", alignItems: "center", gap: "14px", fontFamily: "var(--font-dmmono), monospace", fontSize: "12px", letterSpacing: ".08em", textTransform: "uppercase", color: "#9a8d7e" } as CS}>
               <span style={{ width: "26px", height: "1px", background: "#c9a98f" }} />
               Pérou · Équateur · Bolivie · Chili
             </div>
           </div>
           <div className="amb" style={{ flex: "0 0 auto", width: "clamp(280px,40vw,560px)", animation: "cmFloatA 8s ease-in-out infinite" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/accueil/maloka-clean.png" alt="Minga — cercle de travail collectif sous la casa" style={{ width: "100%", height: "auto", display: "block", filter: "drop-shadow(0 22px 44px rgba(110,66,48,.24))" }} />
+            <img src="/accueil/maloka-clean.webp" alt="Minga — cercle de travail collectif sous la casa" style={{ width: "100%", height: "auto", display: "block", filter: "drop-shadow(0 22px 44px rgba(110,66,48,.24))" }} />
           </div>
         </section>
 
@@ -508,7 +508,7 @@ export default function HomeLanding() {
                   <div style={{ display: "flex", gap: "5px" }}>
                     {["#FF5F57","#FFBD2E","#28C840"].map(c => <span key={c} style={{ width: "11px", height: "11px", borderRadius: "50%", background: c, display: "block" }} />)}
                   </div>
-                  <div style={{ flex: 1, background: "#ECEAE4", borderRadius: "6px", padding: "4px 12px", fontSize: "11px", color: "rgba(44,45,45,.5)", fontFamily: "'DM Mono', monospace" }}>
+                  <div style={{ flex: 1, background: "#ECEAE4", borderRadius: "6px", padding: "4px 12px", fontSize: "11px", color: "rgba(44,45,45,.5)", fontFamily: "var(--font-dmmono), monospace" }}>
                     admin.casaminga.com/dashboard/bernard-kohn
                   </div>
                 </div>
@@ -581,14 +581,14 @@ export default function HomeLanding() {
               {STATS.map(s => (
                 <div key={s.l}>
                   <div style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: "clamp(30px,2.9vw,46px)", color: "#2C2D2D", lineHeight: 1 }}>{s.n}</div>
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: "clamp(12.5px,1.05vw,15px)", letterSpacing: ".03em", color: "rgba(44,45,45,.62)", marginTop: "8px" }}>{s.l}</div>
+                  <div style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "clamp(12.5px,1.05vw,15px)", letterSpacing: ".03em", color: "rgba(44,45,45,.62)", marginTop: "8px" }}>{s.l}</div>
                 </div>
               ))}
             </div>
-            <p className="rv" style={{ "--d": ".34s", margin: "-26px 0 34px", fontFamily: "'DM Mono', monospace", fontSize: "11.5px", letterSpacing: ".05em", color: "rgba(44,45,45,.45)" } as CS}>
+            <p className="rv" style={{ "--d": ".34s", margin: "-26px 0 34px", fontFamily: "var(--font-dmmono), monospace", fontSize: "11.5px", letterSpacing: ".05em", color: "rgba(44,45,45,.45)" } as CS}>
               Chiffres 2025 du Tiers-lieu Bernard Kohn, lieu pilote de Casa Minga
             </p>
-            <Link href="/approche" className="cm-draw rv" style={{ "--d": ".4s", position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "16px 34px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "14px", letterSpacing: ".04em", color: "#2C2D2D" } as CS}>
+            <Link href="/approche" className="cm-draw rv" style={{ "--d": ".4s", position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "16px 34px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "14px", letterSpacing: ".04em", color: "#2C2D2D" } as CS}>
               Notre impact
               {DRAW_SVG}
             </Link>
@@ -614,8 +614,8 @@ export default function HomeLanding() {
               Le lieu nous parlait, mais nous n&apos;avions pas d&apos;outil pour l&apos;écouter.
             </blockquote>
             <div className="rv" style={{ "--d": ".3s", marginTop: "34px", display: "flex", alignItems: "center", gap: "22px" } as CS}>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".06em", color: "#6b4a35" }}>— Léo · coordination, tiers-lieu Bernard Kohn</span>
-              <Link href="/histoire" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "14px 28px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "13px", color: "#2C2D2D" }}>
+              <span style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".06em", color: "#6b4a35" }}>— Léo · coordination, tiers-lieu Bernard Kohn</span>
+              <Link href="/histoire" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "14px 28px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", color: "#2C2D2D" }}>
                 Notre histoire
                 {DRAW_SVG}
               </Link>
@@ -624,7 +624,7 @@ export default function HomeLanding() {
           <div className="amb" style={{ flex: "0 0 auto", animation: "cmFloatB 8s ease-in-out infinite", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/accueil/p-portrait.jpg" alt="Léo et Bernard" style={{ width: "clamp(200px,24vw,340px)", height: "clamp(260px,32vw,440px)", objectFit: "cover", borderRadius: "20px", display: "block" }} />
-            <figcaption style={{ fontFamily: "'DM Mono', monospace", fontSize: "11px", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(44,45,45,.45)" }}>
+            <figcaption style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "11px", letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(44,45,45,.45)" }}>
               Léo et Bernard
             </figcaption>
           </div>
@@ -644,7 +644,7 @@ export default function HomeLanding() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.img} alt={p.t} style={{ width: "100%", height: "clamp(150px,28vh,260px)", display: "block", objectFit: "cover", borderRadius: "16px" }} />
                 <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "12px 0 6px" }}>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", color: "#7a3d28" }}>{p.num}</span>
+                  <span style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", color: "#7a3d28" }}>{p.num}</span>
                   <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: "clamp(18px,1.7vw,26px)", color: "#2C2D2D" }}>{p.t}</span>
                 </div>
                 <p style={{ margin: 0, fontSize: "clamp(12.5px,1vw,14.5px)", lineHeight: 1.55, color: "rgba(44,45,45,.62)" }}>{p.d}</p>
@@ -661,16 +661,16 @@ export default function HomeLanding() {
               <span style={{ fontStyle: "italic" }}>Parlons-en.</span>
             </h2>
             <div className="rv" style={{ "--d": ".28s", marginTop: "36px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" } as CS}>
-              <a href="/signup" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: ACCENT, color: "#FFF9EC", borderRadius: "44px" }}>
+              <a href="/signup" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: ACCENT, color: "#FFF9EC", borderRadius: "44px" }}>
                 Créer mon espace gratuit →
                 {DRAW_SVG}
               </a>
-              <a href="/site/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "'DM Mono', monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
+              <a href="/site/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
                 Découvrir le lieu pilote →
               </a>
             </div>
             <div className="rv" style={{ "--d": ".40s", marginTop: "14px" } as CS}>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "13px", letterSpacing: ".04em", color: "#7a3d28" }}>Gratuit · sans carte bancaire · votre lieu en ligne en 5 minutes</span>
+              <span style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", color: "#7a3d28" }}>Gratuit · sans carte bancaire · votre lieu en ligne en 5 minutes</span>
             </div>
           </div>
           <div className="amb" style={{ position: "absolute", right: "clamp(20px,5vw,90px)", bottom: "clamp(20px,6vh,80px)", zIndex: 1, animation: "cmDrift 9s ease-in-out infinite" }}>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Syne, DM_Sans, Geist_Mono, Fraunces, Space_Grotesk } from "next/font/google";
+import { Poppins, Syne, DM_Sans, DM_Serif_Display, DM_Mono, Geist_Mono, Fraunces, Space_Grotesk } from "next/font/google";
 import { Toaster } from "sonner";
 import { CookieBanner } from "@/components/mc/cookie-banner";
 import { GlobalFeedback } from "@/components/mc/global-feedback";
@@ -38,6 +38,18 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+const dmSerifDisplay = DM_Serif_Display({
+  variable: "--font-dmserif",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dmmono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -82,7 +94,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${poppins.variable} ${syne.variable} ${dmSans.variable} ${geistMono.variable} ${fraunces.variable} ${spaceGrotesk.variable} h-full antialiased`}
+      className={`${poppins.variable} ${syne.variable} ${dmSans.variable} ${dmSerifDisplay.variable} ${dmMono.variable} ${geistMono.variable} ${fraunces.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
