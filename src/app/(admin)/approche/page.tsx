@@ -1,5 +1,12 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
 import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Notre approche — un outil qui en fait moins, exprès · Casa Minga",
+  description:
+    "Pourquoi Casa Minga refuse la sur-ingénierie des Yapla, Assoconnect ou Notion+Drive+HelloAsso : un socle simple, des modules activés selon vos besoins réels.",
+};
 
 function Eyebrow({ children, variant = "coral" }: {
   children: React.ReactNode;

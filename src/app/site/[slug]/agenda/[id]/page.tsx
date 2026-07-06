@@ -5,6 +5,7 @@ import { getPublishedSiteContent } from "@/lib/site-public/data";
 import { mergeSiteContent } from "@/lib/site-public/types";
 import { PublicEventPage } from "@/components/mc/public-event-page";
 import { remainingSeats } from "@/lib/events/register";
+import { JsonLd } from "@/components/seo/json-ld";
 
 export async function generateMetadata({
   params,
@@ -47,14 +48,49 @@ export default async function PublicEventDetailPage({
   const c = mergeSiteContent(rawContent);
   const accent = c.accent_color || org.primary_color || "#FF8A65";
 
+  const eventJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    startDate: event.start_at,
+    endDate: event.end_at,
+    eventStatus: "https://schema.org/EventScheduled",
+    description: event.description ?? undefined,
+    image: event.photos?.[0] ?? undefined,
+    location: {
+      "@type": "Place",
+      name: org.name,
+    },
+    organizer: {
+      "@type": "Organization",
+      name: org.name,
+      url: `https://admin.casaminga.com/site/${slug}`,
+    },
+    ...(event.price != null && {
+      offers: {
+        "@type": "Offer",
+        price: String(event.price),
+        priceCurrency: "EUR",
+        url: `https://admin.casaminga.com/site/${slug}/agenda/${event.id}`,
+        availability:
+          remaining === 0
+            ? "https://schema.org/SoldOut"
+            : "https://schema.org/InStock",
+      },
+    }),
+  };
+
   return (
-    <PublicEventPage
-      event={event}
-      org={org}
-      accent={accent}
-      orgSlug={slug}
-      remaining={remaining}
-      stripeEnabled={!!(org.stripe_account_id && org.stripe_charges_enabled)}
-    />
+    <>
+      <JsonLd data={eventJsonLd} />
+      <PublicEventPage
+        event={event}
+        org={org}
+        accent={accent}
+        orgSlug={slug}
+        remaining={remaining}
+        stripeEnabled={!!(org.stripe_account_id && org.stripe_charges_enabled)}
+      />
+    </>
   );
 }

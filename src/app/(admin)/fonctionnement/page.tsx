@@ -3,6 +3,13 @@ import Image from "next/image";
 import { Inbox, LayoutGrid, BarChart2, Send } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "La plateforme — 4 piliers pour piloter votre lieu · Casa Minga",
+  description:
+    "Accueillir, organiser, piloter, publier : 17 modules métier pour gérer demandes, espaces, événements, finances et site public de votre tiers-lieu.",
+};
 
 const DEMO_SLUG = "bernard-kohn";
 
@@ -85,7 +92,7 @@ export default async function LandingPage() {
               /* Non connecté → liens classiques */
               <>
                 <Link href="/login" style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#2C2C2C", textDecoration: "none", borderRadius: 100, border: "1.5px solid #E5DDD6", background: "#fff" }}>Connexion</Link>
-                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>Voir le dashboard démo →</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", borderRadius: 100, background: "#FF8A65" }}>Voir un lieu en action →</Link>
               </>
             )}
           </div>
@@ -115,8 +122,8 @@ export default async function LandingPage() {
                 Casa Minga Lieux relie votre site public, vos demandes, vos espaces, vos événements, vos documents, vos finances et votre gouvernance dans un seul outil simple et vivant.
               </p>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "16px 30px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 15.5, textDecoration: "none", boxShadow: "0 8px 20px rgba(255,138,101,0.22)" }}>Voir le dashboard démo →</Link>
-                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "16px 30px", borderRadius: 100, background: "#fff", color: "#2C2C2C", fontWeight: 600, fontSize: 15.5, textDecoration: "none", border: "1.5px solid #E5DDD6" }}>Voir un site généré</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "16px 30px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 15.5, textDecoration: "none", boxShadow: "0 8px 20px rgba(255,138,101,0.22)" }}>Voir le site d&apos;un lieu réel →</Link>
+                <Link href="/signup" style={{ padding: "16px 30px", borderRadius: 100, background: "#fff", color: "#2C2C2C", fontWeight: 600, fontSize: 15.5, textDecoration: "none", border: "1.5px solid #E5DDD6" }}>Créer mon espace gratuit</Link>
               </div>
               <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid #E5DDD6", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", fontSize: 12.5, color: "#6B6460" }}>
                 {["Pensé depuis le terrain", "Adapté aux associations loi 1901", "Sobriété numérique"].map((t) => (
@@ -388,8 +395,7 @@ export default async function LandingPage() {
                 ))}
               </ul>
               <div style={{ marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Explorer le dashboard démo →</Link>
-                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, border: "1.5px solid #E5DDD6", color: "#2C2C2C", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Voir le site public généré</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Voir le site d&apos;un lieu réel →</Link>
               </div>
             </div>
             {/* Mockup — desktop-shaped. Sur mobile, le conteneur .lp-mockup-wrap
@@ -469,7 +475,7 @@ export default async function LandingPage() {
                   </div>
                 ))}
               </div>
-              <Link href="/dashboard/bernard-kohn/impact" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "16px 28px", borderRadius: 100, border: "2px solid #2C2C2C", background: "#fff", color: "#2C2C2C", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
+              <Link href="/site/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "16px 28px", borderRadius: 100, border: "2px solid #2C2C2C", background: "#fff", color: "#2C2C2C", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
                 Voir le module Impact dans le dashboard démo →
               </Link>
             </div>
@@ -694,8 +700,7 @@ export default async function LandingPage() {
                 ))}
               </ul>
               <div style={{ marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Link href={`/dashboard/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>▶ Voir le dashboard démo</Link>
-                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#fff", color: "#2C2C2C", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>Voir un site public généré</Link>
+                <Link href={`/site/${DEMO_SLUG}`} style={{ padding: "12px 22px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>▶ Voir le site d&apos;un lieu réel</Link>
               </div>
             </div>
             {/* Formulaire */}
@@ -747,7 +752,7 @@ export default async function LandingPage() {
               <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>Inspiré de l'ESS. Made with ❤ pour les communs.</p>
             </div>
             {[
-              { title: "Produit", links: [["Notre approche", "/approche"], ["Dashboard démo", `/dashboard/${DEMO_SLUG}`], ["Site public généré", `/site/${DEMO_SLUG}`]] },
+              { title: "Produit", links: [["Notre approche", "/approche"], ["Site public généré", `/site/${DEMO_SLUG}`]] },
               { title: "Le projet", links: [["Notre histoire", "/histoire"], ["Centre d'aide", "/aide"], ["S'inscrire", "/signup"]] },
               { title: "Contact", links: [["Demander une démo", "#contact"], ["Se connecter", "/login"], ["contact@casaminga.com", "mailto:contact@casaminga.com"]] },
             ].map((col) => (

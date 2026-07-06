@@ -1,5 +1,12 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
 import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "Notre histoire — le lieu d'abord, l'outil ensuite · Casa Minga",
+  description:
+    "Casa Minga est né dans un tiers-lieu réel, le Tiers-lieu Bernard Kohn, avec de vraies contraintes de gestion associative — pas dans une startup.",
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function Eyebrow({ children, variant = "coral" }: {
@@ -302,8 +309,8 @@ export default function HistoirePage() {
             <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>"</span>
           </blockquote>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/dashboard/bernard-kohn" style={{ padding: "16px 30px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 700, fontSize: 15, textDecoration: "none", boxShadow: "0 8px 20px rgba(255,138,101,0.3)" }}>
-              Voir le dashboard démo →
+            <Link href="/site/bernard-kohn" style={{ padding: "16px 30px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 700, fontSize: 15, textDecoration: "none", boxShadow: "0 8px 20px rgba(255,138,101,0.3)" }}>
+              Découvrir le lieu pilote →
             </Link>
             <Link href="/" style={{ padding: "16px 30px", borderRadius: 100, background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.2)", color: "#fff", fontWeight: 600, fontSize: 15, textDecoration: "none" }}>
               ← Retour à l'accueil

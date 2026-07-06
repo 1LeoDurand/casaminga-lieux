@@ -7,9 +7,14 @@ import type { MetadataRoute } from "next";
  * et on bloque tout l'espace privé : dashboard, back-office, API, pages
  * transactionnelles (scan billets, signatures, désinscription…).
  *
- * Les sites vitrines des lieux (/site/<slug>) ne sont PAS indexés ici : leur
- * URL canonique est casaminga.com/<slug> (le proxy réécrit), pour éviter le
- * contenu dupliqué entre les deux domaines.
+ * Les sites vitrines des lieux (/site/<slug>) SONT indexables ici : le
+ * domaine canonique casaminga.com est actuellement hors service, donc on
+ * assume admin.casaminga.com/site/<slug> comme URL indexable temporaire
+ * (voir generateMetadata → alternates.canonical dans src/app/site/[slug]).
+ *
+ * Les règles disallow ci-dessous n'ont volontairement PAS de slash final :
+ * un disallow sans slash final couvre à la fois le chemin exact (ex.
+ * "/espace") et tous ses sous-chemins (ex. "/espace/xyz").
  */
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -18,21 +23,20 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
-          "/dashboard/",
-          "/admin/",
-          "/api/",
+          "/dashboard",
+          "/admin",
+          "/api",
           "/login",
           "/signup",
           "/onboarding",
-          "/site/",
-          "/scan/",
-          "/signer/",
-          "/tache/",
-          "/billet/",
-          "/embed/",
-          "/espace/",
-          "/rejoindre/",
-          "/newsletter/",
+          "/scan",
+          "/signer",
+          "/tache",
+          "/billet",
+          "/embed",
+          "/espace",
+          "/rejoindre",
+          "/newsletter",
           "/unsubscribe",
         ],
       },

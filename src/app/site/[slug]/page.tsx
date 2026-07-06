@@ -24,9 +24,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const canonical = { alternates: { canonical: `https://admin.casaminga.com/site/${slug}` } };
   const site = await getPublicSiteBySlug(slug);
   if (site) {
-    return { title: site.title, description: site.seo_description ?? undefined };
+    return { title: site.title, description: site.seo_description ?? undefined, ...canonical };
   }
   // Vitrine par établissement
   const est = await getEstablishmentForPublic(slug);
@@ -35,6 +36,7 @@ export async function generateMetadata({
     return {
       title: est.establishment.name,
       description: est.establishment.description ?? orgSite?.seo_description ?? undefined,
+      ...canonical,
     };
   }
   return { title: "Lieu introuvable" };
