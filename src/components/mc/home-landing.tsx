@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/client";
 
 type CS = React.CSSProperties;
 
@@ -86,6 +88,26 @@ export default function HomeLanding() {
   const loginRef = useRef<HTMLAnchorElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Connexion → « Mon compte » si une session existe déjà
+  const [account, setAccount] = useState<{ label: string; href: string }>({ label: "Connexion", href: "/login" });
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("organization_members")
+        .select("organizations(slug)")
+        .eq("user_id", user.id)
+        .eq("status", "actif")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const org = data?.organizations as unknown as { slug: string } | null;
+      setAccount({ label: "Mon compte", href: org?.slug ? `/dashboard/${org.slug}` : "/onboarding" });
+    });
+  }, []);
 
   // lock body scroll
   useEffect(() => {
@@ -359,9 +381,13 @@ export default function HomeLanding() {
         <span style={{ width: "22px", height: "2px", background: "#2C2D2D", borderRadius: "2px" }} />
       </button>
 
-      <a ref={loginRef} id="cm-login" href="/login" style={{ position: "fixed", top: "31px", right: "calc(clamp(20px,4vw,52px) + 72px)", zIndex: 51, display: "flex", alignItems: "center", gap: "9px", padding: "13px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", border: "none", color: "#2C2D2D", background: "#FFF9EC", boxShadow: "0 10px 30px -10px rgba(0,0,0,.45)", transition: "background .25s ease, transform .2s ease" }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>
-        Connexion
+      <a ref={loginRef} id="cm-login" href={account.href} style={{ position: "fixed", top: "31px", right: "calc(clamp(20px,4vw,52px) + 72px)", zIndex: 51, display: "flex", alignItems: "center", gap: "9px", padding: "13px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", border: "none", color: "#2C2D2D", background: "#FFF9EC", boxShadow: "0 10px 30px -10px rgba(0,0,0,.45)", transition: "background .25s ease, transform .2s ease" }}>
+        {account.label === "Mon compte" ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>
+        )}
+        {account.label}
       </a>
 
       <a ref={demoBtnRef} id="cm-demo-btn" href="/signup" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>

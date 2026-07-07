@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -23,6 +23,28 @@ function LoginForm() {
   // Récupère l'url de redirection après connexion (ex: /dashboard/mon-lieu)
   const redirectTo = searchParams.get("redirect") ?? null;
   const authError = searchParams.get("error");
+
+  // Session déjà active → inutile de remontrer le formulaire, on renvoie
+  // directement vers l'espace d'administration (ou l'URL demandée).
+  useEffect(() => {
+    if (!configured) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      if (redirectTo) { router.replace(redirectTo); return; }
+      const { data } = await supabase
+        .from("organization_members")
+        .select("organizations(slug)")
+        .eq("user_id", user.id)
+        .eq("status", "actif")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const org = data?.organizations as unknown as { slug: string } | null;
+      router.replace(org?.slug ? `/dashboard/${org.slug}` : "/onboarding");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
