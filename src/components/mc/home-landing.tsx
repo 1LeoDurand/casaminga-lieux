@@ -71,7 +71,7 @@ const GLOBAL_CSS = `
   #cm-root .cm-draw.drawn svg path { stroke-dashoffset: 0; transition: stroke-dashoffset 1.05s cubic-bezier(.65,0,.35,1) var(--draw-delay,.15s); }
   #cm-menu-btn:hover { transform: scale(1.04); }
   .cm-menu-item:hover { color: #FE8B65 !important; padding-left: 14px; }
-  #cm-login:hover { background: rgba(44,45,45,.07); }
+  #cm-login:hover { background: #FFFFFF; transform: scale(1.04); }
   @media (prefers-reduced-motion: reduce) {
     #cm-root .rv, #cm-root .rv[data-shown] { transform: none; transition: none; }
     #cm-root .cm-draw svg path { stroke-dashoffset: 0; }
@@ -286,7 +286,8 @@ export default function HomeLanding() {
       const dark = darkScene[i];
       if (wm) wm.style.color = dark ? "#FFF9EC" : "#2C2D2D";
       if (demo) { demo.style.background = dark ? ACCENT : "#2C2D2D"; demo.style.color = dark ? "#2C2D2D" : "#FFF9EC"; }
-      if (login) { login.style.color = dark ? "#FFF9EC" : "#2C2D2D"; login.style.borderColor = dark ? "rgba(255,249,236,.45)" : "rgba(44,45,45,.28)"; }
+      // login : fond crème permanent → lisible sur tous les panneaux, pas de swap
+      void login;
     };
 
     let ticking = false;
@@ -358,14 +359,14 @@ export default function HomeLanding() {
         <span style={{ width: "22px", height: "2px", background: "#2C2D2D", borderRadius: "2px" }} />
       </button>
 
-      <a ref={loginRef} id="cm-login" href="/login" style={{ position: "fixed", top: "31px", right: "calc(clamp(20px,4vw,52px) + 72px)", zIndex: 51, display: "flex", alignItems: "center", gap: "9px", padding: "13px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", border: "1.5px solid rgba(44,45,45,.28)", color: "#2C2D2D", background: "transparent", transition: "color .5s ease, border-color .5s ease, background .25s ease" }}>
+      <a ref={loginRef} id="cm-login" href="/login" style={{ position: "fixed", top: "31px", right: "calc(clamp(20px,4vw,52px) + 72px)", zIndex: 51, display: "flex", alignItems: "center", gap: "9px", padding: "13px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", border: "none", color: "#2C2D2D", background: "#FFF9EC", boxShadow: "0 10px 30px -10px rgba(0,0,0,.45)", transition: "background .25s ease, transform .2s ease" }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>
         Connexion
       </a>
 
-      <a ref={demoBtnRef} id="cm-demo-btn" href="/site/bernard-kohn" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>
+      <a ref={demoBtnRef} id="cm-demo-btn" href="/signup" style={{ position: "fixed", bottom: "26px", right: "clamp(20px,4vw,52px)", zIndex: 51, display: "flex", alignItems: "center", gap: "10px", padding: "14px 22px", borderRadius: "40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", background: ACCENT, color: "#2C2D2D", fontWeight: 500, boxShadow: "0 12px 32px -10px rgba(0,0,0,.5)", transition: "background .5s ease, color .5s ease, transform .25s ease" }}>
         <span style={{ width: "22px", height: "22px", borderRadius: "50%", background: "rgba(44,45,45,.16)", display: "flex", alignItems: "center", justifyContent: "center" }}>✦</span>
-        Découvrir le lieu pilote
+        Créer mon espace gratuit
       </a>
 
       <div style={{ position: "fixed", left: 0, bottom: 0, width: "100vw", height: "3px", background: "rgba(0,0,0,.10)", zIndex: 50 }}>
@@ -665,7 +666,7 @@ export default function HomeLanding() {
                 Créer mon espace gratuit →
                 {DRAW_SVG}
               </a>
-              <a href="/site/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
+              <a href="/dashboard/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
                 Découvrir le lieu pilote →
               </a>
             </div>
