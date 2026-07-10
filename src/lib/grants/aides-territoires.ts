@@ -78,10 +78,22 @@ interface AtAid {
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
-/** Retire les balises HTML d'une description AT (texte brut pour notre champ). */
+/** Retire les balises HTML et décode les entités d'une description AT (texte brut). */
 function stripHtml(html: string | null | undefined): string | null {
   if (!html) return null;
-  const text = html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    // Entités numériques (&#039; &#8217;…) puis entités nommées courantes.
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
   return text.length ? text.slice(0, 2000) : null;
 }
 

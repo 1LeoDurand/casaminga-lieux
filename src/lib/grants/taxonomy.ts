@@ -113,8 +113,31 @@ export const GRANT_CATEGORY_LABELS = [
   "Urbanisme / logement / aménagement / Voirie et réseaux",
 ] as const;
 
+/**
+ * Les 9 thèmes parents AT. Nécessaire pour découper les libellés : le
+ * séparateur " / " apparaît AUSSI à l'intérieur de certains noms de thèmes
+ * ("Énergies / Déchets") et de feuilles ("Cours d'eau / canaux / plans d'eau"),
+ * donc un split positionnel est faux — on matche par préfixe connu.
+ */
+export const PARENT_THEMES = [
+  "Culture et identité collective / patrimoine / sports",
+  "Développement économique / production et consommation",
+  "Eau et milieux aquatiques",
+  "Énergies / Déchets",
+  "Fonctions support",
+  "Mobilité / transports",
+  "Nature / environnement",
+  "Solidarités / lien social",
+  "Urbanisme / logement / aménagement",
+] as const;
+
 /** Découpe un libellé complet en { thème parent, feuille }. */
 export function splitCategory(label: string): { theme: string; leaf: string } {
+  for (const theme of PARENT_THEMES) {
+    if (label.startsWith(`${theme} / `)) return { theme, leaf: label.slice(theme.length + 3) };
+    if (label === theme) return { theme, leaf: theme };
+  }
+  // Thème inconnu (évolution du référentiel AT) : dernier segment en feuille.
   const i = label.lastIndexOf(" / ");
   if (i === -1) return { theme: label, leaf: label };
   return { theme: label.slice(0, i), leaf: label.slice(i + 3) };
