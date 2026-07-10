@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight, FolderOpen, Search } from "lucide-react";
+import { SlidersHorizontal, ExternalLink, X, CalendarClock, ChevronDown, ArrowRight, FolderOpen, FolderKanban, Search } from "lucide-react";
 import {
   type GrantOpportunity,
   type OrgGrantProfile,
@@ -28,6 +28,9 @@ const STRUCTURE_TYPES = ["association", "scic", "scop", "collectif", "etablissem
 
 const STATUS_ORDER: ApplicationStatus[] = ["interesse", "en_cours", "depose", "obtenu", "refuse"];
 
+/** Une opportunité suivie (statut non nul) — utilisée par le bloc « Mes dossiers ». */
+type FollowedItem = { opp: GrantOpportunity; status: ApplicationStatus; linked_grant_id: string | null };
+
 type DeadlineFilter = "" | "soon" | "permanent";
 type AidTypeFilter = "" | "grant" | "loan" | "engineering";
 
@@ -42,6 +45,11 @@ function scoreColor(s: number) {
   if (s >= 75) return "bg-emerald-100 text-emerald-700";
   if (s >= 50) return "bg-amber-100 text-amber-700";
   return "bg-slate-100 text-slate-500";
+}
+
+/** Nombre de jours (arrondi au-dessus) entre maintenant et une date ISO — peut être négatif si passée. */
+function daysUntil(iso: string): number {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
 /** Une opportunité passe le filtre échéance ? */
@@ -307,6 +315,29 @@ export function VeilleView({
     return { status: app?.status ?? null, linked_grant_id: app?.linked_grant_id ?? null };
   }
 
+  // Opportunités suivies (statut non nul) — remontées en haut de vue pour ne pas se perdre dans le catalogue.
+  const followed = useMemo<FollowedItem[]>(() => {
+    const items: FollowedItem[] = [];
+    for (const o of opportunities) {
+      const { status, linked_grant_id } = getApp(o.id);
+      if (status !== null) items.push({ opp: o, status, linked_grant_id });
+    }
+    return items.sort((a, b) => {
+      const oi = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+      if (oi !== 0) return oi;
+      const ad = a.opp.deadline ? new Date(a.opp.deadline).getTime() : Infinity;
+      const bd = b.opp.deadline ? new Date(b.opp.deadline).getTime() : Infinity;
+      return ad - bd;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opportunities, localApps, initialApplications]);
+
+  const followedCounts = useMemo(() => {
+    const counts = new Map<ApplicationStatus, number>();
+    for (const f of followed) counts.set(f.status, (counts.get(f.status) ?? 0) + 1);
+    return counts;
+  }, [followed]);
+
   function handleStatusChange(opp: GrantOpportunity, statusOrEmpty: ApplicationStatus | "") {
     const newStatus = statusOrEmpty === "" ? null : statusOrEmpty;
 
@@ -402,6 +433,59 @@ export function VeilleView({
           >
             Compléter mon profil
           </button>
+        </div>
+      )}
+
+      {/* Mes dossiers — remonte les opportunités suivies pour qu'elles ne se perdent pas dans le catalogue */}
+      {followed.length > 0 && (
+        <div className="rounded-2xl border border-border bg-white px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 font-heading text-[15px] font-bold text-ink">
+              <FolderKanban className="size-4 text-coral-dark" />
+              Mes dossiers <span className="font-normal text-warmgray">({followed.length})</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {STATUS_ORDER.filter((s) => (followedCounts.get(s) ?? 0) > 0).map((s) => {
+                const meta = APPLICATION_STATUS_META[s];
+                return (
+                  <span
+                    key={s}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${meta.color}`}
+                  >
+                    {meta.icon} {followedCounts.get(s)}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+            {followed.map(({ opp, status }) => {
+              const meta = APPLICATION_STATUS_META[status];
+              const days = opp.deadline ? daysUntil(opp.deadline) : null;
+              const isSoon = days !== null && days >= 0 && days <= 30;
+              return (
+                <Link
+                  key={opp.id}
+                  href={`/dashboard/${orgSlug}/subventions/veille/${opp.id}`}
+                  className="min-w-[240px] max-w-[280px] shrink-0 rounded-xl border border-border bg-[#FAFAF7] p-3 transition hover:border-coral/40"
+                >
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${meta.color}`}>
+                    {meta.icon} {meta.label}
+                  </span>
+                  <div className="mt-2 line-clamp-2 font-semibold text-[13px] text-ink">{opp.title}</div>
+                  {opp.funder && <div className="truncate text-[12px] text-warmgray">{opp.funder}</div>}
+                  {opp.deadline && (
+                    <div className={`mt-1.5 inline-flex items-center gap-1 text-[11px] ${isSoon ? "font-semibold text-coral-dark" : "text-warmgray"}`}>
+                      <CalendarClock className="size-3" />
+                      {new Date(opp.deadline).toLocaleDateString("fr-FR")}
+                      {isSoon ? ` · J-${days}` : ""}
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 

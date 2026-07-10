@@ -3,14 +3,19 @@ import Link from "next/link";
 import { Radar } from "lucide-react";
 import { PageHeader } from "@/components/mc/page-header";
 import { GrantsView } from "@/components/mc/grants-view";
+import { GrantDossiersHub } from "@/components/mc/grant-dossiers-hub";
 import { getOrganizationBySlug, getGrantsForOrg } from "@/lib/data";
+import { getFollowedDossiers } from "@/lib/grants/data";
 
 export default async function SubventionsPage({ params }: { params: Promise<{ org: string }> }) {
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
 
-  const grants = await getGrantsForOrg(organization.id);
+  const [grants, dossiers] = await Promise.all([
+    getGrantsForOrg(organization.id),
+    getFollowedDossiers(organization.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -24,6 +29,7 @@ export default async function SubventionsPage({ params }: { params: Promise<{ or
           </Link>
         }
       />
+      <GrantDossiersHub dossiers={dossiers} orgSlug={organization.slug} />
       <GrantsView grants={grants} orgSlug={organization.slug} orgId={organization.id} />
     </div>
   );

@@ -52,6 +52,45 @@ export async function getApplications(orgId: string): Promise<Map<string, GrantA
   return map;
 }
 
+/** Un dossier suivi = une candidature + l'opportunité correspondante (jointure applicative). */
+export interface FollowedDossier {
+  application: GrantApplication;
+  opportunity: GrantOpportunity | null;
+}
+
+/**
+ * Dossiers suivis par l'org (toute candidature ayant un statut), enrichis du
+ * détail de l'opportunité. Alimente le hub Subventions et le bloc « Mes
+ * dossiers » : ce qu'on suit doit remonter au lieu de se perdre dans le catalogue.
+ */
+export async function getFollowedDossiers(orgId: string): Promise<FollowedDossier[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data: apps } = await supabase
+    .from("grant_applications")
+    .select("*")
+    .eq("organization_id", orgId)
+    .order("updated_at", { ascending: false });
+  const applications = (apps ?? []) as GrantApplication[];
+  if (applications.length === 0) return [];
+
+  const oppIds = [...new Set(applications.map((a) => a.opportunity_id))];
+  const oppById = new Map<string, GrantOpportunity>();
+  // `.in()` borné — découpe par paquets de 300 (URL raisonnable).
+  for (let i = 0; i < oppIds.length; i += 300) {
+    const { data } = await supabase
+      .from("grant_opportunities")
+      .select("*")
+      .in("id", oppIds.slice(i, i + 300));
+    for (const o of (data ?? []) as GrantOpportunity[]) oppById.set(o.id, o);
+  }
+
+  return applications.map((application) => ({
+    application,
+    opportunity: oppById.get(application.opportunity_id) ?? null,
+  }));
+}
+
 /** Upsert d'une candidature (création ou mise à jour du statut). */
 export async function upsertApplication(
   orgId: string,
