@@ -48,6 +48,11 @@ export async function generateMonthlyInvoices(
 
   const todayISO = now.toISOString().slice(0, 10);
 
+  // Échéance = émission + délai de paiement (une facture due le jour de son
+  // émission passait « en retard » dès le lendemain → relances immédiates).
+  const termsDays = (settings as InvoiceSettings | null)?.payment_terms_days ?? 15;
+  const dueISO = new Date(now.getTime() + termsDays * 86_400_000).toISOString().slice(0, 10);
+
   for (const sub of subs) {
     // Déjà facturé ce mois ?
     if (sub.last_invoiced_month === monthKey) { result.skipped++; continue; }
@@ -78,7 +83,7 @@ export async function generateMonthlyInvoices(
         client_email: sub.client_email,
         client_address: sub.client_address,
         issue_date: todayISO,
-        due_date: todayISO,
+        due_date: dueISO,
         lines,
         vat_applicable: vatApplicable,
         ...totals,

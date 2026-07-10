@@ -9,8 +9,16 @@ export const maxDuration = 60;
 /**
  * Relances de paiement : marque "en_retard" les factures émises/envoyées dont
  * l'échéance est dépassée et envoie un email de rappel (PDF joint).
- * Sécurisé par CRON_SECRET. Idempotent (n'envoie qu'aux non payées/non annulées).
+ * Sécurisé par CRON_SECRET.
+ *
+ * Anti-spam (le cron tourne chaque jour, mais on ne relance PAS chaque jour) :
+ *  - 1ʳᵉ relance : 3 jours après l'échéance (laisser le temps de payer) ;
+ *  - relances suivantes : espacées d'au moins 7 jours ;
+ *  - plafond : 3 relances par facture, ensuite on s'arrête (relance humaine).
  */
+const FIRST_REMINDER_DELAY_DAYS = 3;
+const REMINDER_SPACING_DAYS = 7;
+const MAX_REMINDERS = 3;
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -50,13 +58,30 @@ export async function POST(req: Request) {
     return s;
   }
 
+  const now = Date.now();
+  const DAY = 86_400_000;
+
   let reminded = 0;
-  for (const inv of overdue as Invoice[]) {
-    // Marque en retard
+  let skipped = 0;
+  for (const inv of overdue as (Invoice & { last_reminder_at: string | null; reminder_count: number })[]) {
+    // Marque en retard (indépendant de l'envoi d'email)
     if (inv.status !== "en_retard") {
       await admin.from("invoices").update({ status: "en_retard" }).eq("id", inv.id);
     }
     if (!inv.client_email) continue;
+
+    // ── Throttle anti-spam ──
+    const count = inv.reminder_count ?? 0;
+    if (count >= MAX_REMINDERS) { skipped++; continue; }
+    if (!inv.last_reminder_at) {
+      // Jamais relancé : attendre FIRST_REMINDER_DELAY_DAYS après l'échéance
+      const dueMs = inv.due_date ? new Date(inv.due_date).getTime() : 0;
+      if (now - dueMs < FIRST_REMINDER_DELAY_DAYS * DAY) { skipped++; continue; }
+    } else if (now - new Date(inv.last_reminder_at).getTime() < REMINDER_SPACING_DAYS * DAY) {
+      // Déjà relancé récemment : espacer
+      skipped++; continue;
+    }
+
     const set = await settingsFor(inv.organization_id);
     try {
       const pdf = await renderInvoicePdf(inv, set);
@@ -77,12 +102,17 @@ export async function POST(req: Request) {
         replyTo: set.email ?? undefined,
         attachments: [{ filename: `${inv.number}.pdf`, content: pdf, contentType: "application/pdf" }],
       });
-      if (ok) reminded++;
+      if (ok) {
+        reminded++;
+        await admin.from("invoices")
+          .update({ last_reminder_at: new Date().toISOString(), reminder_count: count + 1 })
+          .eq("id", inv.id);
+      }
     } catch {
       /* on continue */
     }
   }
 
   await logCronRun("payment-reminders", "ok", { rowsAffected: reminded });
-  return NextResponse.json({ ok: true, overdue: overdue.length, reminded });
+  return NextResponse.json({ ok: true, overdue: overdue.length, reminded, skipped });
 }
