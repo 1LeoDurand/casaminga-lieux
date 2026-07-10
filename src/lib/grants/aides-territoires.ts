@@ -31,7 +31,21 @@ export interface ImportedOpportunity {
   application_url: string | null;
   required_documents: string[];
   description: string | null;
+  // ── Enrichissement Layer 2 (colonnes migration 0008) ──
+  // Toujours calculés, mais écrits en base seulement si ENRICH est actif
+  // (voir enrichmentCols) pour ne pas casser l'import avant la migration.
+  aid_type_slugs: string[];
+  is_charged: boolean | null;
+  region_code: string | null;
+  perimeter_scale: string | null;
 }
+
+/**
+ * Layer 2 activable : n'écrit les colonnes d'enrichissement que si
+ * AIDES_TERRITOIRES_ENRICH=1 ET après application de la migration 0008.
+ * Par défaut off → import strictement identique à l'existant (aucun risque).
+ */
+const ENRICH = process.env.AIDES_TERRITOIRES_ENRICH === "1";
 
 interface AtAid {
   id: number;
@@ -56,6 +70,10 @@ interface AtAid {
   url?: string | null;
   description?: string | null;
   aid_types?: string[];
+  // Enrichissement (v1.8.4) — présents selon la version de l'API.
+  is_charged?: boolean | null;
+  region_code?: string | null;
+  perimeter_scale?: string | null;
 }
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
@@ -124,6 +142,31 @@ function buildDescription(aid: AtAid): string | null {
   return joined.length ? joined.slice(0, 4000) : null;
 }
 
+/**
+ * Déduit des slugs de nature d'aide à partir des signaux financiers déjà
+ * présents dans l'aide (fiable, sans dépendre du nommage exact côté AT).
+ * Le filtre UI classe ensuite par sous-chaîne (grant / loan / advance).
+ */
+function aidTypeSlugs(aid: AtAid): string[] {
+  const slugs = new Set<string>();
+  const hasRate =
+    aid.subvention_rate_min != null || aid.subvention_rate_max != null ||
+    aid.subvention_rate_lower_bound != null || aid.subvention_rate_upper_bound != null;
+  if (hasRate || aid.subvention_comment) slugs.add("grant");
+  if (aid.loan_amount != null) slugs.add("loan");
+  if (aid.recoverable_advance_amount != null) slugs.add("recoverable-advance");
+  for (const t of aid.aid_types ?? []) {
+    const n = t.toLowerCase();
+    if (n.includes("subvention")) slugs.add("grant");
+    if (n.includes("prêt") || n.includes("pret") || n.includes("loan")) slugs.add("loan");
+    if (n.includes("avance")) slugs.add("recoverable-advance");
+    if (n.includes("ingénierie") || n.includes("ingenierie") || n.includes("technique") || n.includes("accompagnement")) {
+      slugs.add("engineering");
+    }
+  }
+  return [...slugs];
+}
+
 function mapAid(aid: AtAid): ImportedOpportunity {
   const financer = aid.financers?.[0] ?? null;
   return {
@@ -143,6 +186,21 @@ function mapAid(aid: AtAid): ImportedOpportunity {
     application_url: aid.application_url ?? aid.origin_url ?? aid.url ?? null,
     required_documents: [],
     description: buildDescription(aid),
+    aid_type_slugs: aidTypeSlugs(aid),
+    is_charged: aid.is_charged ?? null,
+    region_code: aid.region_code ?? null,
+    perimeter_scale: aid.perimeter_scale ?? null,
+  };
+}
+
+/** Colonnes d'enrichissement à écrire — vides si Layer 2 inactif (migration non appliquée). */
+function enrichmentCols(o: ImportedOpportunity) {
+  if (!ENRICH) return {};
+  return {
+    aid_type_slugs: o.aid_type_slugs,
+    is_charged: o.is_charged,
+    region_code: o.region_code,
+    perimeter_scale: o.perimeter_scale,
   };
 }
 
@@ -270,7 +328,15 @@ export async function syncAidesTerritoires(maxAids = 2000): Promise<SyncResult> 
   // lieux ; le tri/filtrage se fait côté lieu via le profil + la recherche).
   if (newRows.length) {
     const { error } = await admin.from("grant_opportunities").insert(
-      newRows.map((o) => ({ ...o, source: "aides-territoires", published: true, updated_at: now })),
+      newRows.map((o) => ({
+        external_id: o.external_id, title: o.title, funder: o.funder, funder_type: o.funder_type,
+        themes: o.themes, regions: o.regions, structure_types: o.structure_types,
+        amount_min: o.amount_min, amount_max: o.amount_max, deadline: o.deadline,
+        recurring: o.recurring, application_url: o.application_url,
+        required_documents: o.required_documents, description: o.description,
+        ...enrichmentCols(o),
+        source: "aides-territoires", published: true, updated_at: now,
+      })),
     );
     if (error) return { ok: false, error: error.message };
     imported = newRows.length;
@@ -287,6 +353,7 @@ export async function syncAidesTerritoires(maxAids = 2000): Promise<SyncResult> 
         amount_min: o.amount_min, amount_max: o.amount_max, deadline: o.deadline,
         recurring: o.recurring, application_url: o.application_url,
         required_documents: o.required_documents, description: o.description,
+        ...enrichmentCols(o),
         updated_at: now,
       })),
       { onConflict: "source,external_id" },

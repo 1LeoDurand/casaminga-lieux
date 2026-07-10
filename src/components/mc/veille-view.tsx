@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useTransition } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -11,11 +11,11 @@ import {
   type GrantApplication,
   type ApplicationStatus,
   FUNDER_TYPE_LABELS,
-  GRANT_THEMES,
   FRENCH_REGIONS,
   APPLICATION_STATUS_META,
   eligibilityScore,
 } from "@/lib/grants/types";
+import { CATEGORY_GROUPS, splitCategory } from "@/lib/grants/taxonomy";
 import {
   saveGrantProfile,
   upsertApplicationAction,
@@ -28,6 +28,9 @@ const STRUCTURE_TYPES = ["association", "scic", "scop", "collectif", "etablissem
 
 const STATUS_ORDER: ApplicationStatus[] = ["interesse", "en_cours", "depose", "obtenu", "refuse"];
 
+type DeadlineFilter = "" | "soon" | "permanent";
+type AidTypeFilter = "" | "grant" | "loan" | "engineering";
+
 function fmtAmount(min: number | null, max: number | null) {
   const f = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
   if (min && max) return `${f(min)} – ${f(max)}`;
@@ -39,6 +42,26 @@ function scoreColor(s: number) {
   if (s >= 75) return "bg-emerald-100 text-emerald-700";
   if (s >= 50) return "bg-amber-100 text-amber-700";
   return "bg-slate-100 text-slate-500";
+}
+
+/** Une opportunité passe le filtre échéance ? */
+function matchesDeadline(opp: GrantOpportunity, filter: DeadlineFilter): boolean {
+  if (!filter) return true;
+  if (filter === "permanent") return !opp.deadline;
+  if (!opp.deadline) return false;
+  const days = (new Date(opp.deadline).getTime() - Date.now()) / 86_400_000;
+  return days >= 0 && days <= 90;
+}
+
+/** Une opportunité passe le filtre nature d'aide (Layer 2) ? */
+function matchesAidType(opp: GrantOpportunity, filter: AidTypeFilter): boolean {
+  if (!filter) return true;
+  const slugs = opp.aid_type_slugs ?? [];
+  if (slugs.length === 0) return false;
+  const hay = slugs.join(" ").toLowerCase();
+  if (filter === "grant") return /grant|subvention/.test(hay);
+  if (filter === "loan") return /loan|advance|avance/.test(hay);
+  return /engineering|ingenierie|technical/.test(hay);
 }
 
 /** Sélecteur de statut candidature intégré à la carte. */
@@ -113,14 +136,106 @@ function ApplicationStatusPicker({
   );
 }
 
+/** Sélecteur de thématiques à 2 niveaux (thème parent repliable → catégories AT à cocher). */
+function CategoryFilter({
+  selected,
+  onChange,
+}: {
+  selected: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  function toggleGroup(theme: string) {
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (next.has(theme)) next.delete(theme); else next.add(theme);
+      return next;
+    });
+  }
+  function toggleItem(label: string) {
+    const next = new Set(selected);
+    if (next.has(label)) next.delete(label); else next.add(label);
+    onChange(next);
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-[#FAFAF7] px-3 py-2.5 text-sm text-ink outline-none focus:border-coral"
+      >
+        {selected.size === 0 ? "Toutes les thématiques" : `${selected.size} thématique${selected.size > 1 ? "s" : ""}`}
+        <ChevronDown className={`size-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-20 mt-1.5 max-h-[360px] w-[360px] max-w-[90vw] overflow-y-auto rounded-xl border border-border bg-white shadow-lg"
+          onMouseLeave={() => setOpen(false)}
+        >
+          {CATEGORY_GROUPS.map((group) => {
+            const isExpanded = expanded.has(group.theme);
+            const selectedInGroup = group.items.filter((it) => selected.has(it.label)).length;
+            return (
+              <div key={group.theme} className="border-b border-border last:border-b-0">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.theme)}
+                  className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-ink hover:bg-cream"
+                >
+                  <span>{group.theme}{selectedInGroup > 0 ? ` (${selectedInGroup})` : ""}</span>
+                  <ChevronDown className={`size-3.5 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                </button>
+                {isExpanded && (
+                  <div className="flex flex-col gap-0.5 px-3.5 pb-2.5">
+                    {group.items.map((item) => (
+                      <label
+                        key={item.label}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-[12.5px] text-warmgray hover:bg-cream"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected.has(item.label)}
+                          onChange={() => toggleItem(item.label)}
+                          className="size-3.5 accent-coral"
+                        />
+                        {item.leaf}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {selected.size > 0 && (
+            <div className="border-t border-border px-3.5 py-2">
+              <button
+                type="button"
+                onClick={() => onChange(new Set())}
+                className="text-[12px] font-semibold text-coral-dark hover:underline"
+              >
+                Tout effacer
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VeilleView({
-  opportunities, profile, applications: initialApplications, defaultStructure, orgId, orgSlug,
+  opportunities, profile, applications: initialApplications, defaultStructure, orgId, orgSlug, orgRegions,
 }: {
   opportunities: GrantOpportunity[];
   profile: OrgGrantProfile | null;
   applications: Map<string, GrantApplication>;
   defaultStructure: string | null;
   orgId: string; orgSlug: string;
+  orgRegions: string[];
 }) {
   const [showProfile, setShowProfile] = useState(false);
   const [onlyEligible, setOnlyEligible] = useState(false);
@@ -131,10 +246,18 @@ export function VeilleView({
   const PAGE = 40;
   const [query, setQuery] = useState("");
   const [funderFilter, setFunderFilter] = useState("");
-  const [themeFilter, setThemeFilter] = useState("");
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set());
+  const [deadlineFilter, setDeadlineFilter] = useState<DeadlineFilter>("");
+  const [aidTypeFilter, setAidTypeFilter] = useState<AidTypeFilter>("");
   const [limit, setLimit] = useState(PAGE);
-  // Repart du début quand un filtre change
-  useEffect(() => { setLimit(PAGE); }, [query, funderFilter, themeFilter, onlyEligible]);
+  // Repart du début quand un filtre change — reset pendant le rendu (pattern React
+  // recommandé, sans effet) via une clé dérivée des filtres actifs.
+  const filterKey = `${query}|${funderFilter}|${[...selectedCats].sort().join(",")}|${deadlineFilter}|${aidTypeFilter}|${onlyEligible}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setLimit(PAGE);
+  }
 
   // Optimistic local state: opportunity_id → { status, linked_grant_id }
   type LocalApp = { status: ApplicationStatus | null; linked_grant_id?: string | null };
@@ -142,30 +265,35 @@ export function VeilleView({
 
   const scored = useMemo(() => {
     return opportunities
-      .map((o) => ({ opp: o, score: eligibilityScore(o, profile) }))
+      .map((o) => ({ opp: o, score: eligibilityScore(o, profile, orgRegions) }))
       .sort((a, b) => b.score - a.score);
-  }, [opportunities, profile]);
+  }, [opportunities, profile, orgRegions]);
 
-  // Thématiques réellement présentes dans le catalogue (pour le sélecteur)
-  const allThemes = useMemo(() => {
-    const s = new Set<string>();
-    for (const o of opportunities) for (const t of o.themes) s.add(t);
-    return [...s].sort((a, b) => a.localeCompare(b, "fr"));
-  }, [opportunities]);
+  // Facette « nature d'aide » : affichée seulement si le catalogue a des aid_type_slugs (Layer 2).
+  const hasAidTypes = useMemo(
+    () => opportunities.some((o) => (o.aid_type_slugs?.length ?? 0) > 0),
+    [opportunities]
+  );
+
+  const hasActiveFilters = Boolean(
+    query || funderFilter || selectedCats.size > 0 || deadlineFilter || aidTypeFilter || onlyEligible
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return scored.filter(({ opp, score }) => {
       if (onlyEligible && score < 50) return false;
       if (funderFilter && opp.funder_type !== funderFilter) return false;
-      if (themeFilter && !opp.themes.includes(themeFilter)) return false;
+      if (selectedCats.size > 0 && !opp.themes.some((t) => selectedCats.has(t))) return false;
+      if (!matchesDeadline(opp, deadlineFilter)) return false;
+      if (hasAidTypes && !matchesAidType(opp, aidTypeFilter)) return false;
       if (q) {
         const hay = `${opp.title} ${opp.funder ?? ""} ${opp.description ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [scored, onlyEligible, funderFilter, themeFilter, query]);
+  }, [scored, onlyEligible, funderFilter, selectedCats, deadlineFilter, aidTypeFilter, hasAidTypes, query]);
 
   const shown = filtered.slice(0, limit);
   const hasProfile = Boolean(profile?.region || profile?.structure_type || (profile?.themes.length ?? 0) > 0);
@@ -278,7 +406,7 @@ export function VeilleView({
       )}
 
       {/* Barre de filtres */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white px-4 py-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-white px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-warmgray" />
           <input
@@ -293,10 +421,26 @@ export function VeilleView({
           <option value="">Tous les financeurs</option>
           {Object.entries(FUNDER_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        {allThemes.length > 0 && (
-          <select value={themeFilter} onChange={(e) => setThemeFilter(e.target.value)} className="max-w-[220px] rounded-xl border border-border bg-[#FAFAF7] px-3 py-2.5 text-sm text-ink outline-none focus:border-coral">
-            <option value="">Toutes les thématiques</option>
-            {allThemes.map((t) => <option key={t} value={t}>{t}</option>)}
+        <CategoryFilter selected={selectedCats} onChange={setSelectedCats} />
+        <select
+          value={deadlineFilter}
+          onChange={(e) => setDeadlineFilter(e.target.value as DeadlineFilter)}
+          className="rounded-xl border border-border bg-[#FAFAF7] px-3 py-2.5 text-sm text-ink outline-none focus:border-coral"
+        >
+          <option value="">Toutes les échéances</option>
+          <option value="soon">Échéance &lt; 90 jours</option>
+          <option value="permanent">Sans échéance / permanentes</option>
+        </select>
+        {hasAidTypes && (
+          <select
+            value={aidTypeFilter}
+            onChange={(e) => setAidTypeFilter(e.target.value as AidTypeFilter)}
+            className="rounded-xl border border-border bg-[#FAFAF7] px-3 py-2.5 text-sm text-ink outline-none focus:border-coral"
+          >
+            <option value="">Toutes les aides</option>
+            <option value="grant">Subventions</option>
+            <option value="loan">Prêts / avances</option>
+            <option value="engineering">Ingénierie / accompagnement</option>
           </select>
         )}
       </div>
@@ -305,9 +449,16 @@ export function VeilleView({
       <div className="px-1 text-[12.5px] text-warmgray">
         {filtered.length} aide{filtered.length > 1 ? "s" : ""}
         {filtered.length !== opportunities.length ? ` sur ${opportunities.length}` : ""}
-        {(query || funderFilter || themeFilter || onlyEligible) && (
+        {hasActiveFilters && (
           <button
-            onClick={() => { setQuery(""); setFunderFilter(""); setThemeFilter(""); setOnlyEligible(false); }}
+            onClick={() => {
+              setQuery("");
+              setFunderFilter("");
+              setSelectedCats(new Set());
+              setDeadlineFilter("");
+              setAidTypeFilter("");
+              setOnlyEligible(false);
+            }}
             className="ml-2 font-semibold text-coral-dark hover:underline"
           >
             réinitialiser
@@ -318,7 +469,7 @@ export function VeilleView({
       {/* Liste */}
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-white px-5 py-12 text-center text-sm text-warmgray">
-          Aucune opportunité {onlyEligible || query || funderFilter || themeFilter ? "ne correspond à votre recherche" : "pour le moment"}.
+          Aucune opportunité {hasActiveFilters ? "ne correspond à votre recherche" : "pour le moment"}.
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -351,9 +502,18 @@ export function VeilleView({
 
                 {opp.themes.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {opp.themes.map((t) => (
-                      <span key={t} className={`rounded-full border px-2 py-0.5 text-[11px] ${profile?.themes.includes(t) ? "border-coral/40 bg-peach-pale text-coral-dark" : "border-border text-warmgray"}`}>{t}</span>
-                    ))}
+                    {opp.themes.map((t) => {
+                      const { leaf } = splitCategory(t);
+                      return (
+                        <span
+                          key={t}
+                          title={t}
+                          className={`rounded-full border px-2 py-0.5 text-[11px] ${profile?.themes.includes(t) ? "border-coral/40 bg-peach-pale text-coral-dark" : "border-border text-warmgray"}`}
+                        >
+                          {leaf}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -429,9 +589,23 @@ function ProfileModal({
   const [themes, setThemes] = useState<string[]>(profile?.themes ?? []);
   const [budget, setBudget] = useState<string>(profile?.annual_budget != null ? String(profile.annual_budget) : "");
   const [summary, setSummary] = useState(profile?.project_summary ?? "");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(
+      CATEGORY_GROUPS
+        .filter((g) => g.items.some((it) => (profile?.themes ?? []).includes(it.label)))
+        .map((g) => g.theme)
+    )
+  );
 
   function toggleTheme(t: string) {
     setThemes((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
+  }
+  function toggleGroup(theme: string) {
+    setExpandedGroups((cur) => {
+      const next = new Set(cur);
+      if (next.has(theme)) next.delete(theme); else next.add(theme);
+      return next;
+    });
   }
   function submit() {
     startTransition(async () => {
@@ -472,11 +646,37 @@ function ProfileModal({
           <div className="sm:col-span-2"><label className={labelCls}>Budget annuel (€)</label><input type="number" className={inputCls} value={budget} onChange={(e) => setBudget(e.target.value)} /></div>
           <div className="sm:col-span-2">
             <label className={labelCls}>Thématiques de votre lieu</label>
-            <div className="flex flex-wrap gap-1.5">
-              {GRANT_THEMES.map((t) => (
-                <button key={t} type="button" onClick={() => toggleTheme(t)}
-                  className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition ${themes.includes(t) ? "border-coral bg-coral text-white" : "border-border bg-white text-warmgray hover:border-coral/40"}`}>{t}</button>
-              ))}
+            <div className="max-h-[260px] overflow-y-auto rounded-xl border border-border">
+              {CATEGORY_GROUPS.map((group) => {
+                const isExpanded = expandedGroups.has(group.theme);
+                const selectedCount = group.items.filter((it) => themes.includes(it.label)).length;
+                return (
+                  <div key={group.theme} className="border-b border-border last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.theme)}
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[12.5px] font-semibold text-ink hover:bg-cream"
+                    >
+                      <span>{group.theme}{selectedCount > 0 ? ` (${selectedCount})` : ""}</span>
+                      <ChevronDown className={`size-3.5 shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                    {isExpanded && (
+                      <div className="flex flex-wrap gap-1.5 px-3 pb-2.5">
+                        {group.items.map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => toggleTheme(item.label)}
+                            className={`rounded-full border px-2.5 py-1 text-[12px] font-medium transition ${themes.includes(item.label) ? "border-coral bg-coral text-white" : "border-border bg-white text-warmgray hover:border-coral/40"}`}
+                          >
+                            {item.leaf}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div className="sm:col-span-2"><label className={labelCls}>Présentation du lieu (pour les dossiers)</label><textarea className={`${inputCls} min-h-[90px] resize-y`} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Quelques lignes sur votre lieu, ses activités, son public…" /></div>

@@ -25,6 +25,7 @@ export interface GrantOpportunity {
   title: string;
   funder: string | null;
   funder_type: FunderType | null;
+  /** Libellés de catégories Aides-Territoires (ex. "Nature / environnement / Biodiversité"). */
   themes: string[];
   regions: string[];
   structure_types: string[];
@@ -38,12 +39,29 @@ export interface GrantOpportunity {
   source: "manuel" | "aides-territoires";
   external_id: string | null;
   published: boolean;
+  // ── Enrichissement AT optionnel (Layer 2 : migration 0008 + réimport). ──
+  // Absents/vides tant que la couche d'enrichissement n'est pas appliquée :
+  // toujours lus avec fallback, jamais requis au runtime.
+  /** Nature d'aide : "grant" (subvention), "loan", "recoverable-advance", ingénierie… */
+  aid_type_slugs?: string[];
+  /** L'aide est-elle payante pour le bénéficiaire ? */
+  is_charged?: boolean | null;
+  /** Code région INSEE du périmètre (ex. "11" = Île-de-France). */
+  region_code?: string | null;
+  /** Échelle du périmètre : commune / epci / department / region / country / europe. */
+  perimeter_scale?: string | null;
 }
 
 export interface OrgGrantProfile {
   organization_id: string;
   region: string | null;
   structure_type: string | null;
+  /**
+   * Catégories Aides-Territoires sélectionnées par le lieu, en LIBELLÉS COMPLETS
+   * (mêmes chaînes que `GrantOpportunity.themes`). Stockées dans la colonne
+   * `org_grant_profile.themes` — le matching thématique est une intersection
+   * exacte avec les catégories des aides. Voir lib/grants/taxonomy.ts.
+   */
   themes: string[];
   annual_budget: number | null;
   project_summary: string | null;
@@ -94,32 +112,110 @@ export const FRENCH_REGIONS = [
   "Outre-mer",
 ] as const;
 
+import { parentThemes, isNationalPerimeter, perimeterMatchesRegions } from "./taxonomy";
+
 /**
- * Score d'éligibilité 0–100 d'une opportunité pour un profil donné.
- * Régions/structures vides = ouvert à tous (compatible). Thèmes communs = bonus.
+ * Contexte géographique du lieu pour le scoring : toutes les régions couvertes
+ * par l'organisation (région du profil + régions dérivées de ses établissements
+ * — gestion multi-lieu). Vide = localisation inconnue → axe géo neutralisé.
  */
-export function eligibilityScore(opp: GrantOpportunity, profile: OrgGrantProfile | null): number {
+export type OrgGeoContext = string[];
+
+/**
+ * Score de pertinence 0–100 d'une opportunité pour un profil de lieu.
+ *
+ * Trois axes (l'axe « type de structure » a été retiré : toutes les aides
+ * importées ciblent déjà les associations, il n'apportait aucune discrimination
+ * et gonflait tous les scores à ~60 %) :
+ *   • Thématique (55 pts) — intersection exacte des catégories AT, avec repli
+ *     sur le thème parent commun. C'est le signal le plus fort.
+ *   • Géographique (35 pts) — aide nationale/européenne = compatible partout ;
+ *     sinon match sur l'une des régions du lieu (profil + établissements).
+ *   • Fraîcheur / récurrence (10 pts) — petit bonus deadline proche ou récurrent.
+ *
+ * `orgRegions` : union des régions du lieu (voir OrgGeoContext). Optionnel pour
+ * compat ascendante ; sans lui, seule la région du profil est prise en compte.
+ */
+export function eligibilityScore(
+  opp: GrantOpportunity,
+  profile: OrgGrantProfile | null,
+  orgRegions: OrgGeoContext = [],
+): number {
   if (!profile) return 50; // pas de profil → neutre
+
+  // Régions du lieu : profil + établissements, dédupliquées.
+  const regions = [...new Set([profile.region, ...orgRegions].filter((r): r is string => !!r))];
+
   let score = 0;
-  let max = 0;
 
-  // Région (poids 35)
-  max += 35;
-  if (opp.regions.length === 0) score += 35;
-  else if (profile.region && opp.regions.includes(profile.region)) score += 35;
-
-  // Type de structure (poids 25)
-  max += 25;
-  if (opp.structure_types.length === 0) score += 25;
-  else if (profile.structure_type && opp.structure_types.includes(profile.structure_type)) score += 25;
-
-  // Thématiques (poids 40)
-  max += 40;
-  if (opp.themes.length === 0) score += 20;
-  else {
-    const common = opp.themes.filter((t) => profile.themes.includes(t)).length;
-    if (common > 0) score += Math.min(40, 20 + common * 10);
+  // ── Thématique (55 pts) ─────────────────────────────────────
+  if (profile.themes.length === 0) {
+    score += 22; // profil sans thématique → neutre bas
+  } else if (opp.themes.length === 0) {
+    score += 18; // aide généraliste (toutes thématiques)
+  } else {
+    const profileSet = new Set(profile.themes);
+    const exact = opp.themes.filter((t) => profileSet.has(t)).length;
+    if (exact >= 1) {
+      score += Math.min(55, 45 + (exact - 1) * 5); // 1 match = 45, +5 par match, plafonné
+    } else {
+      // Pas de catégorie exacte commune → thème parent commun ?
+      const oppParents = parentThemes(opp.themes);
+      const profParents = parentThemes(profile.themes);
+      const sharedParent = [...oppParents].some((p) => profParents.has(p));
+      score += sharedParent ? 28 : 0;
+    }
   }
 
-  return Math.round((score / max) * 100);
+  // ── Géographique (35 pts) ───────────────────────────────────
+  if (regions.length === 0) {
+    score += 18; // localisation inconnue → neutre
+  } else if (opp.region_code || opp.perimeter_scale === "country" || opp.perimeter_scale === "europe") {
+    // Layer 2 : périmètre précis disponible.
+    if (opp.perimeter_scale === "country" || opp.perimeter_scale === "europe") score += 35;
+    else score += regionMatchesCode(opp, regions) ? 35 : 6;
+  } else if (opp.regions.length === 0 || opp.regions.some(isNationalPerimeter)) {
+    score += 35; // périmètre vide ou national/européen → compatible partout
+  } else if (opp.regions.some((p) => perimeterMatchesRegions(p, regions))) {
+    score += 35;
+  } else {
+    score += 6; // périmètre régional/local qui ne recouvre pas le lieu
+  }
+
+  // ── Fraîcheur / récurrence (10 pts) ─────────────────────────
+  if (opp.deadline) {
+    const days = (new Date(opp.deadline).getTime() - Date.now()) / 86_400_000;
+    if (days >= 0 && days <= 90) score += 10;
+    else if (days > 90) score += 6;
+    else score += 0; // échue
+  } else if (opp.recurring) {
+    score += 8; // permanente/récurrente
+  } else {
+    score += 5;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
+
+/** Layer 2 : match région via le code INSEE (mapping libellé région → code). */
+function regionMatchesCode(opp: GrantOpportunity, orgRegions: string[]): boolean {
+  if (!opp.region_code) return false;
+  return orgRegions.some((r) => REGION_NAME_TO_CODE[r] === opp.region_code);
+}
+
+/** Libellé région (FRENCH_REGIONS) → code INSEE région. "Outre-mer" regroupe plusieurs codes → non mappé (fallback libellé). */
+export const REGION_NAME_TO_CODE: Record<string, string> = {
+  "Auvergne-Rhône-Alpes": "84",
+  "Bourgogne-Franche-Comté": "27",
+  "Bretagne": "53",
+  "Centre-Val de Loire": "24",
+  "Corse": "94",
+  "Grand Est": "44",
+  "Hauts-de-France": "32",
+  "Île-de-France": "11",
+  "Normandie": "28",
+  "Nouvelle-Aquitaine": "75",
+  "Occitanie": "76",
+  "Pays de la Loire": "52",
+  "Provence-Alpes-Côte d'Azur": "93",
+};

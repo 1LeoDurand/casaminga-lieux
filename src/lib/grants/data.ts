@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { GrantOpportunity, OrgGrantProfile, GrantApplication, ApplicationStatus } from "./types";
+import { regionFromPostalCode } from "./taxonomy";
 
 /** Opportunités publiées (vue org). */
 export async function getOpportunities(): Promise<GrantOpportunity[]> {
@@ -83,6 +84,28 @@ export async function deleteApplication(orgId: string, opportunityId: string): P
     .eq("organization_id", orgId)
     .eq("opportunity_id", opportunityId);
   return { ok: !error };
+}
+
+/**
+ * Régions couvertes par l'organisation, dérivées des codes postaux de ses
+ * établissements actifs (gestion multi-lieu : un tiers-lieu peut avoir plusieurs
+ * sites dans des régions différentes). Sert d'appoint géo au scoring en plus de
+ * la région du profil. Renvoie [] si aucun CP exploitable.
+ */
+export async function getOrgGeoContext(orgId: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("establishments")
+    .select("postal_code, active")
+    .eq("organization_id", orgId);
+  const regions = new Set<string>();
+  for (const e of (data ?? []) as { postal_code: string | null; active: boolean | null }[]) {
+    if (e.active === false) continue;
+    const r = regionFromPostalCode(e.postal_code);
+    if (r) regions.add(r);
+  }
+  return [...regions];
 }
 
 export async function getOrgGrantProfile(orgId: string): Promise<OrgGrantProfile | null> {
