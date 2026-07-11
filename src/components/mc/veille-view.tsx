@@ -34,6 +34,11 @@ type FollowedItem = { opp: GrantOpportunity; status: ApplicationStatus; linked_g
 type DeadlineFilter = "" | "soon" | "permanent";
 type AidTypeFilter = "" | "grant" | "loan" | "engineering";
 
+/** Minuscules + sans accents : « Théâtre » et « theatre » se trouvent mutuellement. */
+function norm(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
 function fmtAmount(min: number | null, max: number | null) {
   const f = (n: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
   if (min && max) return `${f(min)} – ${f(max)}`;
@@ -287,21 +292,53 @@ export function VeilleView({
     query || funderFilter || selectedCats.size > 0 || deadlineFilter || aidTypeFilter || onlyEligible
   );
 
+  // Index de recherche pré-normalisé (accents/casse) — recalculé seulement
+  // quand le catalogue change, pas à chaque frappe.
+  const searchIndex = useMemo(() => {
+    const idx = new Map<string, { title: string; themes: string; funder: string; desc: string }>();
+    for (const o of opportunities) {
+      idx.set(o.id, {
+        title: norm(o.title),
+        themes: norm(o.themes.join(" ")),
+        funder: norm(o.funder ?? ""),
+        desc: norm(o.description ?? ""),
+      });
+    }
+    return idx;
+  }, [opportunities]);
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return scored.filter(({ opp, score }) => {
-      if (onlyEligible && score < 50) return false;
-      if (funderFilter && opp.funder_type !== funderFilter) return false;
-      if (selectedCats.size > 0 && !opp.themes.some((t) => selectedCats.has(t))) return false;
-      if (!matchesDeadline(opp, deadlineFilter)) return false;
-      if (hasAidTypes && !matchesAidType(opp, aidTypeFilter)) return false;
-      if (q) {
-        const hay = `${opp.title} ${opp.funder ?? ""} ${opp.description ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
+    // Recherche par mots : chaque mot (≥ 2 lettres) doit matcher quelque part
+    // (logique ET), le champ le plus « fort » donne le poids de pertinence.
+    const tokens = norm(query).split(/\s+/).filter((t) => t.length >= 2);
+    const results: { opp: GrantOpportunity; score: number; relevance: number }[] = [];
+    for (const { opp, score } of scored) {
+      if (onlyEligible && score < 50) continue;
+      if (funderFilter && opp.funder_type !== funderFilter) continue;
+      if (selectedCats.size > 0 && !opp.themes.some((t) => selectedCats.has(t))) continue;
+      if (!matchesDeadline(opp, deadlineFilter)) continue;
+      if (hasAidTypes && !matchesAidType(opp, aidTypeFilter)) continue;
+
+      let relevance = 0;
+      if (tokens.length > 0) {
+        const hay = searchIndex.get(opp.id);
+        if (!hay) continue;
+        let allMatch = true;
+        for (const t of tokens) {
+          if (hay.title.includes(t)) relevance += 4;
+          else if (hay.themes.includes(t)) relevance += 3;
+          else if (hay.funder.includes(t)) relevance += 2;
+          else if (hay.desc.includes(t)) relevance += 1;
+          else { allMatch = false; break; }
+        }
+        if (!allMatch) continue;
       }
-      return true;
-    });
-  }, [scored, onlyEligible, funderFilter, selectedCats, deadlineFilter, aidTypeFilter, hasAidTypes, query]);
+      results.push({ opp, score, relevance });
+    }
+    // Recherche active → tri par pertinence, l'éligibilité départage.
+    if (tokens.length > 0) results.sort((a, b) => b.relevance - a.relevance || b.score - a.score);
+    return results;
+  }, [scored, searchIndex, onlyEligible, funderFilter, selectedCats, deadlineFilter, aidTypeFilter, hasAidTypes, query]);
 
   const shown = filtered.slice(0, limit);
   const hasProfile = Boolean(profile?.region || profile?.structure_type || (profile?.themes.length ?? 0) > 0);

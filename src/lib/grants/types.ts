@@ -50,6 +50,22 @@ export interface GrantOpportunity {
   region_code?: string | null;
   /** Échelle du périmètre : commune / epci / department / region / country / europe. */
   perimeter_scale?: string | null;
+  /** Critères d'éligibilité (texte AT aplati). */
+  eligibility?: string | null;
+  /** Avancement du projet visé : réflexion, opérationnel… (libellés AT). */
+  aid_steps?: string[];
+  /** Actions concernées : fonctionnement (supply) / investissement (investment). */
+  aid_destinations?: string[];
+  /** Ouverture des candidatures. */
+  date_start?: string | null;
+  /** Appel à projets / manifestation d'intérêt. */
+  is_call_for_project?: boolean | null;
+  /** Contact du porteur (texte AT aplati). */
+  contact?: string | null;
+  /** Exemples de projets financés (texte AT aplati). */
+  project_examples?: string | null;
+  /** Slug AT → permalien https://aides-territoires.beta.gouv.fr/aides/<slug>/ */
+  at_slug?: string | null;
 }
 
 export interface OrgGrantProfile {

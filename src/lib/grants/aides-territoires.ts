@@ -31,29 +31,33 @@ export interface ImportedOpportunity {
   application_url: string | null;
   required_documents: string[];
   description: string | null;
-  // ── Enrichissement Layer 2 (colonnes migration 0008) ──
-  // Toujours calculés, mais écrits en base seulement si ENRICH est actif
-  // (voir enrichmentCols) pour ne pas casser l'import avant la migration.
+  // ── Enrichissement (migration grant_opportunities_enrichment appliquée) ──
   aid_type_slugs: string[];
   is_charged: boolean | null;
   region_code: string | null;
   perimeter_scale: string | null;
+  // ── Enrichissement v2 : champs structurés pour le filtrage multi-critères ──
+  eligibility: string | null;
+  aid_steps: string[];
+  aid_destinations: string[];
+  date_start: string | null;
+  is_call_for_project: boolean | null;
+  contact: string | null;
+  project_examples: string | null;
+  at_slug: string | null;
 }
-
-/**
- * Layer 2 activable : n'écrit les colonnes d'enrichissement que si
- * AIDES_TERRITOIRES_ENRICH=1 ET après application de la migration 0008.
- * Par défaut off → import strictement identique à l'existant (aucun risque).
- */
-const ENRICH = process.env.AIDES_TERRITOIRES_ENRICH === "1";
 
 interface AtAid {
   id: number;
   name: string;
-  financers?: string[];
-  perimeter?: string | null;
-  categories?: string[];
-  targeted_audiences?: string[];
+  // Tableaux dont les items sont des chaînes (API legacy DRF) ou des objets
+  // { name / slug / backer } (API v2 API-Platform) → normalisés via names().
+  financers?: unknown;
+  aid_financers?: unknown;          // nom v2
+  perimeter?: string | { name?: string; scale?: string; code?: string } | null;
+  categories?: unknown;
+  targeted_audiences?: unknown;
+  aid_audiences?: unknown;          // nom v2
   // Taux de subvention en % — l'API expose les deux nominations selon la version.
   subvention_rate_min?: number | null;
   subvention_rate_max?: number | null;
@@ -64,12 +68,23 @@ interface AtAid {
   recoverable_advance_amount?: number | null; // avance récupérable (€)
   other_financial_aid_comment?: string | null;
   submission_deadline?: string | null;
+  date_submission_deadline?: string | null; // nom v2
   recurrence?: string | null;
+  aid_recurrence?: string | null;           // nom v2
   origin_url?: string | null;
   application_url?: string | null;
   url?: string | null;
   description?: string | null;
-  aid_types?: string[];
+  aid_types?: unknown;
+  // Enrichissement v2 — champs riches (HTML côté AT, aplati via stripHtml).
+  eligibility?: string | null;
+  aid_steps?: unknown;
+  aid_destinations?: unknown;
+  date_start?: string | null;
+  is_call_for_project?: boolean | null;
+  contact?: string | null;
+  project_examples?: string | null;
+  slug?: string | null;
   // Enrichissement (v1.8.4) — présents selon la version de l'API.
   is_charged?: boolean | null;
   region_code?: string | null;
@@ -77,6 +92,31 @@ interface AtAid {
 }
 
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+
+/**
+ * Normalise un tableau AT dont les items sont soit des chaînes (API legacy),
+ * soit des objets { name } / { slug } / { backer: { name } } (API v2).
+ */
+function names(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const item of v) {
+    if (typeof item === "string") { if (item.trim()) out.push(item.trim()); continue; }
+    if (item && typeof item === "object") {
+      const o = item as { name?: unknown; slug?: unknown; backer?: { name?: unknown } | null };
+      const n = o.name ?? o.backer?.name ?? o.slug;
+      if (typeof n === "string" && n.trim()) out.push(n.trim());
+    }
+  }
+  return out;
+}
+
+/** "2027-03-31T00:00:00+00:00" | "2027-03-31" → "2027-03-31" (ou null). */
+function isoDate(v: string | null | undefined): string | null {
+  if (!v || typeof v !== "string") return null;
+  const d = v.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+}
 
 /** Retire les balises HTML et décode les entités d'une description AT (texte brut). */
 function stripHtml(html: string | null | undefined): string | null {
@@ -167,7 +207,7 @@ function aidTypeSlugs(aid: AtAid): string[] {
   if (hasRate || aid.subvention_comment) slugs.add("grant");
   if (aid.loan_amount != null) slugs.add("loan");
   if (aid.recoverable_advance_amount != null) slugs.add("recoverable-advance");
-  for (const t of aid.aid_types ?? []) {
+  for (const t of names(aid.aid_types)) {
     const n = t.toLowerCase();
     if (n.includes("subvention")) slugs.add("grant");
     if (n.includes("prêt") || n.includes("pret") || n.includes("loan")) slugs.add("loan");
@@ -180,39 +220,59 @@ function aidTypeSlugs(aid: AtAid): string[] {
 }
 
 function mapAid(aid: AtAid): ImportedOpportunity {
-  const financer = aid.financers?.[0] ?? null;
+  const financer = names(aid.financers).concat(names(aid.aid_financers))[0] ?? null;
+  const perimeterName =
+    typeof aid.perimeter === "string" ? aid.perimeter : aid.perimeter?.name ?? null;
+  const recurrence = aid.recurrence ?? aid.aid_recurrence ?? null;
   return {
     external_id: String(aid.id),
     title: aid.name,
     funder: financer,
     funder_type: guessFunderType(financer),
-    themes: aid.categories ?? [],
-    regions: aid.perimeter ? [aid.perimeter] : [],
+    themes: names(aid.categories),
+    regions: perimeterName ? [perimeterName] : [],
     structure_types: [],
     // Subventions AT = taux %, pas de montant € fixe → amount null.
     // Les montants réels (prêt, avance, plafonds) vivent dans la description.
     amount_min: null,
     amount_max: null,
-    deadline: aid.submission_deadline ?? null,
-    recurring: !!aid.recurrence && aid.recurrence !== "oneoff",
+    deadline: isoDate(aid.submission_deadline ?? aid.date_submission_deadline),
+    recurring: !!recurrence && recurrence !== "oneoff",
     application_url: aid.application_url ?? aid.origin_url ?? aid.url ?? null,
     required_documents: [],
     description: buildDescription(aid),
     aid_type_slugs: aidTypeSlugs(aid),
     is_charged: aid.is_charged ?? null,
     region_code: aid.region_code ?? null,
-    perimeter_scale: aid.perimeter_scale ?? null,
+    perimeter_scale:
+      aid.perimeter_scale ??
+      (typeof aid.perimeter === "object" ? aid.perimeter?.scale ?? null : null),
+    eligibility: stripHtml(aid.eligibility),
+    aid_steps: names(aid.aid_steps),
+    aid_destinations: names(aid.aid_destinations),
+    date_start: isoDate(aid.date_start),
+    is_call_for_project: aid.is_call_for_project ?? null,
+    contact: stripHtml(aid.contact),
+    project_examples: stripHtml(aid.project_examples),
+    at_slug: aid.slug ?? null,
   };
 }
 
-/** Colonnes d'enrichissement à écrire — vides si Layer 2 inactif (migration non appliquée). */
+/** Colonnes d'enrichissement (migration grant_opportunities_enrichment requise). */
 function enrichmentCols(o: ImportedOpportunity) {
-  if (!ENRICH) return {};
   return {
     aid_type_slugs: o.aid_type_slugs,
     is_charged: o.is_charged,
     region_code: o.region_code,
     perimeter_scale: o.perimeter_scale,
+    eligibility: o.eligibility,
+    aid_steps: o.aid_steps,
+    aid_destinations: o.aid_destinations,
+    date_start: o.date_start,
+    is_call_for_project: o.is_call_for_project,
+    contact: o.contact,
+    project_examples: o.project_examples,
+    at_slug: o.at_slug,
   };
 }
 
