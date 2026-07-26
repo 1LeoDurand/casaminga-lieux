@@ -3,7 +3,7 @@ import { EspaceRequestForm } from "@/app/espace/espace-request-form";
 
 export const metadata: Metadata = {
   title: "Espace adhérent — Casa Minga",
-  description: "Accédez à votre espace adhérent : statut d'adhésion, billets à venir, renouvellement.",
+  description: "Accédez à votre espace : statut d'adhésion, factures, billets à venir, renouvellement.",
 };
 
 export default function EspacePage() {

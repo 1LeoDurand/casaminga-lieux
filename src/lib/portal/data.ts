@@ -37,6 +37,20 @@ export interface PortalRecu {
   donationDate: string;
 }
 
+export type FactureStatus = "payee" | "a_regler" | "en_retard" | "declaree";
+
+export interface PortalFacture {
+  id: string;
+  number: string | null;
+  object: string | null;
+  amountTtc: number;
+  dueDate: string | null;
+  issueDate: string | null;
+  derivedStatus: FactureStatus;
+  /** Le client peut encore déclarer un paiement (ni payée, ni déjà déclarée). */
+  canDeclare: boolean;
+}
+
 export interface PortalOrgData {
   orgId: string;
   orgSlug: string;
@@ -45,6 +59,7 @@ export interface PortalOrgData {
   adhesion: PortalAdhesion | null;
   billets: PortalBillet[];
   recus: PortalRecu[];
+  factures: PortalFacture[];
   activeCampaignSlug: string | null;  // slug pour le lien renouvellement
 }
 
@@ -60,7 +75,9 @@ function deriveStatus(
   membershipEnd: string | null
 ): AdhesionStatus {
   if (status === "en_attente") return "en_attente";
-  if (status !== "validee") return "aucune";
+  // Le statut d'une adhésion validée est "confirmee" (cf. MembershipApplicationStatus).
+  // "validee" existe pour les demandes et les transactions, PAS ici.
+  if (status !== "confirmee") return "aucune";
   if (!membershipEnd) return "active";
   const end = new Date(membershipEnd);
   const now = new Date();
@@ -85,7 +102,7 @@ export async function getPortalDataByEmail(
   const email = normalizeEmail(rawEmail);
 
   // ── 1. Collecter tous les org_ids qui contiennent cet email ──────────────
-  const [personsRes, adhesionsRes, billetsRes] = await Promise.all([
+  const [personsRes, adhesionsRes, billetsRes, facturesRes] = await Promise.all([
     admin
       .from("persons")
       .select("id, organization_id, name")
@@ -100,12 +117,22 @@ export async function getPortalDataByEmail(
       .from("event_registrations")
       .select("ticket_token, full_name, event_id, organization_id, checked_in_at")
       .ilike("email", email),
+    // Factures émises au nom de cet email. Les brouillons et annulées ne
+    // concernent pas le client ; les avoirs sont des pièces comptables internes.
+    admin
+      .from("invoices")
+      .select("id, organization_id, number, object, total_ttc, status, due_date, issue_date, payment_declared_at")
+      .ilike("client_email", email)
+      .eq("kind", "facture")
+      .not("status", "in", "(brouillon,annulee)")
+      .order("issue_date", { ascending: false }),
   ]);
 
   const allOrgIds = new Set<string>();
   for (const p of personsRes.data ?? []) allOrgIds.add(p.organization_id);
   for (const a of adhesionsRes.data ?? []) allOrgIds.add(a.organization_id);
   for (const b of billetsRes.data ?? []) allOrgIds.add(b.organization_id);
+  for (const f of facturesRes.data ?? []) allOrgIds.add(f.organization_id);
 
   if (allOrgIds.size === 0) return { email, orgs: [] };
 
@@ -238,6 +265,27 @@ export async function getPortalDataByEmail(
         donationDate: r.donation_date,
       }));
 
+    // Factures de cette org
+    const today = new Date().toISOString().slice(0, 10);
+    const factures: PortalFacture[] = (facturesRes.data ?? [])
+      .filter((f) => f.organization_id === orgId)
+      .map((f) => {
+        const paid = f.status === "payee";
+        const declared = Boolean(f.payment_declared_at);
+        const late = !paid && !declared && !!f.due_date && f.due_date < today;
+        return {
+          id: f.id,
+          number: f.number,
+          object: f.object,
+          amountTtc: Number(f.total_ttc),
+          dueDate: f.due_date,
+          issueDate: f.issue_date,
+          derivedStatus: paid ? "payee" : declared ? "declaree" : late ? "en_retard" : "a_regler",
+          // Cohérent avec le garde-fou de l'action : une seule déclaration par facture.
+          canDeclare: !paid && !declared,
+        } satisfies PortalFacture;
+      });
+
     result.push({
       orgId,
       orgSlug: org.slug,
@@ -246,6 +294,7 @@ export async function getPortalDataByEmail(
       adhesion,
       billets,
       recus,
+      factures,
       activeCampaignSlug: campaignByOrg.get(orgId) ?? null,
     });
   }
@@ -274,7 +323,7 @@ export async function emailHasPortalContent(rawEmail: string): Promise<boolean> 
 
   const email = normalizeEmail(rawEmail);
 
-  const [p, a, b] = await Promise.all([
+  const [p, a, b, f] = await Promise.all([
     admin
       .from("persons")
       .select("id", { count: "exact", head: true })
@@ -288,7 +337,16 @@ export async function emailHasPortalContent(rawEmail: string): Promise<boolean> 
       .from("event_registrations")
       .select("id", { count: "exact", head: true })
       .ilike("email", email),
+    // Un coworker facturé n'a parfois ni fiche, ni adhésion, ni billet : sans
+    // cette ligne, /espace lui répondait « aucun dossier » et il ne pouvait
+    // obtenir aucun lien de portail.
+    admin
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .ilike("client_email", email)
+      .eq("kind", "facture")
+      .not("status", "in", "(brouillon,annulee)"),
   ]);
 
-  return ((p.count ?? 0) + (a.count ?? 0) + (b.count ?? 0)) > 0;
+  return ((p.count ?? 0) + (a.count ?? 0) + (b.count ?? 0) + (f.count ?? 0)) > 0;
 }

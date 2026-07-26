@@ -5,7 +5,14 @@
  */
 
 import Link from "next/link";
-import type { PortalData, PortalOrgData, PortalRecu, AdhesionStatus } from "@/lib/portal/data";
+import type {
+  PortalData,
+  PortalOrgData,
+  PortalRecu,
+  PortalFacture,
+  AdhesionStatus,
+  FactureStatus,
+} from "@/lib/portal/data";
 import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
 
 // ── Helpers visuels ───────────────────────────────────────────────────────────
@@ -17,6 +24,17 @@ const STATUS_META: Record<AdhesionStatus, { label: string; color: string; bg: st
   en_attente:      { label: "En attente de validation", color: "#1E40AF", bg: "#EFF6FF", border: "#BFDBFE" },
   aucune:          { label: "Pas d'adhésion",          color: "#6B6460", bg: "#F5F0EB", border: "#E5DDD6" },
 };
+
+const FACTURE_META: Record<FactureStatus, { label: string; color: string; bg: string; border: string }> = {
+  payee:     { label: "Payée",            color: "#166534", bg: "#F0FDF4", border: "#BBF7D0" },
+  a_regler:  { label: "À régler",         color: "#1E40AF", bg: "#EFF6FF", border: "#BFDBFE" },
+  en_retard: { label: "En retard",        color: "#991B1B", bg: "#FEF2F2", border: "#FECACA" },
+  declaree:  { label: "Paiement signalé", color: "#92400E", bg: "#FFFBEB", border: "#FDE68A" },
+};
+
+function fmtEuros(n: number) {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(n);
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", {
@@ -240,12 +258,106 @@ function RecusSection({ recus, token }: { recus: PortalRecu[]; token: string }) 
   );
 }
 
+function FacturesSection({ factures, token }: { factures: PortalFacture[]; token: string }) {
+  if (!factures.length) return null;
+
+  const due = factures.filter((f) => f.derivedStatus === "a_regler" || f.derivedStatus === "en_retard");
+  const totalDue = due.reduce((s, f) => s + f.amountTtc, 0);
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10, gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#6B6460", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          Mes factures
+        </h3>
+        {due.length > 0 && (
+          <span style={{ fontSize: 12, color: "#9C9590" }}>
+            {due.length} en attente · <strong style={{ color: "#2C2C2C" }}>{fmtEuros(totalDue)}</strong>
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {factures.map((f) => {
+          const meta = FACTURE_META[f.derivedStatus];
+          const body = (
+            <>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: "#2C2C2C" }}>
+                  Facture {f.number ?? f.id.slice(0, 8)}
+                  {f.object ? <span style={{ fontWeight: 400, color: "#6B6460" }}> — {f.object}</span> : null}
+                </div>
+                <div style={{ fontSize: 12, color: "#9C9590", marginTop: 2 }}>
+                  {fmtEuros(f.amountTtc)}
+                  {f.dueDate ? ` · échéance ${fmtDateShort(f.dueDate)}` : ""}
+                </div>
+                {f.canDeclare && (
+                  <div style={{ fontSize: 11, color: "#FF8A65", marginTop: 6, fontWeight: 600 }}>
+                    J&apos;ai déjà réglé →
+                  </div>
+                )}
+              </div>
+              <span
+                style={{
+                  display: "inline-block",
+                  background: meta.bg,
+                  color: meta.color,
+                  border: `1px solid ${meta.border}`,
+                  borderRadius: 100,
+                  padding: "3px 10px",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  marginLeft: 12,
+                }}
+              >
+                {meta.label}
+              </span>
+            </>
+          );
+
+          const boxStyle = {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "#fff",
+            border: "1px solid #E5DDD6",
+            borderRadius: 12,
+            padding: "12px 16px",
+            textDecoration: "none",
+          } as const;
+
+          // Seules les factures encore déclarables sont cliquables : ailleurs,
+          // le lien mènerait à un écran qui ne propose rien.
+          return f.canDeclare ? (
+            <a key={f.id} href={`/espace/${token}/facture/${f.id}`} style={boxStyle}>
+              {body}
+            </a>
+          ) : (
+            <div key={f.id} style={boxStyle}>
+              {body}
+            </div>
+          );
+        })}
+      </div>
+
+      {factures.some((f) => f.derivedStatus === "declaree") && (
+        <p style={{ margin: "10px 0 0", fontSize: 12, color: "#9C9590", lineHeight: 1.5 }}>
+          Un paiement signalé est en cours de vérification par l&apos;équipe. Vous ne recevrez plus
+          de rappel pour cette facture.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function OrgSection({ org, token }: { org: PortalOrgData; token: string }) {
   const renewUrl = org.activeCampaignSlug
     ? `${PUBLIC_SITE_BASE}/${org.orgSlug}/adhesion/${org.activeCampaignSlug}`
     : null;
 
-  const isEmpty = !org.adhesion && org.billets.length === 0 && org.recus.length === 0;
+  const isEmpty =
+    !org.adhesion && org.billets.length === 0 && org.recus.length === 0 && org.factures.length === 0;
 
   return (
     <div
@@ -287,15 +399,20 @@ function OrgSection({ org, token }: { org: PortalOrgData; token: string }) {
         </p>
       ) : (
         <>
-          <AdhesionCard
-            adhesion={org.adhesion}
-            renewUrl={renewUrl}
-            attestationUrl={
-              org.adhesion && ["active", "expire_bientot"].includes(org.adhesion.derivedStatus)
-                ? `/espace/${token}/attestation/${org.orgSlug}`
-                : null
-            }
-          />
+          {/* Un client qui n'a que des factures (coworker, prestataire) n'a pas
+              besoin qu'on lui affiche « Pas d'adhésion » à chaque visite. */}
+          {(org.adhesion || org.factures.length === 0) && (
+            <AdhesionCard
+              adhesion={org.adhesion}
+              renewUrl={renewUrl}
+              attestationUrl={
+                org.adhesion && ["active", "expire_bientot"].includes(org.adhesion.derivedStatus)
+                  ? `/espace/${token}/attestation/${org.orgSlug}`
+                  : null
+              }
+            />
+          )}
+          <FacturesSection factures={org.factures} token={token} />
           <BilletsSection billets={org.billets} />
           <RecusSection recus={org.recus} token={token} />
         </>
@@ -377,7 +494,7 @@ export function PortalDashboard({ data, token }: { data: PortalData; token: stri
               Aucun dossier trouvé
             </p>
             <p style={{ margin: "8px 0 24px", fontSize: 13, color: "#9C9590" }}>
-              Aucune adhésion ni billet n'est associé à cet email.
+              Aucune adhésion, facture ni billet n'est associé à cet email.
             </p>
             <a
               href="/espace"
