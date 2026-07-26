@@ -12,7 +12,7 @@ import {
   PAYMENT_METHODS,
   formatEuros,
 } from "@/lib/invoicing/types";
-import { setInvoiceStatus, relanceInvoice, setInvoiceValidation } from "@/app/(admin)/dashboard/[org]/factures/actions";
+import { setInvoiceStatus, relanceInvoice, setInvoiceValidation, confirmDeclaredPayment, rejectDeclaredPayment } from "@/app/(admin)/dashboard/[org]/factures/actions";
 import { LieuBadge, type LieuOpt } from "@/components/mc/lieu-badge";
 
 const FILTERS: { key: string; label: string }[] = [
@@ -21,9 +21,23 @@ const FILTERS: { key: string; label: string }[] = [
   { key: "emise", label: "Émises" },
   { key: "envoyee", label: "Envoyées" },
   { key: "payee", label: "Payées" },
+  { key: "averifier", label: "💬 Paiements à vérifier" },
   { key: "arelancer", label: "À relancer" },
   { key: "avalider", label: "À valider" },
 ];
+
+/** Onglets qui ne s'affichent que s'ils ont quelque chose à montrer. */
+const CONDITIONAL_FILTERS = new Set(["averifier", "arelancer", "avalider"]);
+
+const DECLARED_METHOD_LABELS: Record<string, string> = {
+  virement: "virement", cheque: "chèque", especes: "espèces",
+  prelevement: "prélèvement", autre: "autre moyen",
+};
+
+/** Le client a signalé avoir réglé — en attente de vérification par l'équipe. */
+function isDeclared(inv: Invoice): boolean {
+  return Boolean(inv.payment_declared_at) && inv.status !== "payee" && inv.status !== "annulee";
+}
 
 function isOverdue(inv: Invoice): boolean {
   if (!inv.number || inv.status === "payee" || inv.status === "annulee") return false;
@@ -75,6 +89,7 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
   const filtered = useMemo(() => {
     let list: Invoice[];
     if (filter === "arelancer") list = invoices.filter(isOverdue);
+    else if (filter === "averifier") list = invoices.filter(isDeclared);
     else if (filter === "avalider") list = invoices.filter((i) => i.validation_status === "a_valider");
     else if (filter === "all") list = invoices;
     else list = invoices.filter((i) => i.status === filter);
@@ -84,6 +99,21 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
 
   const toRelanceCount = useMemo(() => invoices.filter(isOverdue).length, [invoices]);
   const toValidateCount = useMemo(() => invoices.filter((i) => i.validation_status === "a_valider").length, [invoices]);
+  const toVerifyCount = useMemo(() => invoices.filter(isDeclared).length, [invoices]);
+
+  /** Le client dit avoir payé : on tranche (reçu → payée, ou non retrouvé → relances reprennent). */
+  function doVerifyDeclared(id: string, received: boolean) {
+    setBusyId(id);
+    startTransition(async () => {
+      const res = received
+        ? await confirmDeclaredPayment(orgSlug, id)
+        : await rejectDeclaredPayment(orgSlug, id);
+      setBusyId(null);
+      if (res.ok) {
+        toast.success(received ? "Paiement confirmé — facture payée ✓" : "Règlement non retrouvé — le client est prévenu");
+      } else toast.error(res.error ?? "Erreur");
+    });
+  }
 
   function changeStatus(id: string, status: "payee" | "annulee" | "envoyee", msg: string, opts?: { payment_method?: string }) {
     setBusyId(id);
@@ -150,7 +180,22 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
             </button>
           </>
         )}
-        {isOverdue(inv) && (
+        {isDeclared(inv) && (
+          <>
+            <button disabled={isBusy} onClick={() => doVerifyDeclared(inv.id, true)}
+              title="Paiement bien reçu → marquer payée"
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+              <Check className="size-3.5" /> Reçu
+            </button>
+            <button disabled={isBusy} onClick={() => doVerifyDeclared(inv.id, false)}
+              title="Règlement non retrouvé → prévenir le client"
+              className="inline-flex items-center rounded-lg border border-border p-1.5 text-warmgray hover:border-red-300 hover:text-red-600 disabled:opacity-40">
+              <ShieldX className="size-3.5" />
+            </button>
+          </>
+        )}
+        {/* Pas de relance manuelle tant que le client attend notre vérification. */}
+        {isOverdue(inv) && !isDeclared(inv) && (
           <button disabled={isBusy} onClick={() => doRelance(inv.id)}
             title="Relancer par email"
             className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40">
@@ -187,7 +232,20 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
         {inv.validation_status === "a_valider" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⏳ À valider</span>}
         {inv.validation_status === "valide" && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Validée</span>}
         {inv.validation_status === "refuse" && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">✗ Refusée</span>}
-        {isOverdue(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
+        {isOverdue(inv) && !isDeclared(inv) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">⚠ En retard</span>}
+        {isDeclared(inv) && (
+          <span
+            className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700"
+            title={
+              `Le client déclare avoir réglé` +
+              (inv.payment_declared_method ? ` par ${DECLARED_METHOD_LABELS[inv.payment_declared_method] ?? inv.payment_declared_method}` : "") +
+              (inv.payment_declared_date ? ` le ${new Date(inv.payment_declared_date).toLocaleDateString("fr-FR")}` : "") +
+              (inv.payment_declared_note ? ` — « ${inv.payment_declared_note} »` : "")
+            }
+          >
+            💬 Paiement déclaré — à vérifier
+          </span>
+        )}
       </div>
     );
 
@@ -233,13 +291,18 @@ export function InvoicesView({ invoices, orgSlug, validatorName = "", establishm
       {/* Filtres statut */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => {
-          const badge = f.key === "arelancer" ? toRelanceCount : f.key === "avalider" ? toValidateCount : 0;
-          if ((f.key === "arelancer" || f.key === "avalider") && badge === 0 && filter !== f.key) return null;
+          const badge =
+            f.key === "arelancer" ? toRelanceCount
+            : f.key === "avalider" ? toValidateCount
+            : f.key === "averifier" ? toVerifyCount
+            : 0;
+          if (CONDITIONAL_FILTERS.has(f.key) && badge === 0 && filter !== f.key) return null;
           return (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
                 filter === f.key ? "border-coral bg-coral text-white"
                   : f.key === "arelancer" ? "border-red-200 bg-red-50 text-red-600 hover:border-red-300"
+                  : f.key === "averifier" ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                   : f.key === "avalider" ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300"
                   : "border-border bg-white text-warmgray hover:border-coral/40"
               }`}

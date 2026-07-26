@@ -211,6 +211,19 @@ export async function sendInvoiceEmail(
 
   const pdf = await renderInvoicePdf(inv, fallbackSettings);
   const orgName = fallbackSettings.issuer_name ?? "Casa Minga Lieux";
+
+  // Lien « j'ai déjà réglé » : indispensable ici, car une facture ayant atteint
+  // le plafond de relances automatiques n'est plus contactée QUE par ce bouton.
+  let declareUrl: string | null = null;
+  if (inv.status !== "payee" && !inv.payment_declared_at) {
+    try {
+      const { signPortalToken } = await import("@/lib/portal/token");
+      const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
+      declareUrl = `${appBase}/espace/${signPortalToken(inv.client_email)}/facture/${inv.id}`;
+    } catch {
+      /* secret portail absent → email sans bouton */
+    }
+  }
   const dueDate = inv.due_date
     ? new Date(inv.due_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
     : "—";
@@ -226,6 +239,7 @@ export async function sendInvoiceEmail(
       dueDate,
       iban: fallbackSettings.iban,
       isReminder,
+      declareUrl,
     }),
     replyTo: fallbackSettings.email ?? undefined,
     attachments: [{ filename: `${inv.number}.pdf`, content: pdf, contentType: "application/pdf" }],
@@ -389,6 +403,108 @@ export async function setInvoiceValidation(
     updated_at: new Date().toISOString(),
   }).eq("id", id);
   if (error) return { ok: false, error: humanError(error) };
+  revalidatePath(`/dashboard/${orgSlug}/factures`);
+  return { ok: true, id };
+}
+
+// ── Déclarations de paiement client (règle « emails actionnables ») ──────────
+// Le client peut signaler qu'il a réglé depuis son email : les relances
+// s'arrêtent, mais rien n'est écrit en compta tant que l'équipe n'a pas vérifié.
+// Ces deux actions tranchent : reçu (→ payée) ou non retrouvé (→ relances reprennent).
+
+/** Le paiement déclaré est bien arrivé → facture payée + recette Finances. */
+export async function confirmDeclaredPayment(orgSlug: string, id: string): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const supabase = await createClient();
+
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("payment_declared_method, payment_declared_date")
+    .eq("id", id)
+    .maybeSingle();
+  if (!inv) return { ok: false, error: "Facture introuvable." };
+
+  // Réutilise le passage « payée » existant (crée la recette, gère les avoirs…)
+  // en reprenant le mode et la date déclarés par le client.
+  const res = await setInvoiceStatus(orgSlug, id, "payee", {
+    payment_method: inv.payment_declared_method ?? undefined,
+    paid_at: inv.payment_declared_date ?? undefined,
+  });
+  if (!res.ok) return res;
+
+  // Déclaration traitée : on efface le drapeau « à vérifier ».
+  await supabase
+    .from("invoices")
+    .update({ payment_declared_at: null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath(`/dashboard/${orgSlug}/factures`);
+  return { ok: true, id };
+}
+
+/**
+ * Le paiement déclaré n'a pas été retrouvé → on lève le drapeau et on prévient
+ * le client (sinon il croit l'affaire close et une relance le surprendrait).
+ */
+export async function rejectDeclaredPayment(orgSlug: string, id: string): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) return NOT_CONFIGURED;
+  const supabase = await createClient();
+
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("id, number, client_name, client_email, total_ttc, organization_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!inv) return { ok: false, error: "Facture introuvable." };
+
+  const { error } = await supabase
+    .from("invoices")
+    .update({
+      payment_declared_at: null,
+      payment_declared_method: null,
+      payment_declared_date: null,
+      payment_declared_note: null,
+      // Redonne une fenêtre de 7 jours avant toute relance automatique.
+      last_reminder_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) return { ok: false, error: humanError(error) };
+
+  try {
+    if (inv.client_email) {
+      const [{ sendMail }, { tplPaiementNonRetrouve }, { formatEuros }, { getOrganizationBySlug }] =
+        await Promise.all([
+          import("@/lib/mail"),
+          import("@/lib/mail-templates"),
+          import("@/lib/invoicing/types"),
+          import("@/lib/data"),
+        ]);
+      const org = await getOrganizationBySlug(orgSlug);
+      const { data: settings } = await supabase
+        .from("invoice_settings")
+        .select("iban, email")
+        .eq("organization_id", inv.organization_id)
+        .maybeSingle();
+      await sendMail({
+        to: inv.client_email,
+        subject: `Facture ${inv.number} — nous n'avons pas retrouvé votre règlement`,
+        html: tplPaiementNonRetrouve({
+          orgName: org?.name ?? "Votre lieu",
+          clientName: inv.client_name,
+          invoiceNumber: inv.number ?? "—",
+          amountTtc: formatEuros(inv.total_ttc),
+          iban: settings?.iban ?? null,
+        }),
+        replyTo: settings?.email ?? undefined,
+        category: "facture",
+        organizationId: inv.organization_id,
+      });
+    }
+  } catch {
+    /* la notification ne doit jamais bloquer la décision */
+  }
+
   revalidatePath(`/dashboard/${orgSlug}/factures`);
   return { ok: true, id };
 }

@@ -14,7 +14,9 @@ export const maxDuration = 60;
  * Anti-spam (le cron tourne chaque jour, mais on ne relance PAS chaque jour) :
  *  - 1ʳᵉ relance : 3 jours après l'échéance (laisser le temps de payer) ;
  *  - relances suivantes : espacées d'au moins 7 jours ;
- *  - plafond : 3 relances par facture, ensuite on s'arrête (relance humaine).
+ *  - plafond : 3 relances par facture, ensuite on s'arrête (relance humaine) ;
+ *  - le client a déclaré avoir payé (payment_declared_at) : on n'insiste plus,
+ *    la balle est dans le camp de l'équipe qui doit vérifier.
  */
 const FIRST_REMINDER_DELAY_DAYS = 3;
 const REMINDER_SPACING_DAYS = 7;
@@ -36,7 +38,9 @@ export async function POST(req: Request) {
     .in("status", ["emise", "envoyee", "en_retard"])
     .eq("kind", "facture")
     .not("number", "is", null)
-    .lt("due_date", today);
+    .lt("due_date", today)
+    // Paiement déclaré par le client → plus aucune relance (l'équipe vérifie).
+    .is("payment_declared_at", null);
 
   if (!overdue || overdue.length === 0) return NextResponse.json({ ok: true, reminded: 0 });
 
@@ -60,6 +64,18 @@ export async function POST(req: Request) {
 
   const now = Date.now();
   const DAY = 86_400_000;
+
+  // Lien « j'ai déjà réglé » — portail signé HMAC sur l'email du client.
+  // Sans PORTAL_LINK_SECRET, on dégrade proprement (email sans bouton).
+  const { signPortalToken } = await import("@/lib/portal/token");
+  const APP_BASE = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
+  function declareUrlFor(email: string, invoiceId: string): string | null {
+    try {
+      return `${APP_BASE}/espace/${signPortalToken(email)}/facture/${invoiceId}`;
+    } catch {
+      return null;
+    }
+  }
 
   let reminded = 0;
   let skipped = 0;
@@ -98,6 +114,7 @@ export async function POST(req: Request) {
             : "—",
           iban: set.iban,
           isReminder: true,
+          declareUrl: declareUrlFor(inv.client_email, inv.id),
         }),
         replyTo: set.email ?? undefined,
         attachments: [{ filename: `${inv.number}.pdf`, content: pdf, contentType: "application/pdf" }],

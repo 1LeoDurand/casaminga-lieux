@@ -57,6 +57,16 @@ export interface Invoice {
   validation_status: "a_valider" | "valide" | "refuse" | null;
   validated_by: string | null;
   validated_at: string | null;
+  // ── Déclaration de paiement par le client (règle « emails actionnables ») ──
+  // Le client a signalé avoir réglé : les relances cessent, l'équipe vérifie.
+  // Ne vaut PAS paiement tant que `status` n'est pas passé à "payee".
+  payment_declared_at?: string | null;
+  payment_declared_method?: string | null;
+  payment_declared_date?: string | null;
+  payment_declared_note?: string | null;
+  // Throttle des relances (cf. cron payment-reminders).
+  last_reminder_at?: string | null;
+  reminder_count?: number | null;
   created_at: string;
   updated_at: string;
 }

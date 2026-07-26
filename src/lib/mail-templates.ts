@@ -875,6 +875,8 @@ export function tplFactureRappel(opts: {
   dueDate: string;
   iban?: string | null;
   isReminder?: boolean;
+  /** Lien de déclaration « j'ai déjà réglé » — arrête les relances. */
+  declareUrl?: string | null;
 }) {
   return base(
     `
@@ -892,7 +894,81 @@ export function tplFactureRappel(opts: {
       { label: "Échéance", value: opts.dueDate },
       ...(opts.iban ? [{ label: "IBAN", value: opts.iban }] : []),
     ])}
+    ${
+      opts.declareUrl
+        ? `${btn("J'ai déjà réglé cette facture", opts.declareUrl)}
+           ${p(
+             `<span style="color:#8A8078;font-size:13px;">Déjà payé&nbsp;? Signalez-le en un clic : nous cesserons immédiatement de vous relancer et notre équipe vérifiera de son côté.</span>`
+           )}`
+        : ""
+    }
     ${p("Le PDF de la facture est joint à cet email. Merci de votre confiance.")}
+  `,
+    opts.orgName
+  );
+}
+
+/** Le règlement déclaré par le client n'a pas été retrouvé — ton non accusateur. */
+export function tplPaiementNonRetrouve(opts: {
+  orgName: string;
+  clientName: string;
+  invoiceNumber: string;
+  amountTtc: string;
+  iban?: string | null;
+}) {
+  return base(
+    `
+    ${badge("FACTURE EN ATTENTE", "#E8714D")}
+    ${h1("Nous n'avons pas retrouvé votre règlement")}
+    ${p(`Bonjour <strong>${opts.clientName}</strong>,`)}
+    ${p(
+      `Vous nous avez signalé avoir réglé la facture <strong>${opts.invoiceNumber}</strong>, et nous vous en remercions. ` +
+        `Après vérification, nous ne retrouvons cependant pas ce règlement dans nos comptes.`
+    )}
+    ${p(
+      `Il peut s'agir d'un simple délai bancaire, d'une référence manquante — ou d'une erreur de notre côté.`
+    )}
+    ${card([
+      { label: "N° de facture", value: opts.invoiceNumber },
+      { label: "Montant TTC", value: opts.amountTtc },
+      ...(opts.iban ? [{ label: "IBAN", value: opts.iban }] : []),
+    ])}
+    ${p(
+      `Le plus simple&nbsp;: répondez à cet email avec la référence ou la date de votre virement, et nous vérifions ensemble.`
+    )}
+  `,
+    opts.orgName
+  );
+}
+
+/** Alerte équipe : un client déclare avoir réglé une facture → à vérifier. */
+export function tplPaiementDeclare(opts: {
+  orgName: string;
+  clientName: string;
+  invoiceNumber: string;
+  amountTtc: string;
+  method: string;
+  paidOn: string;
+  note?: string | null;
+  dashboardUrl: string;
+}) {
+  return base(
+    `
+    ${badge("À VÉRIFIER", "#E8A23D")}
+    ${h1("Un client déclare avoir réglé")}
+    ${p(
+      `<strong>${opts.clientName}</strong> vient de signaler le règlement de la facture <strong>${opts.invoiceNumber}</strong>.`
+    )}
+    ${card([
+      { label: "Montant TTC", value: opts.amountTtc },
+      { label: "Mode de paiement", value: opts.method },
+      { label: "Réglé le", value: opts.paidOn },
+      ...(opts.note ? [{ label: "Précision", value: opts.note }] : []),
+    ])}
+    ${p(
+      `<strong>La facture n'est pas encore marquée payée.</strong> Vérifiez la réception sur votre compte, puis confirmez ou infirmez depuis votre espace. Les relances automatiques sont suspendues en attendant.`
+    )}
+    ${btn("Vérifier cette facture", opts.dashboardUrl)}
   `,
     opts.orgName
   );

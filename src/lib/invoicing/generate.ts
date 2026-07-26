@@ -119,6 +119,16 @@ export async function generateMonthlyInvoices(
           footer_mentions: null, number_prefix: "FAC-", logo_url: null, updated_at: todayISO,
         } as InvoiceSettings);
         const pdf = await renderInvoicePdf({ ...inv, number, status: "emise" }, set);
+        // Lien « j'ai déjà réglé » dès l'émission : le client peut signaler un
+        // paiement (virement croisé, prélèvement…) sans attendre une relance.
+        let declareUrl: string | null = null;
+        try {
+          const { signPortalToken } = await import("@/lib/portal/token");
+          const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
+          declareUrl = `${appBase}/espace/${signPortalToken(sub.client_email)}/facture/${inv.id}`;
+        } catch {
+          /* secret portail absent → email sans bouton */
+        }
         const ok = await sendMail({
           to: sub.client_email,
           subject: `Facture ${number} · ${set.issuer_name ?? "Coworking"}`,
@@ -127,8 +137,9 @@ export async function generateMonthlyInvoices(
             clientName: sub.client_name,
             invoiceNumber: number,
             amountTtc: formatEuros(totals.total_ttc),
-            dueDate: now.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }),
+            dueDate: new Date(dueISO).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }),
             iban: set.iban,
+            declareUrl,
           }),
           replyTo: set.email ?? undefined,
           attachments: [{ filename: `${number}.pdf`, content: pdf, contentType: "application/pdf" }],
