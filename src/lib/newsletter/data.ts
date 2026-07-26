@@ -3,6 +3,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { NewsletterSettings, NewsletterCampaign, NewsletterBlock } from "./types";
 
@@ -95,26 +96,54 @@ export async function deleteNewsletterCampaign(id: string): Promise<{ ok: boolea
 
 // ─── Désinscription ────────────────────────────────────────────────────────────
 
+/**
+ * La désinscription s'exerce SANS compte : le destinataire clique depuis sa
+ * boîte mail, il n'a pas de session. Or `persons` est protégée par une RLS
+ * réservée aux membres de l'organisation — le client normal ne verrait donc
+ * aucune ligne et ne pourrait rien écrire. D'où le client service_role, borné
+ * ici au seul filtre `unsubscribe_token` (un secret par personne).
+ */
+function unsubscribeClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createServiceClient(url, key, { auth: { persistSession: false } });
+}
+
 export async function getPersonByUnsubscribeToken(
   token: string
-): Promise<{ id: string; name: string; organization_id: string } | null> {
-  if (!isSupabaseConfigured()) return null;
-  const supabase = await createClient();
-  const { data } = await supabase
+): Promise<{ id: string; name: string; organization_id: string; newsletter_opt_out: boolean } | null> {
+  const admin = unsubscribeClient();
+  if (!admin) return null;
+  const { data } = await admin
     .from("persons")
-    .select("id, name, organization_id")
+    .select("id, name, organization_id, newsletter_opt_out")
     .eq("unsubscribe_token", token)
     .maybeSingle();
   return data ?? null;
 }
 
-export async function unsubscribeByToken(token: string): Promise<{ ok: boolean }> {
-  if (!isSupabaseConfigured()) return { ok: false };
-  const supabase = await createClient();
-  const { error } = await supabase
+/** Canal par lequel le retrait a été exercé — conservé comme preuve (RGPD art. 7.3). */
+export type OptoutSource = "lien_email" | "one_click" | "dashboard";
+
+export async function unsubscribeByToken(
+  token: string,
+  source: OptoutSource = "lien_email"
+): Promise<{ ok: boolean }> {
+  const admin = unsubscribeClient();
+  if (!admin) return { ok: false };
+  // Filtre sur `newsletter_opt_out = false` : un second clic ne doit pas
+  // réécrire la date du premier retrait, qui est la seule qui fasse foi.
+  // Zéro ligne touchée = déjà désinscrit, ce qui reste un succès.
+  const { error } = await admin
     .from("persons")
-    .update({ newsletter_opt_out: true })
-    .eq("unsubscribe_token", token);
+    .update({
+      newsletter_opt_out: true,
+      newsletter_optout_at: new Date().toISOString(),
+      newsletter_optout_source: source,
+    })
+    .eq("unsubscribe_token", token)
+    .eq("newsletter_opt_out", false);
   return { ok: !error };
 }
 

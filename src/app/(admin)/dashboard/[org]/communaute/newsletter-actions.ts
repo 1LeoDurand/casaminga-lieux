@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getOrganizationBySlug } from "@/lib/data";
 
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
+
 type Result = { ok: boolean; error?: string; sent?: number; total?: number };
 
 /**
@@ -29,8 +31,14 @@ export async function sendNewsletter(
     if (personIds.length === 0) return { ok: false, error: "Ce groupe n'a aucun membre." };
   }
 
+  // `newsletter_opt_out` doit filtrer ici comme partout ailleurs : ce bulletin
+  // est un envoi de masse, pas un message transactionnel.
   let query = supabase
-    .from("persons").select("name, email").eq("organization_id", orgId).not("email", "is", null);
+    .from("persons")
+    .select("name, email, unsubscribe_token")
+    .eq("organization_id", orgId)
+    .eq("newsletter_opt_out", false)
+    .not("email", "is", null);
   if (personIds) query = query.in("id", personIds);
   const { data: recipients } = await query;
 
@@ -43,16 +51,23 @@ export async function sendNewsletter(
     import("@/lib/mail-templates"),
   ]);
   const orgName = org?.name ?? "Casa Minga Lieux";
-  const html = tplNewsletter({ orgName, title: input.subject, body: input.body });
 
   let sent = 0;
   for (const r of list) {
+    // Le lien de désabonnement est propre à chaque destinataire : le HTML ne
+    // peut donc plus être calculé une seule fois pour toute la liste.
     const ok = await sendMail({
       to: r.email!,
       subject: input.subject,
-      html,
+      html: tplNewsletter({
+        orgName,
+        title: input.subject,
+        body: input.body,
+        unsubscribeUrl: `${BASE_URL}/unsubscribe/${r.unsubscribe_token}`,
+      }),
       category: "newsletter",
       organizationId: orgId,
+      unsubscribeUrl: `${BASE_URL}/api/unsubscribe/${r.unsubscribe_token}`,
     });
     if (ok) sent++;
   }

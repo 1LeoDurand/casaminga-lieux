@@ -17,7 +17,7 @@ export default async function UnsubscribePage({
   const person = await getPersonByUnsubscribeToken(token);
   if (!person) notFound();
 
-  const result = await unsubscribeByToken(token);
+  const result = await unsubscribeByToken(token, "lien_email");
 
   return <UnsubscribeLayout status={result.ok ? "success" : "error"} name={person.name} />;
 }

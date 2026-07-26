@@ -826,15 +826,24 @@ export function tplNewsletter(opts: {
   title: string;
   /** Corps en texte simple : les sauts de ligne deviennent des paragraphes. */
   body: string;
+  /** Page de désabonnement propre au destinataire. Obligatoire pour un envoi de masse. */
+  unsubscribeUrl?: string;
 }) {
   const paragraphs = opts.body
     .split(/\n{2,}/)
     .map((para) => p(para.replace(/\n/g, "<br/>")))
     .join("");
+  const unsub = opts.unsubscribeUrl
+    ? `<p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #F0E8E0;font-size:12px;color:#9C9590;text-align:center;">
+        Vous recevez ce message car vous êtes membre de ${opts.orgName}.<br/>
+        <a href="${opts.unsubscribeUrl}" style="color:#9C9590;text-decoration:underline;">Se désabonner</a>
+      </p>`
+    : "";
   return base(
     `
     ${h1(opts.title)}
     ${paragraphs}
+    ${unsub}
   `,
     opts.orgName
   );

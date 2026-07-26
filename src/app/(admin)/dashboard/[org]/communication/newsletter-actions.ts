@@ -108,6 +108,7 @@ export async function sendCampaignNowAction(
       html,
       category: "newsletter",
       organizationId: orgId,
+      unsubscribeUrl: `${BASE_URL}/api/unsubscribe/${recipient.unsubscribe_token}`,
     });
     if (ok) sent++; else failed++;
     await new Promise((r) => setTimeout(r, 50)); // throttle SMTP
