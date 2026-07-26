@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Trash2, Clock, Check, FileText, Send, Settings } from "lucide-react";
+import { Plus, Trash2, Clock, Check, FileText, Send, Settings, Eye, MousePointerClick } from "lucide-react";
 import { newCampaignAction, deleteCampaignAction } from "@/app/(admin)/dashboard/[org]/communication/newsletter-actions";
 import type { NewsletterCampaign, NewsletterSettings } from "@/lib/newsletter/types";
+import type { CampaignStats } from "@/lib/newsletter/data";
 
 interface GroupLite { id: string; name: string; memberCount: number }
 
@@ -32,6 +33,34 @@ function StatusBadge({ statut }: { statut: string }) {
   );
 }
 
+/**
+ * Ouvertures et clics d'une campagne envoyée.
+ *
+ * Le taux d'ouverture est volontairement présenté comme une tendance : la
+ * plupart des clients mail bloquent les images par défaut et Gmail les sert via
+ * son proxy. Un chiffre affiché sans cette réserve serait pris pour un
+ * décompte, et il est toujours sous-estimé.
+ */
+function CampaignStatsLine({ stats }: { stats?: CampaignStats }) {
+  if (!stats || stats.nb_delivres === 0) return null;
+  const pct = (n: number) => Math.round((n / stats.nb_delivres) * 100);
+  const rien = stats.nb_ouvertures === 0 && stats.nb_clics === 0;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[12px] text-warmgray">
+      <span className="inline-flex items-center gap-1">
+        <Eye className="size-3.5 text-coral" />
+        <strong className="text-ink">{stats.nb_ouvertures}</strong> ouverture{stats.nb_ouvertures > 1 ? "s" : ""}
+        {!rien && <span className="text-warmgray/70">({pct(stats.nb_ouvertures)} % au moins)</span>}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <MousePointerClick className="size-3.5 text-coral" />
+        <strong className="text-ink">{stats.nb_clics}</strong> clic{stats.nb_clics > 1 ? "s" : ""}
+      </span>
+      {rien && <span className="text-warmgray/70">— aucune mesure pour l&apos;instant</span>}
+    </div>
+  );
+}
+
 function ModeChip({ settings }: { settings: NewsletterSettings | null }) {
   if (!settings?.actif) return null;
   const labels: Record<string, string> = {
@@ -53,12 +82,14 @@ export function NewsletterList({
   orgId,
   orgSlug,
   groups: _groups,
+  stats,
 }: {
   campaigns: NewsletterCampaign[];
   settings: NewsletterSettings | null;
   orgId: string;
   orgSlug: string;
   groups: GroupLite[];
+  stats?: Record<string, CampaignStats>;
 }) {
   const [pending, start] = useTransition();
 
@@ -138,6 +169,7 @@ export function NewsletterList({
                     ? `Programmée pour le ${fmtDate(c.programmee_pour)}`
                     : `Modifiée le ${fmtDate(c.updated_at)} · ${c.blocs?.length ?? 0} bloc(s)`}
                 </div>
+                {c.statut === "envoyee" && <CampaignStatsLine stats={stats?.[c.id]} />}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {c.statut !== "envoyee" && (

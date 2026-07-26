@@ -15,7 +15,8 @@
  */
 
 import { createClient as createServiceClient, type SupabaseClient } from "@supabase/supabase-js";
-import { sendMail } from "@/lib/mail";
+import { sendMail, htmlToText } from "@/lib/mail";
+import { instrumentHtml } from "./tracking";
 
 /** Au-delà, un envoi « en_cours » est considéré comme interrompu et repris. */
 export const STALE_SEND_MINUTES = 15;
@@ -92,8 +93,10 @@ export async function sendCampaignBatch(params: {
   recipients: DeliveryRecipient[];
   renderHtml: (recipient: DeliveryRecipient) => string;
   baseUrl: string;
+  /** Suivi des ouvertures/clics. Coupé par organisation dans les réglages. */
+  tracking?: boolean;
 }): Promise<{ sent: number; failed: number; skipped: number }> {
-  const { campaignId, organizationId, sujet, recipients, renderHtml, baseUrl } = params;
+  const { campaignId, organizationId, sujet, recipients, renderHtml, baseUrl, tracking } = params;
   const admin = ledgerClient();
 
   // Deux fiches peuvent porter la même adresse (doublon, couple, contact
@@ -128,20 +131,40 @@ export async function sendCampaignBatch(params: {
     // Le registre est écrit AVANT l'envoi : si le processus meurt entre les
     // deux, on préfère un destinataire oublié à un destinataire servi deux
     // fois. Un conflit ici signifie qu'un autre passage l'a déjà pris.
+    let deliveryId: string | null = null;
     if (admin) {
-      const { error } = await admin
+      const { data, error } = await admin
         .from("newsletter_deliveries")
-        .insert({ campaign_id: campaignId, email: key, statut: "en_cours" });
+        .insert({ campaign_id: campaignId, email: key, statut: "en_cours" })
+        .select("id")
+        .single();
       if (error) {
         skipped++;
         continue;
       }
+      deliveryId = data.id;
+    }
+
+    // L'id de livraison sert de jeton de suivi : il est propre au couple
+    // (campagne, destinataire) et n'expose aucune adresse.
+    const raw = renderHtml(recipient);
+    let html = raw;
+    if (tracking && deliveryId) {
+      html = instrumentHtml(raw, {
+        deliveryId,
+        baseUrl,
+        skipUrls: [`${baseUrl}/unsubscribe/${recipient.unsubscribe_token}`],
+      });
     }
 
     const ok = await sendMail({
       to: recipient.email,
       subject: sujet,
-      html: renderHtml(recipient),
+      html,
+      // La partie texte est dérivée du HTML *avant* instrumentation : en mode
+      // texte, une URL de redirection illisible de 200 caractères dessert plus
+      // le lecteur que la statistique ne nous sert.
+      text: htmlToText(raw),
       category: "newsletter",
       organizationId,
       unsubscribeUrl: `${baseUrl}/api/unsubscribe/${recipient.unsubscribe_token}`,

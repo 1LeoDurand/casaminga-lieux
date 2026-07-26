@@ -11,6 +11,7 @@ import {
   updateNewsletterCampaign,
   createNewsletterCampaign,
   deleteNewsletterCampaign,
+  isTrackingEnabled,
 } from "@/lib/newsletter/data";
 import { claimCampaign, sendCampaignBatch, finalizeCampaign } from "@/lib/newsletter/send";
 import { resolveAllBlocks } from "@/lib/newsletter/resolvers";
@@ -96,7 +97,10 @@ export async function sendCampaignNowAction(
     return { ok: false, error: "Un envoi de cette campagne est déjà en cours. Patientez quelques minutes." };
   }
 
-  const resolved = await resolveAllBlocks(orgId);
+  const [resolved, tracking] = await Promise.all([
+    resolveAllBlocks(orgId),
+    isTrackingEnabled(orgId),
+  ]);
 
   const { sent, failed, skipped } = await sendCampaignBatch({
     campaignId,
@@ -104,6 +108,7 @@ export async function sendCampaignNowAction(
     sujet: campaign.sujet,
     recipients,
     baseUrl: BASE_URL,
+    tracking,
     renderHtml: (recipient) =>
       renderNewsletterHtml(campaign.blocs, {
         orgName: org.name,

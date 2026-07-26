@@ -113,6 +113,8 @@ export interface NewsletterSettings {
   dernier_envoi_le: string | null;
   nb_evenements_declencheur: number;
   garde_fou_jours: number;
+  /** Suivi des ouvertures et des clics. Actif par défaut. */
+  suivi_actif: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -33,6 +33,16 @@ export async function upsertNewsletterSettings(
   return { ok: true };
 }
 
+/**
+ * Le suivi est actif tant qu'on n'a pas dit le contraire — y compris quand
+ * l'organisation n'a aucune ligne de réglages, ce qui est le cas tant qu'elle
+ * n'a rien configuré.
+ */
+export async function isTrackingEnabled(orgId: string): Promise<boolean> {
+  const settings = await getNewsletterSettings(orgId);
+  return settings?.suivi_actif ?? true;
+}
+
 // ─── Campagnes ─────────────────────────────────────────────────────────────────
 
 export async function getNewsletterCampaigns(orgId: string): Promise<NewsletterCampaign[]> {
@@ -92,6 +102,33 @@ export async function deleteNewsletterCampaign(id: string): Promise<{ ok: boolea
   const supabase = await createClient();
   await supabase.from("newsletter_campaigns").delete().eq("id", id);
   return { ok: true };
+}
+
+// ─── Statistiques d'envoi ──────────────────────────────────────────────────────
+
+export interface CampaignStats {
+  nb_delivres: number;
+  nb_ouvertures: number;
+  nb_clics: number;
+}
+
+/** Indexé par id de campagne. Une campagne sans suivi n'apparaît pas. */
+export async function getCampaignStats(orgId: string): Promise<Record<string, CampaignStats>> {
+  if (!isSupabaseConfigured()) return {};
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("newsletter_campaign_stats")
+    .select("campaign_id, nb_delivres, nb_ouvertures, nb_clics")
+    .eq("organization_id", orgId);
+  const out: Record<string, CampaignStats> = {};
+  for (const row of (data ?? []) as (CampaignStats & { campaign_id: string })[]) {
+    out[row.campaign_id] = {
+      nb_delivres: Number(row.nb_delivres ?? 0),
+      nb_ouvertures: Number(row.nb_ouvertures ?? 0),
+      nb_clics: Number(row.nb_clics ?? 0),
+    };
+  }
+  return out;
 }
 
 // ─── Désinscription ────────────────────────────────────────────────────────────

@@ -30,6 +30,7 @@ export function NewsletterSettingsForm({
   const [segmentId, setSegmentId] = useState(settings?.segment_id ?? "");
   const [nbEvts, setNbEvts] = useState(settings?.nb_evenements_declencheur ?? 1);
   const [gardeFou, setGardeFou] = useState(settings?.garde_fou_jours ?? 7);
+  const [suivi, setSuivi] = useState(settings?.suivi_actif ?? true);
   const [pending, start] = useTransition();
 
   function save() {
@@ -43,6 +44,7 @@ export function NewsletterSettingsForm({
         segment_id: segmentId || null,
         nb_evenements_declencheur: nbEvts,
         garde_fou_jours: gardeFou,
+        suivi_actif: suivi,
       } as Partial<NewsletterSettings>);
       if (res.ok) toast.success("Réglages enregistrés ✓");
       else toast.error(res.error ?? "Erreur");
@@ -154,6 +156,32 @@ export function NewsletterSettingsForm({
         </select>
         <p className="mt-2 text-[11.5px] text-warmgray">
           Applicable aux envois automatiques. Vous pourrez choisir un segment différent par campagne.
+        </p>
+      </div>
+
+      {/* Suivi */}
+      <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-semibold text-ink">Mesurer les ouvertures et les clics</div>
+            <div className="text-[13px] text-warmgray">
+              Ajoute un pixel invisible et fait passer les liens par une redirection.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuivi(!suivi)}
+            aria-label={suivi ? "Désactiver le suivi" : "Activer le suivi"}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${suivi ? "bg-coral" : "bg-warmgray/30"}`}
+          >
+            <span className={`absolute top-1 size-4 rounded-full bg-white shadow transition-transform ${suivi ? "left-6" : "left-1"}`} />
+          </button>
+        </div>
+        {/* Dire ce que ça implique vaut mieux que de le découvrir lors d'un contrôle. */}
+        <p className="mt-3 rounded-xl bg-cream px-3 py-2 text-[11.5px] leading-relaxed text-warmgray">
+          {suivi
+            ? "Ces mesures sont des données personnelles : mentionnez-les dans votre politique de confidentialité. Nous n'enregistrons ni adresse IP ni navigateur, seulement le fait qu'un destinataire a ouvert ou cliqué. Le taux d'ouverture reste un minimum : beaucoup de messageries bloquent les images."
+            : "Aucun pixel ni lien réécrit ne sera ajouté à vos envois. Les campagnes déjà envoyées gardent leurs statistiques."}
         </p>
       </div>
 

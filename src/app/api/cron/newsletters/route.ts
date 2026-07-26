@@ -66,6 +66,19 @@ async function loadRecipients(
   return ((data ?? []) as DeliveryRecipient[]).filter((r) => r.email);
 }
 
+/** Le suivi est actif tant que l'organisation ne l'a pas coupé. */
+async function trackingEnabled(
+  admin: ReturnType<typeof getAdmin>,
+  orgId: string
+): Promise<boolean> {
+  const { data } = await admin
+    .from("newsletter_settings")
+    .select("suivi_actif")
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  return (data as { suivi_actif: boolean } | null)?.suivi_actif ?? true;
+}
+
 /** Envoie une campagne DÉJÀ réservée, puis la clôt. */
 async function runCampaign(
   admin: ReturnType<typeof getAdmin>,
@@ -86,7 +99,10 @@ async function runCampaign(
     return { sent: 0, failed: 0, skipped: 0 };
   }
 
-  const resolved = await resolveAllBlocks(orgId);
+  const [resolved, tracking] = await Promise.all([
+    resolveAllBlocks(orgId),
+    trackingEnabled(admin, orgId),
+  ]);
 
   const counts = await sendCampaignBatch({
     campaignId,
@@ -94,6 +110,7 @@ async function runCampaign(
     sujet,
     recipients,
     baseUrl: BASE_URL,
+    tracking,
     renderHtml: (recipient) =>
       renderNewsletterHtml(blocs as never[], {
         orgName: org.name,
