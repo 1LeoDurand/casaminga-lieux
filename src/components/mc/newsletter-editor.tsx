@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trash2, ChevronUp, ChevronDown, Eye, Send,
@@ -237,40 +237,64 @@ const BLOCK_TYPES: NewsletterBlockType[] = ["texte", "titre", "evenements", "adh
 
 function AddBlockMenu({ onAdd }: { onAdd: (type: NewsletterBlockType) => void }) {
   const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Fermeture au clic extérieur SANS calque plein écran : un overlay `fixed`
+  // recouvrait la barre d'actions collante et rendait « Enregistrer » inerte.
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="menu"
         className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-white py-4 text-sm font-semibold text-warmgray transition hover:border-coral/40 hover:text-ink"
       >
         <Plus className="size-4" /> Ajouter un bloc
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-border bg-white p-2 shadow-xl">
-            <div className="grid grid-cols-2 gap-1.5">
-              {BLOCK_TYPES.map((type) => {
-                const m = BLOCK_META[type];
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => { onAdd(type); setOpen(false); }}
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition hover:bg-cream"
-                  >
-                    <span className="text-xl">{m.emoji}</span>
-                    <div>
-                      <div className="text-[13px] font-semibold text-ink">{m.label}</div>
-                      <div className="text-[11px] text-warmgray">{m.description}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        // Ouverture vers le HAUT : ce bouton est toujours en fin de liste, un
+        // menu déroulant vers le bas sortait du document (absolute = hors flux,
+        // donc impossible à atteindre au scroll).
+        <div
+          role="menu"
+          className="absolute bottom-full left-0 right-0 z-20 mb-2 rounded-2xl border border-border bg-white p-2 shadow-xl"
+        >
+          <div className="grid grid-cols-2 gap-1.5">
+            {BLOCK_TYPES.map((type) => {
+              const m = BLOCK_META[type];
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { onAdd(type); setOpen(false); }}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition hover:bg-cream"
+                >
+                  <span className="text-xl">{m.emoji}</span>
+                  <div>
+                    <div className="text-[13px] font-semibold text-ink">{m.label}</div>
+                    <div className="text-[11px] text-warmgray">{m.description}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -478,7 +502,7 @@ export function NewsletterEditor({
 
         {/* Barre d'actions */}
         {!isSent && (
-          <div className="sticky bottom-4 rounded-2xl border border-border bg-white p-4 shadow-lg">
+          <div className="sticky bottom-4 z-30 rounded-2xl border border-border bg-white p-4 shadow-lg">
             <div className="flex flex-wrap items-center gap-2">
               {/* Aperçu */}
               <button type="button" onClick={openPreview} disabled={pending || !blocs.length}
