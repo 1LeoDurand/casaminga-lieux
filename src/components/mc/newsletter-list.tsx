@@ -20,12 +20,13 @@ function StatusBadge({ statut }: { statut: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     brouillon:   { label: "Brouillon",   cls: "bg-warmgray/15 text-warmgray" },
     programmee:  { label: "Programmée",  cls: "bg-blue-50 text-blue-600" },
+    en_cours:    { label: "Envoi en cours", cls: "bg-amber-50 text-amber-700" },
     envoyee:     { label: "Envoyée",     cls: "bg-[#e8f5ee] text-[#2f8a4c]" },
   };
   const s = map[statut] ?? { label: statut, cls: "bg-warmgray/15 text-warmgray" };
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${s.cls}`}>
-      {statut === "envoyee" ? <Check className="size-3" /> : statut === "programmee" ? <Clock className="size-3" /> : <FileText className="size-3" />}
+      {statut === "envoyee" ? <Check className="size-3" /> : statut === "programmee" || statut === "en_cours" ? <Clock className="size-3" /> : <FileText className="size-3" />}
       {s.label}
     </span>
   );
@@ -131,6 +132,8 @@ export function NewsletterList({
                 <div className="mt-1 text-[12px] text-warmgray">
                   {c.statut === "envoyee"
                     ? `Envoyée le ${fmtDate(c.envoyee_le)} · ${c.nb_envoyes ?? 0} destinataire(s)`
+                    : c.statut === "en_cours"
+                    ? `Envoi en cours depuis le ${fmtDate(c.envoi_demarre_le)}`
                     : c.statut === "programmee"
                     ? `Programmée pour le ${fmtDate(c.programmee_pour)}`
                     : `Modifiée le ${fmtDate(c.updated_at)} · ${c.blocs?.length ?? 0} bloc(s)`}
@@ -153,7 +156,9 @@ export function NewsletterList({
                     Voir archive
                   </Link>
                 )}
-                {c.statut !== "envoyee" && (
+                {/* Pas de suppression pendant l'envoi : elle emporterait le
+                    registre des destinataires déjà servis. */}
+                {c.statut !== "envoyee" && c.statut !== "en_cours" && (
                   <button
                     type="button"
                     onClick={() => handleDelete(c.id, c.sujet)}

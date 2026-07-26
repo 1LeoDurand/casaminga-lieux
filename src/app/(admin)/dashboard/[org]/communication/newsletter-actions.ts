@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getOrganizationBySlug } from "@/lib/data";
 import {
@@ -13,6 +12,7 @@ import {
   createNewsletterCampaign,
   deleteNewsletterCampaign,
 } from "@/lib/newsletter/data";
+import { claimCampaign, sendCampaignBatch, finalizeCampaign } from "@/lib/newsletter/send";
 import { resolveAllBlocks } from "@/lib/newsletter/resolvers";
 import { renderNewsletterHtml } from "@/lib/newsletter/renderer";
 import type { NewsletterBlock, NewsletterSettings } from "@/lib/newsletter/types";
@@ -72,7 +72,7 @@ export async function sendCampaignNowAction(
   campaignId: string,
   orgId: string,
   orgSlug: string
-): Promise<{ ok: boolean; sent?: number; total?: number; error?: string }> {
+): Promise<{ ok: boolean; sent?: number; skipped?: number; total?: number; error?: string }> {
   if (!isSupabaseConfigured()) return { ok: false, error: "Supabase non configuré." };
 
   const [campaign, org] = await Promise.all([
@@ -86,33 +86,34 @@ export async function sendCampaignNowAction(
   const recipients = await getNewsletterRecipients(orgId, campaign.segment_id);
   if (!recipients.length) return { ok: false, error: "Aucun destinataire avec email." };
 
-  const resolved = await resolveAllBlocks(orgId);
-  const { sendMail } = await import("@/lib/mail");
-
-  let sent = 0;
-  let failed = 0;
-
-  for (const recipient of recipients) {
-    const unsubUrl = `${BASE_URL}/unsubscribe/${recipient.unsubscribe_token}`;
-    const html = renderNewsletterHtml(campaign.blocs, {
-      orgName: org.name,
-      orgSlug: org.slug,
-      accentColor: org.primary_color,
-      siteBase: BASE_URL,
-      unsubscribeUrl: unsubUrl,
-      ...resolved,
-    });
-    const ok = await sendMail({
-      to: recipient.email,
-      subject: campaign.sujet,
-      html,
-      category: "newsletter",
-      organizationId: orgId,
-      unsubscribeUrl: `${BASE_URL}/api/unsubscribe/${recipient.unsubscribe_token}`,
-    });
-    if (ok) sent++; else failed++;
-    await new Promise((r) => setTimeout(r, 50)); // throttle SMTP
+  // Réservation : deux clics sur « Envoyer », ou un clic pendant que le cron
+  // traite la même campagne, ne doivent pas produire deux envois. La condition
+  // est évaluée en base ; ici on se contente de renoncer.
+  // `resumeStale` : si un envoi précédent s'est interrompu, on le reprend —
+  // le registre fera sauter les destinataires déjà servis.
+  const claimed = await claimCampaign(campaignId, { resumeStale: true });
+  if (!claimed) {
+    return { ok: false, error: "Un envoi de cette campagne est déjà en cours. Patientez quelques minutes." };
   }
+
+  const resolved = await resolveAllBlocks(orgId);
+
+  const { sent, failed, skipped } = await sendCampaignBatch({
+    campaignId,
+    organizationId: orgId,
+    sujet: campaign.sujet,
+    recipients,
+    baseUrl: BASE_URL,
+    renderHtml: (recipient) =>
+      renderNewsletterHtml(campaign.blocs, {
+        orgName: org.name,
+        orgSlug: org.slug,
+        accentColor: org.primary_color,
+        siteBase: BASE_URL,
+        unsubscribeUrl: `${BASE_URL}/unsubscribe/${recipient.unsubscribe_token}`,
+        ...resolved,
+      }),
+  });
 
   // Archiver le rendu + marquer envoyée
   const sampleHtml = renderNewsletterHtml(campaign.blocs, {
@@ -124,17 +125,10 @@ export async function sendCampaignNowAction(
     ...resolved,
   });
 
-  await updateNewsletterCampaign(campaignId, { statut: "envoyee" });
-  const supabase = await createClient();
-  await supabase.from("newsletter_campaigns").update({
-    envoyee_le: new Date().toISOString(),
-    nb_envoyes: sent,
-    nb_echecs: failed,
-    html_archive: sampleHtml,
-  }).eq("id", campaignId);
+  await finalizeCampaign(campaignId, { sent, failed }, { html_archive: sampleHtml });
 
   revalidatePath(`/dashboard/${orgSlug}/communication`);
-  return { ok: true, sent, total: recipients.length };
+  return { ok: true, sent, skipped, total: recipients.length };
 }
 
 // ─── Aperçu HTML ──────────────────────────────────────────────────────────────

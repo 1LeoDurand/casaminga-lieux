@@ -75,7 +75,8 @@ export type NewsletterBlockType = NewsletterBlock["type"];
 
 // ─── Campagne ──────────────────────────────────────────────────────────────────
 
-export type CampaignStatus = "brouillon" | "programmee" | "envoyee";
+/** `en_cours` = envoi réservé par un passage ; interdit à tout autre de démarrer. */
+export type CampaignStatus = "brouillon" | "programmee" | "en_cours" | "envoyee";
 
 export interface NewsletterCampaign {
   id: string;
@@ -85,6 +86,7 @@ export interface NewsletterCampaign {
   blocs: NewsletterBlock[];
   html_archive: string | null;
   programmee_pour: string | null;
+  envoi_demarre_le: string | null;
   envoyee_le: string | null;
   nb_envoyes: number | null;
   nb_echecs: number | null;
