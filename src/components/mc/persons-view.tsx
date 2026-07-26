@@ -114,6 +114,61 @@ function PortalLinkButtons({ email, name, orgSlug, establishmentName }: { email:
   );
 }
 
+/**
+ * État du consentement newsletter, avec sa preuve.
+ * Le RGPD (art. 7.1) demande de pouvoir *démontrer* le consentement : une case
+ * cochée quelque part ne suffit pas, il faut la date et l'origine. Cet encart
+ * est donc là pour être lu le jour où quelqu'un conteste, pas pour décorer.
+ */
+function ConsentPanel({ person }: { person: Person }) {
+  const fmt = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : null;
+
+  const consentDate = fmt(person.newsletter_consent_at);
+  const optoutDate = fmt(person.newsletter_optout_at);
+  const optoutLabels: Record<string, string> = {
+    lien_email: "lien en bas d'un email",
+    one_click: "bouton de sa messagerie",
+    dashboard: "retiré depuis le tableau de bord",
+    inconnu_avant_tracage: "avant la mise en place du suivi",
+  };
+
+  if (person.newsletter_opt_out) {
+    return (
+      <div className="rounded-xl bg-white p-4 text-[13px] leading-relaxed text-slate-600">
+        <p className="font-semibold text-slate-700">Désabonné·e</p>
+        <p className="mt-1">
+          {optoutDate ? `Retrait le ${optoutDate}` : "Date de retrait inconnue"}
+          {person.newsletter_optout_source
+            ? ` · ${optoutLabels[person.newsletter_optout_source] ?? person.newsletter_optout_source}`
+            : ""}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl bg-white p-4 text-[13px] leading-relaxed text-slate-600">
+      <p className="font-semibold text-slate-700">Abonné·e</p>
+      {consentDate ? (
+        <>
+          <p className="mt-1">Consentement recueilli le {consentDate}</p>
+          <p className="mt-0.5 text-[12px] text-warmgray">
+            Double opt-in confirmé
+            {person.newsletter_consent_source ? ` · ${person.newsletter_consent_source}` : ""}
+            {person.newsletter_consent_ip ? ` · IP ${person.newsletter_consent_ip}` : ""}
+          </p>
+        </>
+      ) : (
+        <p className="mt-1 text-amber-700">
+          Aucune preuve de consentement enregistrée — fiche créée avant la mise en place du suivi,
+          ou saisie à la main. À faire re-confirmer en cas de contestation.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function PersonsView({
   persons,
   orgSlug,
@@ -548,6 +603,12 @@ export function PersonsView({
                 <p className="mt-2 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-relaxed text-foreground">
                   {selected.notes ?? "—"}
                 </p>
+              </div>
+
+              {/* Section newsletter — preuve de consentement (RGPD art. 7) */}
+              <div>
+                <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-warmgray">Newsletter</h3>
+                <ConsentPanel person={selected} />
               </div>
 
               {/* Section accès au logiciel */}

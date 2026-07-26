@@ -102,6 +102,12 @@ export interface Person {
   notes: string | null;
   newsletter_opt_out?: boolean;
   unsubscribe_token?: string;
+  /** Preuve du consentement newsletter (RGPD art. 7). Voir la page de confirmation double opt-in. */
+  newsletter_consent_at?: string | null;
+  newsletter_consent_ip?: string | null;
+  newsletter_consent_source?: string | null;
+  newsletter_optout_at?: string | null;
+  newsletter_optout_source?: string | null;
   anonymized_at?: string | null;
   anonymized_by?: string | null;
   created_at: string;

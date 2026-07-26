@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { verifyOptinToken } from "@/lib/newsletter/optin-token";
 import { getOrganizationBySlug } from "@/lib/data";
 import { createAdminClient } from "@/lib/admin/guard";
@@ -58,6 +59,23 @@ export default async function NewsletterConfirmPage({
     );
   }
 
+  // Preuve du consentement (RGPD art. 7.1 : « être en mesure de démontrer »).
+  // C'est ce clic-ci qui fait foi — l'étape 1 ne crée volontairement aucune
+  // trace, pour ne pas laisser énumérer les inscrits. On ne conserve donc que
+  // l'IP de confirmation, pas celle de la demande.
+  const h = await headers();
+  const consent = {
+    newsletter_opt_out: false,
+    newsletter_consent_at: new Date().toISOString(),
+    newsletter_consent_ip:
+      h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || null,
+    newsletter_consent_source: `site_public:${parsed.slug}`,
+    // Un nouveau consentement efface le retrait précédent : sans cela, la fiche
+    // affirmerait à la fois « inscrit » et « s'est désinscrit le … ».
+    newsletter_optout_at: null,
+    newsletter_optout_source: null,
+  };
+
   // Déjà inscrit ? On ré-active simplement le consentement.
   const { data: existing } = await admin
     .from("persons")
@@ -68,7 +86,7 @@ export default async function NewsletterConfirmPage({
     .limit(1);
 
   if (existing && existing.length > 0) {
-    await admin.from("persons").update({ newsletter_opt_out: false }).eq("id", existing[0].id);
+    await admin.from("persons").update(consent).eq("id", existing[0].id);
   } else {
     await admin.from("persons").insert({
       organization_id: org.id,
@@ -79,7 +97,7 @@ export default async function NewsletterConfirmPage({
       status: "actif",
       tags: ["newsletter"],
       notes: "Inscription newsletter via le site public.",
-      newsletter_opt_out: false,
+      ...consent,
     });
   }
 
