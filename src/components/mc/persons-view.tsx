@@ -120,7 +120,7 @@ function PortalLinkButtons({ email, name, orgSlug, establishmentName }: { email:
  * cochée quelque part ne suffit pas, il faut la date et l'origine. Cet encart
  * est donc là pour être lu le jour où quelqu'un conteste, pas pour décorer.
  */
-function ConsentPanel({ person }: { person: Person }) {
+export function ConsentPanel({ person }: { person: Person }) {
   const fmt = (iso?: string | null) =>
     iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : null;
 
