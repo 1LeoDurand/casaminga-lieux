@@ -242,6 +242,8 @@ export function tplAdhesionRappelRenouvellement(opts: {
   firstName: string;
   membershipEnd: string;
   renewUrl?: string;
+  /** Lien « je ne renouvelle pas » — coupe les rappels et prévient l'équipe. */
+  declineUrl?: string | null;
 }) {
   return base(
     `
@@ -252,6 +254,44 @@ export function tplAdhesionRappelRenouvellement(opts: {
     ${p(`Votre adhésion à <strong>${opts.orgName}</strong> expire le <strong>${new Date(opts.membershipEnd).toLocaleDateString("fr-FR")}</strong>.`)}
     ${p("Renouvelez dès maintenant pour continuer à bénéficier de tous les avantages.")}
     ${opts.renewUrl ? btn("Renouveler mon adhésion →", opts.renewUrl) : ""}
+    ${
+      opts.declineUrl
+        ? `${p(
+            `<span style="color:#8A8078;font-size:13px;">Vous ne souhaitez pas renouveler&nbsp;? ` +
+              `<a href="${opts.declineUrl}" style="color:#8A8078;text-decoration:underline;">Dites-le-nous en un clic</a> ` +
+              `— nous arrêterons de vous relancer, sans rancune.</span>`
+          )}`
+        : ""
+    }
+  `,
+    opts.orgName
+  );
+}
+
+/** Alerte équipe : un adhérent annonce qu'il ne renouvellera pas. */
+export function tplAdhesionNonRenouvellement(opts: {
+  orgName: string;
+  memberName: string;
+  memberEmail: string;
+  membershipEnd: string;
+  note?: string | null;
+  dashboardUrl: string;
+}) {
+  return base(
+    `
+    ${badge("NON-RENOUVELLEMENT", "#E8A23D")}
+    ${h1("Un adhérent ne renouvellera pas")}
+    ${p(`<strong>${opts.memberName}</strong> vient d'indiquer qu'il ne renouvellera pas son adhésion.`)}
+    ${card([
+      { label: "Email", value: opts.memberEmail },
+      { label: "Fin d'adhésion", value: opts.membershipEnd },
+      ...(opts.note ? [{ label: "Motif indiqué", value: opts.note }] : []),
+    ])}
+    ${p(
+      `Les rappels de renouvellement sont arrêtés pour cette personne. ` +
+        `S'il s'agit d'un départ que vous voulez rattraper, c'est le bon moment pour un mot personnel.`
+    )}
+    ${btn("Voir la fiche adhésion", opts.dashboardUrl)}
   `,
     opts.orgName
   );
@@ -323,6 +363,8 @@ export function tplReservationRappel(opts: {
   spaceName: string;
   startAt: string;
   endAt: string;
+  /** Lien « je dois annuler » — libère l'espace et prévient l'équipe. */
+  cancelUrl?: string | null;
 }) {
   const fmt = (d: string) =>
     new Date(d).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
@@ -339,6 +381,43 @@ export function tplReservationRappel(opts: {
       { label: "Fin",    value: fmt(opts.endAt) },
     ])}
     ${p("À demain !")}
+    ${
+      opts.cancelUrl
+        ? p(
+            `<span style="color:#8A8078;font-size:13px;">Un empêchement&nbsp;? ` +
+              `<a href="${opts.cancelUrl}" style="color:#8A8078;text-decoration:underline;">Annulez votre réservation</a> ` +
+              `— l'espace sera libéré pour quelqu'un d'autre.</span>`
+          )
+        : ""
+    }
+  `,
+    opts.orgName
+  );
+}
+
+/** Alerte équipe : le client a annulé sa réservation depuis le rappel J-1. */
+export function tplReservationAnnuleeParClient(opts: {
+  orgName: string;
+  contactName: string;
+  spaceName: string;
+  startAt: string;
+  reason?: string | null;
+  dashboardUrl: string;
+}) {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+  return base(
+    `
+    ${badge("PLACE LIBÉRÉE", "#E8A23D")}
+    ${h1("Une réservation vient d'être annulée")}
+    ${p(`<strong>${opts.contactName}</strong> a annulé sa réservation depuis le rappel de la veille.`)}
+    ${card([
+      { label: "Espace", value: opts.spaceName },
+      { label: "Créneau", value: fmt(opts.startAt) },
+      ...(opts.reason ? [{ label: "Motif indiqué", value: opts.reason }] : []),
+    ])}
+    ${p("Le créneau est de nouveau disponible.")}
+    ${btn("Voir les réservations", opts.dashboardUrl)}
   `,
     opts.orgName
   );
@@ -402,9 +481,12 @@ export function tplEvenementRappel(opts: {
   eventTitle: string;
   startAt: string;
   location?: string;
+  /** Billets du destinataire : chaque page permet d'annuler la place. */
+  tickets?: { holderName: string; url: string }[];
 }) {
   const fmt = (d: string) =>
     new Date(d).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+  const tickets = opts.tickets ?? [];
   return base(
     `
     ${badge("Rappel — demain", "#3B82F6")}
@@ -416,7 +498,50 @@ export function tplEvenementRappel(opts: {
       { label: "Date", value: fmt(opts.startAt) },
       ...(opts.location ? [{ label: "Lieu", value: opts.location }] : []),
     ])}
+    ${tickets.length === 1 ? btn("Voir mon billet", tickets[0].url) : ""}
+    ${
+      tickets.length > 1
+        ? resourceLinks(tickets.map((t) => ({ label: `🎟️ ${t.holderName}`, href: t.url })))
+        : ""
+    }
     ${p("On vous attend !")}
+    ${
+      tickets.length > 0
+        ? p(
+            `<span style="color:#8A8078;font-size:13px;">Un empêchement&nbsp;? Ouvrez ` +
+              `${tickets.length > 1 ? "le billet concerné" : "votre billet"} et annulez la place ` +
+              `— elle profitera à quelqu'un sur liste d'attente.</span>`
+          )
+        : ""
+    }
+  `,
+    opts.orgName
+  );
+}
+
+/** Alerte équipe : un participant a rendu sa place. */
+export function tplBilletAnnuleParClient(opts: {
+  orgName: string;
+  holderName: string;
+  eventTitle: string;
+  startAt: string;
+  seatsLeft: number | null;
+  dashboardUrl: string;
+}) {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+  return base(
+    `
+    ${badge("PLACE LIBÉRÉE", "#E8A23D")}
+    ${h1("Un participant a rendu sa place")}
+    ${p(`<strong>${opts.holderName}</strong> a annulé son billet pour <strong>${opts.eventTitle}</strong>.`)}
+    ${card([
+      { label: "Événement", value: opts.eventTitle },
+      { label: "Date", value: fmt(opts.startAt) },
+      ...(opts.seatsLeft !== null ? [{ label: "Places restantes", value: String(opts.seatsLeft) }] : []),
+    ])}
+    ${p("Si une liste d'attente existait, la première personne a été promue automatiquement.")}
+    ${btn("Voir les inscriptions", opts.dashboardUrl)}
   `,
     opts.orgName
   );

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/admin/guard";
 import { logCronRun } from "@/lib/cron-logger";
+import { portalActionUrl } from "@/lib/portal/notify";
+import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -9,7 +11,13 @@ export const maxDuration = 60;
  * Rappels automatiques :
  *  - Réservations confirmées qui débutent DEMAIN (J-1) → email au contact.
  *  - Adhésions confirmées dont la fin tombe dans 30 jours (J-30) → rappel de renouvellement.
+ *  - Billetterie J-1 → rappel aux inscrits.
  * Sécurisé par CRON_SECRET. Conçu pour tourner 1×/jour (fenêtres datées → pas de doublon).
+ *
+ * Règle « emails actionnables » (CLAUDE.md) : chaque rappel embarque le lien qui
+ * permet au destinataire d'agir sans compte — annuler sa place, dire qu'il ne
+ * renouvelle pas. Sans PORTAL_LINK_SECRET, portalActionUrl renvoie null et
+ * l'email part simplement sans le bouton.
  */
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -39,7 +47,7 @@ export async function POST(req: Request) {
     .lte("start_at", dayEnd.toISOString());
 
   for (const r of (resas ?? []) as unknown as Array<{
-    title: string | null; start_at: string; end_at: string;
+    id: string; title: string | null; start_at: string; end_at: string;
     persons: { name: string; email: string | null } | null;
     spaces: { name: string } | null;
     organizations: { name: string } | null;
@@ -55,6 +63,7 @@ export async function POST(req: Request) {
         spaceName: r.spaces?.name ?? r.title ?? "Espace",
         startAt: r.start_at,
         endAt: r.end_at,
+        cancelUrl: portalActionUrl(email, `reservation/${r.id}`),
       }),
     });
     if (ok) resaSent++;
@@ -68,15 +77,33 @@ export async function POST(req: Request) {
   let adhSent = 0;
   const { data: apps } = await admin
     .from("membership_applications")
-    .select("id, first_name, email, membership_end, status, organizations(name)")
+    .select("id, first_name, email, membership_end, status, organization_id, organizations(name, slug)")
     .eq("status", "confirmee")
-    .eq("membership_end", in30Date);
+    .eq("membership_end", in30Date)
+    // Intention déjà déclarée depuis un rappel précédent → on n'insiste pas.
+    .is("renewal_intent_at", null);
+
+  // Campagne publiée par org → URL de renouvellement du tunnel d'adhésion.
+  const adhOrgIds = [...new Set((apps ?? []).map((a) => a.organization_id as string))];
+  const campaignSlugByOrg = new Map<string, string>();
+  if (adhOrgIds.length > 0) {
+    const { data: campaigns } = await admin
+      .from("membership_campaigns")
+      .select("slug, organization_id")
+      .in("organization_id", adhOrgIds)
+      .eq("status", "publie");
+    for (const c of campaigns ?? []) {
+      if (!campaignSlugByOrg.has(c.organization_id)) campaignSlugByOrg.set(c.organization_id, c.slug);
+    }
+  }
 
   for (const a of (apps ?? []) as unknown as Array<{
-    first_name: string; email: string | null; membership_end: string;
-    organizations: { name: string } | null;
+    id: string; first_name: string; email: string | null; membership_end: string;
+    organization_id: string;
+    organizations: { name: string; slug: string } | null;
   }>) {
     if (!a.email) continue;
+    const campaignSlug = campaignSlugByOrg.get(a.organization_id);
     const ok = await sendMail({
       to: a.email,
       subject: `Votre adhésion arrive à échéance · ${a.organizations?.name ?? "Casa Minga"}`,
@@ -84,6 +111,11 @@ export async function POST(req: Request) {
         orgName: a.organizations?.name ?? "Casa Minga Lieux",
         firstName: a.first_name,
         membershipEnd: new Date(a.membership_end).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }),
+        renewUrl:
+          a.organizations?.slug && campaignSlug
+            ? `${PUBLIC_SITE_BASE.replace(/\/$/, "")}/${a.organizations.slug}/adhesion/${campaignSlug}`
+            : undefined,
+        declineUrl: portalActionUrl(a.email, `adhesion/${a.id}`),
       }),
     });
     if (ok) adhSent++;
@@ -104,9 +136,27 @@ export async function POST(req: Request) {
   }>) {
     const { data: regs } = await admin
       .from("event_registrations")
-      .select("full_name, email")
+      .select("id, full_name, email")
       .eq("event_id", ev.id)
       .eq("status", "inscrit");
+
+    // Billets encore valides de l'événement, groupés par inscription : ce sont
+    // eux qui portent le lien d'annulation (/billet/<token>, libère la place).
+    const { data: tickets } = await admin
+      .from("event_tickets")
+      .select("registration_id, holder_name, ticket_token")
+      .eq("event_id", ev.id);
+    const ticketsByReg = new Map<string, { holderName: string; url: string }[]>();
+    for (const t of tickets ?? []) {
+      if (!t.registration_id) continue;
+      const list = ticketsByReg.get(t.registration_id) ?? [];
+      list.push({
+        holderName: t.holder_name,
+        url: `${PUBLIC_SITE_BASE.replace(/\/$/, "")}/billet/${t.ticket_token}`,
+      });
+      ticketsByReg.set(t.registration_id, list);
+    }
+
     for (const r of regs ?? []) {
       if (!r.email) continue;
       const ok = await sendMail({
@@ -117,6 +167,7 @@ export async function POST(req: Request) {
           firstName: r.full_name?.split(" ")[0] ?? "",
           eventTitle: ev.title,
           startAt: ev.start_at,
+          tickets: ticketsByReg.get(r.id) ?? [],
         }),
       });
       if (ok) eventSent++;

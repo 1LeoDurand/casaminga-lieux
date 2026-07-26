@@ -70,6 +70,15 @@ function ResaCard({
         <span className="mc-resa-title">{r.title || spaceName(r.space_id)}</span>
         {withStatus ? <StatusBadge status={r.status} /> : null}
       </div>
+      {/* Annulée par le client depuis le rappel J-1 — pas par l'équipe. */}
+      {r.cancelled_by_client_at ? (
+        <div
+          className="mc-resa-line text-[#8A5E10]"
+          title={r.cancellation_reason ?? "Annulation faite par le client depuis le rappel de la veille."}
+        >
+          🚪 Annulée par le client
+        </div>
+      ) : null}
       <div className="mc-resa-line">
         <Clock className="size-3.5" /> {formatRange(r.start_at, r.end_at)}
       </div>

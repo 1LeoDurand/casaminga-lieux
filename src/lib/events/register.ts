@@ -366,7 +366,7 @@ export async function cancelTicketByToken(token: string): Promise<CancelTicketRe
 
   const { data: event } = await admin
     .from("evenements")
-    .select("id, title, start_at")
+    .select("id, title, start_at, organization_id")
     .eq("id", ticket.event_id)
     .maybeSingle();
   if (!event) return { ok: false, error: "Événement introuvable." };
@@ -397,6 +397,25 @@ export async function cancelTicketByToken(token: string): Promise<CancelTicketRe
   } catch (e) {
     console.error("cancelTicketByToken: promotion liste d'attente", e);
   }
+
+  // L'équipe doit savoir qu'une place s'est libérée (règle « emails actionnables »).
+  const [{ notifyOrgAdmins, APP_BASE }, { tplBilletAnnuleParClient }] = await Promise.all([
+    import("@/lib/portal/notify"),
+    import("@/lib/mail-templates"),
+  ]);
+  const seatsLeft = await remainingSeats(ticket.event_id);
+  await notifyOrgAdmins(admin, event.organization_id, (org) => ({
+    subject: `Place libérée — ${ticket.holder_name} annule pour « ${event.title} »`,
+    html: tplBilletAnnuleParClient({
+      orgName: org.name,
+      holderName: ticket.holder_name,
+      eventTitle: event.title,
+      startAt: event.start_at,
+      seatsLeft,
+      dashboardUrl: `${APP_BASE}/dashboard/${org.slug}/evenements`,
+    }),
+    category: "evenement",
+  }));
 
   return { ok: true, holderName: ticket.holder_name, eventTitle: event.title };
 }

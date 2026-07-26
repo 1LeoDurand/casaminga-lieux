@@ -161,6 +161,9 @@ export interface Reservation {
   stripe_session_id?: string | null;
   amount_paid?: number | null;
   paid_at?: string | null;
+  /** Annulation faite par le client depuis le rappel J-1 (emails actionnables). */
+  cancelled_by_client_at?: string | null;
+  cancellation_reason?: string | null;
 }
 
 export type ReservationPaymentStatus = "none" | "pending" | "paid" | "refunded";
@@ -220,6 +223,11 @@ export interface MembershipApplication {
   notes: string | null;
   payment_method?: string | null; // cheque | virement | especes | en_ligne | exonere
   payment_ref?: string | null;
+  /** Intention déclarée par l'adhérent depuis le rappel J-30 (emails actionnables).
+   *  Ne vaut PAS renouvellement : coupe seulement les rappels. */
+  renewal_intent?: "renouvelle" | "ne_renouvelle_pas" | null;
+  renewal_intent_at?: string | null;
+  renewal_intent_note?: string | null;
   created_at: string;
   updated_at: string;
 }

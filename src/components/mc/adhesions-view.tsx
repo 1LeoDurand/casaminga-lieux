@@ -406,6 +406,19 @@ function CampaignAdmin({ campaign, tiers, applications, orgSlug, onClose }: {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className={`mc-badge ${appStatusBadge(a.status)}`}>{appStatusLabel(a.status)}</span>
+                      {/* Intention déclarée depuis le rappel J-30 (emails actionnables) */}
+                      {a.renewal_intent === "ne_renouvelle_pas" ? (
+                        <span
+                          className="mc-badge bg-[#E8A23D]/15 text-[#8A5E10] border border-[#E8A23D]/30"
+                          title={a.renewal_intent_note ?? "L'adhérent a indiqué ne pas renouveler depuis le rappel J-30."}
+                        >
+                          🚪 Ne renouvelle pas
+                        </span>
+                      ) : a.renewal_intent === "renouvelle" ? (
+                        <span className="mc-badge bg-[#2f8a4c]/12 text-[#2f8a4c] border border-[#2f8a4c]/25">
+                          ↻ Renouvellement annoncé
+                        </span>
+                      ) : null}
                       {a.status === "en_attente" ? (
                         <div className="flex gap-1 mt-1">
                           <button type="button" disabled={pending} onClick={() => quickStatus(a.id, "confirmee")} className="mc-btn mc-btn-outline mc-btn-sm py-0.5 px-2 text-[11px]"><Check className="size-3" /> OK</button>
