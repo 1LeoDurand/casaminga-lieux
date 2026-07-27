@@ -106,7 +106,12 @@ function pickProvider(): Provider | null {
  * sinon il consomme le budget de sortie et renvoie un texte vide.
  */
 async function draftWithGemini(system: string, user: string): Promise<DraftResult> {
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // Alias « latest » volontairement, plutôt qu'une version figée : Google retire
+  // les anciennes générations aux nouveaux projets sans préavis, et c'est ce qui
+  // a mis cette fonctionnalité en panne le 27/07 (404 sur gemini-2.5-flash).
+  // Le brouillon étant relu par un humain avant dépôt, une évolution du modèle
+  // est sans danger ; une fonctionnalité morte, non.
+  const model = process.env.GEMINI_MODEL || "gemini-flash-latest";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const controller = new AbortController();

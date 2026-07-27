@@ -63,15 +63,28 @@ le bouton plutôt que d'échouer.
 
 ## Déploiement SSH Infomaniak
 
-Connexion : SSH sur le slot Infomaniak (pas d'interface Vercel, pas de CI/CD automatique).
-Procédure après `git push` :
+Pas d'interface Vercel, pas de CI/CD : **un `git push` ne déploie rien.**
+
+Constaté le 27/07/2026 sur le serveur, contre ce que disait cette section :
+
+- le chemin du slot est **`/srv/customer/sites/admin.casaminga.com`** (et non
+  `~/admin.casaminga.com`) ;
+- **`pm2` n'existe pas** sur ce slot. L'application est lancée par le
+  gestionnaire Node.js d'Infomaniak — c'est lui qui expose le flux de journaux
+  (« Connected to stream ») et c'est **depuis le manager que l'on redémarre** ;
+- les variables d'environnement sont lues dans `.env` **et** `.env.local` du
+  dossier ci-dessus, `.env.local` ayant priorité (Next charge les deux).
+
 ```bash
-# Sur le serveur Infomaniak
-cd ~/admin.casaminga.com   # ou le chemin du slot
+# Sur le serveur, en SSH
+cd /srv/customer/sites/admin.casaminga.com
 git pull
 npm run build
-pm2 restart casa-minga     # ou le nom du process pm2
+# puis Redémarrer DEPUIS LE MANAGER Infomaniak (pas de pm2 ici)
 ```
+
+> Toute commande `pm2 …` trouvée dans une consigne ou un ancien document est à
+> considérer comme périmée pour ce slot.
 
 ### Check après upgrade
 
