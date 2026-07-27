@@ -130,7 +130,7 @@ export async function upsertApplicationAction(
 /**
  * Assistance rédaction IA (Lot 12 P4) — génère un brouillon de section
  * narrative. Réservé aux membres connectés ; 10 générations / org / heure
- * (chaque appel consomme des crédits API Claude).
+ * (chaque appel consomme des crédits API IA — Gemini ou Claude selon la config).
  */
 export async function draftNarrativeAction(
   orgId: string,

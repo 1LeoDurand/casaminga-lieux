@@ -8,6 +8,12 @@ import type { GrantOpportunity, OrgGrantProfile, DraftSection } from "./types";
  * l'appel à projets. Le texte est un POINT DE DÉPART que le porteur relit
  * et personnalise — jamais envoyé tel quel.
  * (Libellés des sections : DRAFT_SECTIONS dans ./types — importable client.)
+ *
+ * Deux fournisseurs possibles, choisis par `AI_DRAFT_PROVIDER` :
+ *   - "gemini" (défaut auto si GEMINI_API_KEY présent) : Google Gemini Flash,
+ *     palier gratuit — idéal pour ce brouillon court.
+ *   - "claude" : Anthropic (repli, ou si AI_DRAFT_PROVIDER=claude).
+ * En "auto" (défaut), Gemini est préféré si sa clé existe, sinon Claude.
  */
 
 const SECTION_INSTRUCTIONS: Record<DraftSection, string> = {
@@ -28,6 +34,13 @@ correspondances réelles entre le profil de la structure et le dispositif —
 sans survendre : un instructeur repère immédiatement les dossiers copiés-collés.`,
 };
 
+const SYSTEM_PROMPT = `Tu aides des tiers-lieux et associations françaises à rédiger leurs dossiers
+de subvention. Tu écris en français, à la première personne du pluriel (« notre
+association », « nous »). Tu n'inventes JAMAIS de faits, de chiffres ou de
+partenariats : quand une information manque, tu insères un [crochet à compléter]
+explicite. Longueur cible : 250 à 400 mots. Pas de titre, pas de liste à puces
+sauf si la section s'y prête — un texte rédigé, prêt à coller dans un formulaire.`;
+
 export interface DraftInput {
   section: DraftSection;
   opportunity: Pick<GrantOpportunity, "title" | "funder" | "description" | "themes" | "amount_min" | "amount_max">;
@@ -40,13 +53,10 @@ export type DraftResult =
   | { ok: true; text: string }
   | { ok: false; error: string };
 
-export async function draftGrantSection(input: DraftInput): Promise<DraftResult> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { ok: false, error: "Assistant IA non configuré (clé API manquante)." };
-  }
+type Provider = "gemini" | "claude";
 
-  const client = new Anthropic();
-
+/** Construit le message utilisateur à partir du profil et de l'appel à projets. */
+function buildUserPrompt(input: DraftInput): string {
   const p = input.profile;
   const contextLines = [
     `Nom de la structure : ${input.orgName}`,
@@ -66,28 +76,104 @@ export async function draftGrantSection(input: DraftInput): Promise<DraftResult>
     input.opportunity.description ? `Description du dispositif :\n${input.opportunity.description}` : null,
   ].filter(Boolean).join("\n");
 
-  try {
-    const response = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      system: `Tu aides des tiers-lieux et associations françaises à rédiger leurs dossiers
-de subvention. Tu écris en français, à la première personne du pluriel (« notre
-association », « nous »). Tu n'inventes JAMAIS de faits, de chiffres ou de
-partenariats : quand une information manque, tu insères un [crochet à compléter]
-explicite. Longueur cible : 250 à 400 mots. Pas de titre, pas de liste à puces
-sauf si la section s'y prête — un texte rédigé, prêt à coller dans un formulaire.`,
-      messages: [{
-        role: "user",
-        content: `## Profil de la structure
+  return `## Profil de la structure
 ${contextLines}
 
 ## Appel à projets visé
 ${oppLines}
 
 ## Tâche
-${SECTION_INSTRUCTIONS[input.section]}`,
-      }],
+${SECTION_INSTRUCTIONS[input.section]}`;
+}
+
+/** Décide du fournisseur selon la config et les clés disponibles. */
+function pickProvider(): Provider | null {
+  const forced = (process.env.AI_DRAFT_PROVIDER ?? "auto").toLowerCase();
+  const hasGemini = !!process.env.GEMINI_API_KEY;
+  const hasClaude = !!process.env.ANTHROPIC_API_KEY;
+
+  if (forced === "gemini") return hasGemini ? "gemini" : null;
+  if (forced === "claude") return hasClaude ? "claude" : null;
+  // auto : Gemini d'abord (palier gratuit), sinon Claude.
+  if (hasGemini) return "gemini";
+  if (hasClaude) return "claude";
+  return null;
+}
+
+/**
+ * Google Gemini Flash via l'API REST (pas de SDK à installer). Palier gratuit.
+ * `thinkingBudget: 0` désactive le raisonnement interne de Gemini 2.5 Flash —
+ * sinon il consomme le budget de sortie et renvoie un texte vide.
+ */
+async function draftWithGemini(system: string, user: string): Promise<DraftResult> {
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-goog-api-key": process.env.GEMINI_API_KEY as string,
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const status = res.status;
+      console.error("draftWithGemini: HTTP", status, await res.text().catch(() => ""));
+      if (status === 429) return { ok: false, error: "Assistant temporairement saturé — réessayez dans une minute." };
+      return { ok: false, error: "L'assistant a rencontré une erreur. Réessayez." };
+    }
+
+    const data = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
+      promptFeedback?: { blockReason?: string };
+    };
+
+    if (data.promptFeedback?.blockReason) {
+      return { ok: false, error: "Demande bloquée par le filtre de sécurité. Reformulez le profil." };
+    }
+
+    const candidate = data.candidates?.[0];
+    const text = (candidate?.content?.parts ?? [])
+      .map((part) => part.text ?? "")
+      .join("")
+      .trim();
+
+    if (!text) return { ok: false, error: "Réponse vide — réessayez." };
+    return { ok: true, text };
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") {
+      return { ok: false, error: "L'assistant met trop de temps à répondre. Réessayez." };
+    }
+    console.error("draftWithGemini:", e);
+    return { ok: false, error: "Erreur réseau. Réessayez." };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Anthropic Claude (repli). max_tokens serré : le brouillon fait 250-400 mots. */
+async function draftWithClaude(system: string, user: string): Promise<DraftResult> {
+  const client = new Anthropic();
+  try {
+    const response = await client.messages.create({
+      model: "claude-opus-4-8",
+      max_tokens: 2000,
+      system,
+      messages: [{ role: "user", content: user }],
     });
 
     const text = response.content
@@ -103,10 +189,33 @@ ${SECTION_INSTRUCTIONS[input.section]}`,
       return { ok: false, error: "Assistant temporairement saturé — réessayez dans une minute." };
     }
     if (e instanceof Anthropic.APIError) {
-      console.error("draftGrantSection: API error", e.status, e.message);
+      console.error("draftWithClaude: API error", e.status, e.message);
       return { ok: false, error: "L'assistant a rencontré une erreur. Réessayez." };
     }
-    console.error("draftGrantSection:", e);
+    console.error("draftWithClaude:", e);
     return { ok: false, error: "Erreur réseau. Réessayez." };
   }
+}
+
+export async function draftGrantSection(input: DraftInput): Promise<DraftResult> {
+  const provider = pickProvider();
+  if (!provider) {
+    // Nommer la variable attendue : un message générique a déjà coûté un
+    // aller-retour de configuration en production, la clé posée n'étant pas
+    // celle que le code déployé savait lire.
+    const forced = (process.env.AI_DRAFT_PROVIDER ?? "auto").toLowerCase();
+    const attendu =
+      forced === "gemini" ? "GEMINI_API_KEY"
+      : forced === "claude" ? "ANTHROPIC_API_KEY"
+      : "GEMINI_API_KEY ou ANTHROPIC_API_KEY";
+    return {
+      ok: false,
+      error: `Assistant IA non configuré : ${attendu} absente de l'environnement du serveur.`,
+    };
+  }
+
+  const user = buildUserPrompt(input);
+  return provider === "gemini"
+    ? draftWithGemini(SYSTEM_PROMPT, user)
+    : draftWithClaude(SYSTEM_PROMPT, user);
 }
