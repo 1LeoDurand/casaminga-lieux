@@ -14,6 +14,8 @@ export interface Organization {
   slug: string;
   name: string;
   structure: string | null;
+  /** SIRET ou RNA — obligatoire dans les mentions légales du site public. */
+  siret?: string | null;
   address: string | null;
   email: string | null;
   phone: string | null;

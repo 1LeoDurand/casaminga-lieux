@@ -83,6 +83,16 @@ export function PublicSiteShell({
       <footer className={t.classes.footer}>
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-6 py-10 text-center text-sm">
           <NewsletterOptinForm slug={slug} accent={accent} dark={t.dark} />
+          {/* Obligatoires (LCEN + RGPD) : ces deux liens ne sont pas
+              désactivables, contrairement aux autres pages du site. */}
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[13px] opacity-80">
+            <Link href={`/site/${slug}/mentions-legales`} className="hover:underline">
+              Mentions légales
+            </Link>
+            <Link href={`/site/${slug}/confidentialite`} className="hover:underline">
+              Confidentialité
+            </Link>
+          </nav>
           <span>
             Site généré avec <span className="font-semibold">Casa Minga Lieux</span>
           </span>
