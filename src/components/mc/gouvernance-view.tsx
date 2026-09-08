@@ -138,6 +138,49 @@ interface ResFV {
 }
 const RES_EMPTY: ResFV = { title: "", description: "", result: "adopte", votes_pour: 0, votes_contre: 0, votes_abstention: 0 };
 
+// Défini au niveau module : imbriqué dans ResolutionsPanel, il était recréé à chaque
+// rendu du parent, donc démonté/remonté à chaque frappe — les champs perdaient le focus.
+function ResForm({ form, setF, pending, onSave, onCancel }: {
+  form: ResFV;
+  setF: <K extends keyof ResFV>(k: K, v: ResFV[K]) => void;
+  pending: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-indigo-200 bg-white p-3">
+      <input className="mc-input text-[13px]" placeholder="Titre de la résolution *" value={form.title} onChange={(e) => setF("title", e.target.value)} />
+      <textarea className="mc-textarea text-[13px]" placeholder="Description (optionnel)" rows={2} value={form.description} onChange={(e) => setF("description", e.target.value)} />
+      <div className="grid grid-cols-4 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold uppercase text-warmgray">Résultat</label>
+          <select className="mc-input text-[12px]" value={form.result} onChange={(e) => setF("result", e.target.value as ResFV["result"])}>
+            <option value="adopte">Adopté</option>
+            <option value="rejete">Rejeté</option>
+            <option value="ajourne">Ajourné</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold uppercase text-warmgray">Pour</label>
+          <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_pour} onChange={(e) => setF("votes_pour", Number(e.target.value))} />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold uppercase text-warmgray">Contre</label>
+          <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_contre} onChange={(e) => setF("votes_contre", Number(e.target.value))} />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold uppercase text-warmgray">Abstention</label>
+          <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_abstention} onChange={(e) => setF("votes_abstention", Number(e.target.value))} />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" disabled={pending} onClick={onSave} className="mc-btn mc-btn-lime mc-btn-sm flex-1">{pending ? "…" : "Enregistrer"}</button>
+        <button type="button" onClick={onCancel} className="mc-btn mc-btn-outline mc-btn-sm">Annuler</button>
+      </div>
+    </div>
+  );
+}
+
 function ResolutionsPanel({
   meeting, resolutions, orgSlug, orgId,
 }: {
@@ -195,41 +238,6 @@ function ResolutionsPanel({
     });
   }
 
-  function ResForm({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
-    return (
-      <div className="flex flex-col gap-2 rounded-lg border border-indigo-200 bg-white p-3">
-        <input className="mc-input text-[13px]" placeholder="Titre de la résolution *" value={form.title} onChange={(e) => setF("title", e.target.value)} />
-        <textarea className="mc-textarea text-[13px]" placeholder="Description (optionnel)" rows={2} value={form.description} onChange={(e) => setF("description", e.target.value)} />
-        <div className="grid grid-cols-4 gap-2">
-          <div>
-            <label className="text-[10px] font-semibold uppercase text-warmgray">Résultat</label>
-            <select className="mc-input text-[12px]" value={form.result} onChange={(e) => setF("result", e.target.value as ResFV["result"])}>
-              <option value="adopte">Adopté</option>
-              <option value="rejete">Rejeté</option>
-              <option value="ajourne">Ajourné</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-semibold uppercase text-warmgray">Pour</label>
-            <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_pour} onChange={(e) => setF("votes_pour", Number(e.target.value))} />
-          </div>
-          <div>
-            <label className="text-[10px] font-semibold uppercase text-warmgray">Contre</label>
-            <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_contre} onChange={(e) => setF("votes_contre", Number(e.target.value))} />
-          </div>
-          <div>
-            <label className="text-[10px] font-semibold uppercase text-warmgray">Abstention</label>
-            <input type="number" min={0} className="mc-input text-[12px]" value={form.votes_abstention} onChange={(e) => setF("votes_abstention", Number(e.target.value))} />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button type="button" disabled={pending} onClick={onSave} className="mc-btn mc-btn-lime mc-btn-sm flex-1">{pending ? "…" : "Enregistrer"}</button>
-          <button type="button" onClick={onCancel} className="mc-btn mc-btn-outline mc-btn-sm">Annuler</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
@@ -247,7 +255,7 @@ function ResolutionsPanel({
         {resolutions.map((r, i) => {
           const badge = RESULT_LABELS[r.result] ?? { label: r.result, cls: "bg-gray-100 text-gray-700" };
           if (editing === r.id) {
-            return <ResForm key={r.id} onSave={() => submitEdit(r.id)} onCancel={() => setEditing(null)} />;
+            return <ResForm key={r.id} form={form} setF={setF} pending={pending} onSave={() => submitEdit(r.id)} onCancel={() => setEditing(null)} />;
           }
           return (
             <div key={r.id} className="group flex items-start gap-2 rounded-lg bg-white/70 px-3 py-2 text-[13px]">
@@ -269,7 +277,7 @@ function ResolutionsPanel({
         })}
 
         {adding && (
-          <ResForm onSave={submitAdd} onCancel={() => { setAdding(false); setForm(RES_EMPTY); }} />
+          <ResForm form={form} setF={setF} pending={pending} onSave={submitAdd} onCancel={() => { setAdding(false); setForm(RES_EMPTY); }} />
         )}
 
         {resolutions.length === 0 && !adding && (
