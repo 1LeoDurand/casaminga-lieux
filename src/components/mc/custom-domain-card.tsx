@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { LinkIcon, Copy, Check, AlertCircle, Mail } from "lucide-react";
 import {
@@ -43,7 +44,7 @@ function EmailRegistrarEncart() {
       <div className="text-[12px] text-warmgray">
         <span className="font-semibold text-ink">Adresse email personnalisée</span>{" "}
         (ex.&nbsp;<span className="font-mono">contact@monlieu.fr</span>) — à créer directement chez votre registrar, souvent incluse avec le domaine.{" "}
-        <a href="/aide/adresse-email-registrar" className="text-coral hover:underline">Comment faire →</a>
+        <Link href="/aide/adresse-email-registrar" className="text-coral hover:underline">Comment faire →</Link>
       </div>
     </div>
   );
@@ -199,7 +200,7 @@ export function CustomDomainCard({ orgId, orgSlug, initial }: {
                 ) : (
                   <p className="mt-2 text-[11px] text-warmgray">
                     Pour l&apos;apex (<span className="font-mono">{state.domain}</span> sans www), ajoutez un enregistrement A.{" "}
-                    <a href="/aide/domaine-personnalise" className="text-coral hover:underline">Voir l&apos;article d&apos;aide</a>
+                    <Link href="/aide/domaine-personnalise" className="text-coral hover:underline">Voir l&apos;article d&apos;aide</Link>
                   </p>
                 )}
               </div>

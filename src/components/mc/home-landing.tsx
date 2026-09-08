@@ -688,13 +688,13 @@ export default function HomeLanding() {
               <span style={{ fontStyle: "italic" }}>Parlons-en.</span>
             </h2>
             <div className="rv" style={{ "--d": ".28s", marginTop: "36px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" } as CS}>
-              <a href="/signup" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: ACCENT, color: "#FFF9EC", borderRadius: "44px" }}>
+              <Link href="/signup" className="cm-draw" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: ACCENT, color: "#FFF9EC", borderRadius: "44px" }}>
                 Créer mon espace gratuit →
                 {DRAW_SVG}
-              </a>
-              <a href="/dashboard/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
+              </Link>
+              <Link href="/dashboard/bernard-kohn" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "18px 40px", textDecoration: "none", fontFamily: "var(--font-dmmono), monospace", fontSize: "15px", background: "#2C2D2D", color: "#FFF9EC", borderRadius: "44px" }}>
                 Découvrir le lieu pilote →
-              </a>
+              </Link>
             </div>
             <div className="rv" style={{ "--d": ".40s", marginTop: "14px" } as CS}>
               <span style={{ fontFamily: "var(--font-dmmono), monospace", fontSize: "13px", letterSpacing: ".04em", color: "#7a3d28" }}>Gratuit · sans carte bancaire · votre lieu en ligne en 5 minutes</span>
