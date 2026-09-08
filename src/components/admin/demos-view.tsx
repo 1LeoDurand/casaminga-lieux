@@ -182,7 +182,7 @@ export function DemosView({ demoOrgs }: { demoOrgs: DemoOrgRow[] }) {
 
       {/* Note globale */}
       <div className="mt-6 rounded-2xl border border-dashed border-border bg-white/50 p-5 text-[13px] text-warmgray">
-        <strong className="text-ink">Impersonation :</strong> "Voir comme" ouvre le vrai dashboard de l'org démo dans un nouvel onglet. En tant que super-admin, vous avez accès à toutes les organisations sans être membre. Les données sont 100% fictives et remplaçables.
+        <strong className="text-ink">Impersonation :</strong> « Voir comme » ouvre le vrai dashboard de l'org démo dans un nouvel onglet. En tant que super-admin, vous avez accès à toutes les organisations sans être membre. Les données sont 100% fictives et remplaçables.
       </div>
     </div>
   );

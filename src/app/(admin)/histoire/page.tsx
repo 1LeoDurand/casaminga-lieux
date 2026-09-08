@@ -115,7 +115,7 @@ export default function HistoirePage() {
                 L'idée fondatrice n'est pas commerciale. Elle est simple : <strong>faire vivre le collectif.</strong> Le tiers-lieu est un espace de <em>vivre ensemble</em> — pas un produit à optimiser.
               </p>
               <blockquote style={{ borderLeft: "4px solid #FF8A65", paddingLeft: 18, margin: 0, fontStyle: "italic", color: "#6B6460", lineHeight: 1.7, fontSize: 15 }}>
-                "Ce lieu nous parlait, mais nous n'avions pas d'outil pour l'écouter."
+                « Ce lieu nous parlait, mais nous n'avions pas d'outil pour l'écouter. »
               </blockquote>
             </div>
             <PhotoEncart
@@ -167,7 +167,7 @@ export default function HistoirePage() {
             </div>
             <div>
               <p style={{ fontSize: "clamp(18px,2.2vw,24px)", fontWeight: 700, lineHeight: 1.5, color: "#fff", marginBottom: 16 }}>
-                "On crée d'abord un gros Drive pour tout centraliser. Puis on réalise que personne ne sait vraiment s'en servir."
+                « On crée d'abord un gros Drive pour tout centraliser. Puis on réalise que personne ne sait vraiment s'en servir. »
               </p>
               <p style={{ fontSize: 15, color: "rgba(255,255,255,0.6)", lineHeight: 1.7 }}>
                 Le numérique, censé aider, avait ajouté une couche de friction supplémentaire. L'outil était devenu le problème.
@@ -221,7 +221,7 @@ export default function HistoirePage() {
               </p>
               <div style={{ background: "#FFF0EB", border: "1.5px solid #FFB4A2", borderRadius: 16, padding: "18px 22px" }}>
                 <p style={{ fontSize: 15, color: "#E8714D", fontWeight: 600, lineHeight: 1.7, margin: 0 }}>
-                  "On ne manque pas de bonne volonté. On manque d'un outil qui comprend comment fonctionne vraiment un tiers-lieu."
+                  « On ne manque pas de bonne volonté. On manque d'un outil qui comprend comment fonctionne vraiment un tiers-lieu. »
                 </p>
               </div>
             </div>
@@ -304,9 +304,9 @@ export default function HistoirePage() {
             Ce qu'on voudrait entendre, un jour, d'un coordinateur de tiers-lieu croisé par hasard :
           </p>
           <blockquote style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,138,101,0.3)", borderRadius: 20, padding: "28px 32px", marginBottom: 44, fontStyle: "italic", fontSize: "clamp(16px,1.8vw,19px)", lineHeight: 1.75, color: "rgba(255,255,255,0.9)" }}>
-            <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>"</span>
+            <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>«</span>
             Grâce à toi, j'ai un seul outil qui unifie notre organisation, simplifie nos échanges, mesure notre impact et permet aux gens de nous découvrir plus facilement.
-            <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>"</span>
+            <span style={{ color: "#FF8A65", fontStyle: "normal", fontWeight: 700 }}>»</span>
           </blockquote>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/site/bernard-kohn" style={{ padding: "16px 30px", borderRadius: 100, background: "#FF8A65", color: "#fff", fontWeight: 700, fontSize: 15, textDecoration: "none", boxShadow: "0 8px 20px rgba(255,138,101,0.3)" }}>
