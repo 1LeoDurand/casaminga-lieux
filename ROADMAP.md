@@ -19,6 +19,172 @@ configuration des hosts/Vercel, et tests de la réécriture en conditions réell
 
 ---
 
+## Backlog — planifié, non construit
+
+Items isolés (spec courte autonome, un item à la fois). Statut : **À FAIRE**.
+
+### [B1] Lien de paiement par carte sur les factures — statut À FAIRE
+
+**Valeur** : encaisser une facture en un clic côté client, réduire les impayés (8 « à relancer »
+aujourd'hui). **Effort** : S/M — l'infra de paiement existe déjà, rien à créer côté Stripe.
+
+**Besoin (Léo)** : à l'émission d'une facture réglée « par carte », un lien de paiement part
+**dans le même email** que la facture. Et dans la liste des factures, un bouton
+**« Envoyer un lien de paiement »** par ligne.
+
+**Socle déjà en place (à réutiliser tel quel)** :
+- Stripe Connect par org (`organizations.stripe_account_id`, encaissement direct, 0 commission),
+  vérif onboarding `accountChargesEnabled()` — [`src/lib/stripe.ts`](src/lib/stripe.ts).
+- `createCheckoutSession()` déjà générique (montant + libellé + email + **métadonnées libres**).
+- Webhook `checkout.session.completed` qui dispatche par métadonnée (don/adhésion/event/résa) —
+  [`src/app/api/orgs/[slug]/stripe/webhook/route.ts`](src/app/api/orgs/[slug]/stripe/webhook/route.ts).
+- Envoi email facture + PDF (`sendInvoiceEmail`, `tplFactureRappel`) et marquage payée → recette
+  Finances auto (`setInvoiceStatus`, idempotent) — [`.../factures/actions.ts`](src/app/(admin)/dashboard/[org]/factures/actions.ts).
+
+**Périmètre isolé (5 briques)** :
+1. **Migration** sur `invoices` : `payment_link_url text`, `payment_link_session_id text`,
+   `payment_link_status text` (`none`/`sent`/`paid`).
+2. **Action** `createInvoicePaymentLink(orgId, orgSlug, invoiceId)` : gardes (facture émise +
+   `client_email` + Stripe connecté & `charges_enabled`) → `createCheckoutSession` avec
+   `metadata: { invoice_id }`, `amountEuros = total_ttc`, `label = "Facture <numéro>"` → stocke
+   l'URL + session id, statut `sent`.
+3. **Email** : `sendInvoiceEmail` accepte un `payUrl?` optionnel ; le template affiche un bouton
+   « Payer en ligne par carte » sous le rappel IBAN.
+4. **Déclencheurs** : (a) à l'émission, si `payment_method === "carte"` → créer le lien + envoyer
+   automatiquement ; (b) bouton ligne « Envoyer un lien de paiement » dans la liste (désactivé +
+   tooltip si Stripe non connecté).
+5. **Webhook** : branche `invoice_id` → facture `payee`, `payment_method = "carte"`, `paid_at`,
+   recette Finances (idempotent par `invoice_id`).
+
+**Garde-fous** : Stripe non connecté → bouton off + lien Paramètres ; pas d'email client → blocage ;
+montant ≤ 0 (avoirs) exclus ; idempotence webhook par `invoice_id`.
+
+**Pré-requis Léo** : l'org doit avoir connecté Stripe (Paramètres → Stripe) ; variables plateforme
+`STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` déjà requises.
+
+---
+
+### [B2] Interface de caisse type comptoir (POS) — statut À FAIRE
+
+**Valeur** : rendre la caisse utilisable au comptoir d'une buvette par un bénévole, là où
+l'écran actuel est un registre comptable pensé pour un trésorier. **Effort** : M/L.
+
+**Constat (08/09/2026)** : `caisse/` propose quatre onglets (écritures, pointage, clôtures,
+statistiques) et une saisie par formulaire dans un tiroir. Les raccourcis
+([`CashShortcut`](src/lib/types.ts)) **pré-remplissent le formulaire** au lieu d'alimenter un
+panier. Le manque réel n'est pas visuel : c'est **le panier**. Aujourd'hui un clic = un
+encaissement = une écriture scellée.
+
+**Contrainte structurante** — dans `cash_add_entry`, le ticket dérive de la séquence :
+
+```sql
+v_ticket := 'CM-' || to_char(p_occurred_at, 'YYYY') || '-' || lpad(v_seq::text, 6, '0');
+```
+
+Deux écritures ne peuvent donc **jamais** partager un `ticket_ref`. Y toucher voudrait dire
+modifier la chaîne de hachage, donc rompre la conformité NF525.
+
+**Le point d'accroche** : `source_ref` est du texte libre et **exclu du payload de hash**. Il
+peut porter la référence du ticket de caisse sans toucher à la partie certifiée.
+
+**Architecture retenue** : le panier vit **hors** du registre — tables `cash_tickets`
+(ouvert / en attente / encaissé) et `cash_ticket_lines`, sans contrainte NF525 puisque c'est du
+détail commercial. À l'encaissement seulement, on écrit dans `cash_entries` **une écriture par
+taux de TVA** (obligatoire pour la ventilation : bière à 20 % et sandwich à 10 % ne tiennent pas
+dans la même ligne), toutes portant le même `source_ref = référence du ticket`.
+`cash_add_entry` n'est pas modifiée.
+
+**Découpage** :
+1. **Catalogue et grille** — ajouter `category` et `color` à `CashShortcut` (déjà stocké en JSON,
+   migration triviale) ; remplacer le tiroir par une grille de boutons colorés avec colonne de
+   catégories. Donne ~70 % du résultat visuel sans toucher à la base certifiée.
+2. **Le panier** — les deux tables, le ticket en cours, le total, les boutons Espèces / CB, la
+   mise en attente.
+3. **Le confort** — plan de salle, tarif sur place / à emporter, note de ticket. Seulement si
+   l'usage le réclame.
+
+**Pré-requis** : traiter [B3] d'abord.
+
+---
+
+### [B3] Doublon de `cash_add_entry` — l'annulation d'écriture est cassée — statut À FAIRE
+
+**Valeur** : sur une caisse certifiée, l'annulation est le geste réglementaire prévu, puisqu'une
+écriture scellée ne peut pas être modifiée. **Effort** : XS.
+
+**Constat (07/09/2026)** : deux surcharges coexistent en production, l'une à 12 paramètres
+(l'originale), l'autre à 14 (elle ajoute `p_person_id` et `p_establishment_id`). La migration qui
+a introduit les deux nouveaux champs n'a pas supprimé l'ancienne fonction.
+
+`addCashEntry` passe les deux paramètres distinctifs et désigne donc la bonne sans ambiguïté.
+Mais **`voidCashEntry` n'en passe aucun** : ses onze arguments existent des deux côtés, les
+manquants ont une valeur par défaut partout, et PostgREST refuse de trancher entre deux
+candidates également valables.
+
+Défaut **latent** : 4 écritures en base au 07/09, **0 annulation** — le chemin n'a jamais été
+exercé. Le premier bénévole qui corrigera une saisie erronée obtiendra une erreur.
+
+**Correctif** — sans effet sur les écritures existantes, le payload de hachage étant identique
+entre les deux versions (ni pôle, ni personne, ni établissement n'y entrent) :
+
+```sql
+drop function public.cash_add_entry(
+  uuid, text, numeric, numeric, text, text, text,
+  text, boolean, bigint, timestamp with time zone, uuid
+);
+```
+
+---
+
+### [B4] Mise à jour Next.js 16.3.4 — sécurité — statut À FAIRE
+
+**Valeur** : `next@16.2.6` porte un avis **« Middleware / Proxy bypass in App Router »**, plus
+deux SSRF (Server Actions, rewrites). Sur une application multi-tenant où
+[`src/proxy.ts`](src/proxy.ts) route par domaine, c'est le point sérieux.
+**Effort** : S, mais impose un rebuild et un redéploiement.
+
+`next@16.3.4` corrige **`next`, `sharp` et `postcss` d'un coup** — ces deux derniers sont
+embarqués sous Next — et c'est une montée **mineure**, pas un changement majeur.
+
+À part : `nodemailer` 8 → 10 est un saut **majeur**, donc vérification de l'API d'envoi avant.
+Le reste des 15 avis (`hono`, `brace-expansion`, `js-yaml`…) est transitif et sans exposition
+directe en production.
+
+---
+
+### [B5] Variables `NEXT_PUBLIC_` absentes du serveur — statut À FAIRE
+
+**Valeur** : quatre variables utilisées par le code manquent dans `.env` **et** `.env.local` du
+slot — `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_PUBLIC_SITE_URL`,
+`NEXT_PUBLIC_CUSTOM_DOMAIN_TARGET_IP`. **Effort** : XS.
+
+Chaque usage retombe sur une valeur par défaut, donc **rien ne plante** — la panne est
+silencieuse. Conséquence visible : la page qui explique à un lieu comment brancher son domaine
+personnalisé affiche une **IP vide**.
+
+⚠️ Ces variables sont figées **au build** : les ajouter impose un rebuild, pas un simple
+redémarrage.
+
+---
+
+### [B6] Dette de lint restante — statut À FAIRE
+
+**Valeur** : rendre `npm run lint` utilisable comme étape CI bloquante. **Effort** : S.
+
+Après le recentrage de `react/no-unescaped-entities` (commit `a7199df`), il reste **40 erreurs** :
+
+| Règle | Nombre | Nature |
+|---|---|---|
+| `react-hooks/set-state-in-effect` | 15 | **Faux positifs** — pattern légitime « lire `localStorage` au montage » (bandeau cookies, GA, `dashboard-shell`) |
+| `@next/next/no-html-link-for-pages` | 12 | Dont 2 volontaires (`/espace` : le rechargement vide le contexte du jeton magique) |
+| `react-hooks/static-components` | 7 | 7 sur `mentions-legales` — page sans état, impact nul |
+| `react-hooks/purity` | 5 | `Date.now()` pendant le rendu — risque d'écart d'hydratation |
+| `react-hooks/refs` | 1 | `site-public-editor` : pattern « ref vers la valeur courante », toléré |
+
+Aucune n'empêche de travailler. Décider règle par règle : corriger, ou désactiver avec
+justification — puis rendre le lint bloquant.
+
+
 ## Versions
 
 ### v1 — socle technique ✅
