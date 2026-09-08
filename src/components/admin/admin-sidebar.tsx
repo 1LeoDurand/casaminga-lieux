@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn } from "lucide-react";
+import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
+  { href: "/admin/roadmap", label: "Feuille de route", icon: KanbanSquare, exact: false },
   { href: "/admin/organisations", label: "Organisations", icon: Building2, exact: false },
   { href: "/admin/moderation", label: "Modération", icon: ShieldCheck, exact: false },
   { href: "/admin/engagement", label: "Engagement", icon: Activity, exact: false },
