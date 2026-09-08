@@ -4,6 +4,7 @@ import { X, Plus, Pencil, Trash2, ListTodo, Calendar, User, AlertTriangle, Check
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/mc/confirm-dialog";
 import { TaskForm, type TaskFormValues } from "@/components/mc/task-form";
+import { TaskBoard, type BoardColumn } from "@/components/mc/task-board";
 import {
   TASK_PRIORITIES, TASK_KANBAN, taskStatusLabel, taskStatusDot,
   priorityLabel, priorityBadge, formatDue, isOverdue,
@@ -11,19 +12,27 @@ import {
 import { createTaskAction, deleteTaskAction, updateTaskAction, notifyAssigneeAction, remindAssigneeAction } from "@/app/(admin)/dashboard/[org]/taches/actions";
 import type { Person, Task, TaskStatus } from "@/lib/types";
 
+const BOARD_COLUMNS: BoardColumn[] = TASK_KANBAN.map((s) => ({
+  id: s,
+  label: taskStatusLabel(s),
+  dot: taskStatusDot(s),
+  empty: "—",
+}));
+
 function toggle<T>(set: Set<T>, v: T): Set<T> {
   const n = new Set(set); if (n.has(v)) { n.delete(v); } else { n.add(v); } return n;
 }
 function PrioBadge({ p }: { p: string }) { return <span className={`mc-badge ${priorityBadge(p)}`}>{priorityLabel(p)}</span>; }
 
-function TaskCard({ t, personName, onSelect }: {
+// Pas de <button> ici : c'est TaskBoard qui rend la carte focalisable et
+// cliquable, pour que le même élément serve au clic, au clavier et au glisser.
+function TaskCard({ t, personName }: {
   t: Task;
   personName: (id: string | null) => string | null;
-  onSelect: (id: string) => void;
 }) {
   const overdue = isOverdue(t.due_date, t.status);
   return (
-    <button type="button" className={`mc-resa-card ${t.status === "fait" ? "is-annulee" : ""}`} onClick={() => onSelect(t.id)}>
+    <div className={`mc-resa-card ${t.status === "fait" ? "is-annulee" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <span className="mc-resa-title">{t.title}</span>
         <PrioBadge p={t.priority} />
@@ -35,7 +44,7 @@ function TaskCard({ t, personName, onSelect }: {
       </div>
       {personName(t.assignee_id) ? <div className="mc-resa-line"><User className="size-3.5" /> {personName(t.assignee_id)}</div> : null}
       {t.related_label ? <span className="mc-tag">{t.related_label}</span> : null}
-    </button>
+    </div>
   );
 }
 
@@ -64,12 +73,6 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
   const filtered = useMemo(() =>
     tasks.filter((t) => prioF.size === 0 || prioF.has(t.priority)),
     [tasks, prioF]);
-
-  const byStatus = useMemo(() => {
-    const m: Record<TaskStatus, Task[]> = { a_faire: [], en_cours: [], fait: [] };
-    for (const t of filtered) m[t.status]?.push(t);
-    return m;
-  }, [filtered]);
 
   function submitForm(values: TaskFormValues) {
     const payload = {
@@ -149,17 +152,19 @@ export function TachesView({ tasks, persons, orgSlug, orgId }: {
         </div>
       </div>
 
-      <div className="mc-kanban" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-        {TASK_KANBAN.map((status) => (
-          <div key={status} className="mc-kanban-col">
-            <div className="mc-kanban-head">
-              <span className="mc-kanban-title"><span className="mc-kanban-dot" style={{ background: taskStatusDot(status) }} />{taskStatusLabel(status)}</span>
-              <span className="mc-kanban-count">{byStatus[status].length}</span>
-            </div>
-            {byStatus[status].length === 0 ? <div className="mc-kanban-empty">—</div> : byStatus[status].map((t) => <TaskCard key={t.id} t={t} personName={personName} onSelect={setSelectedId} />)}
-          </div>
-        ))}
-      </div>
+      <TaskBoard
+        columns={BOARD_COLUMNS}
+        items={filtered}
+        getId={(t) => t.id}
+        getColumnId={(t) => t.status}
+        onMove={(id, to) => {
+          const t = tasks.find((x) => x.id === id);
+          if (t) quickStatus(t, to as TaskStatus);
+        }}
+        onCardClick={setSelectedId}
+        disabled={pending}
+        renderCard={(t) => <TaskCard t={t} personName={personName} />}
+      />
 
       {selected ? (
         <>
