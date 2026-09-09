@@ -17,11 +17,13 @@ export function AdminShell({
   email,
   feedbackOpen = 0,
   moderationPending = 0,
+  claimsPending = 0,
   children,
 }: {
   email: string;
   feedbackOpen?: number;
   moderationPending?: number;
+  claimsPending?: number;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -64,7 +66,12 @@ export function AdminShell({
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full",
         ].join(" ")}
       >
-        <AdminSidebar email={email} feedbackOpen={feedbackOpen} moderationPending={moderationPending} />
+        <AdminSidebar
+          email={email}
+          feedbackOpen={feedbackOpen}
+          moderationPending={moderationPending}
+          claimsPending={claimsPending}
+        />
       </div>
 
       {/* Voile de fond — mobile uniquement */}

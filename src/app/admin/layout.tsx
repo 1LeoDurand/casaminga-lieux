@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireSuperAdmin } from "@/lib/admin/guard";
-import { getPlatformStats, getModerationPendingCount } from "@/lib/admin/data";
+import { getPlatformStats, getModerationPendingCount, getClaimsPendingCount } from "@/lib/admin/data";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const metadata: Metadata = {
@@ -10,10 +10,19 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { email } = await requireSuperAdmin();
-  const [stats, moderationPending] = await Promise.all([getPlatformStats(), getModerationPendingCount()]);
+  const [stats, moderationPending, claimsPending] = await Promise.all([
+    getPlatformStats(),
+    getModerationPendingCount(),
+    getClaimsPendingCount(),
+  ]);
 
   return (
-    <AdminShell email={email} feedbackOpen={stats.feedbackOpen} moderationPending={moderationPending}>
+    <AdminShell
+      email={email}
+      feedbackOpen={stats.feedbackOpen}
+      moderationPending={moderationPending}
+      claimsPending={claimsPending}
+    >
       {children}
     </AdminShell>
   );

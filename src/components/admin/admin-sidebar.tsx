@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare } from "lucide-react";
+import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare, KeyRound } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
   { href: "/admin/roadmap", label: "Feuille de route", icon: KanbanSquare, exact: false },
   { href: "/admin/organisations", label: "Organisations", icon: Building2, exact: false },
   { href: "/admin/moderation", label: "Modération", icon: ShieldCheck, exact: false },
+  { href: "/admin/revendications", label: "Revendications", icon: KeyRound, exact: false },
   { href: "/admin/engagement", label: "Engagement", icon: Activity, exact: false },
   { href: "/admin/connexions", label: "Connexions", icon: LogIn, exact: false },
   { href: "/admin/sante", label: "Santé technique", icon: HeartPulse, exact: false },
@@ -20,7 +21,7 @@ const NAV = [
   { href: "/admin/aide", label: "Centre d'aide", icon: BookOpen, exact: false },
 ];
 
-export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0 }: { email: string; feedbackOpen?: number; moderationPending?: number }) {
+export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0, claimsPending = 0 }: { email: string; feedbackOpen?: number; moderationPending?: number; claimsPending?: number }) {
   const pathname = usePathname();
 
   return (
@@ -42,6 +43,7 @@ export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0 }:
           const badge =
             item.href === "/admin/feedback" && feedbackOpen > 0 ? feedbackOpen
             : item.href === "/admin/moderation" && moderationPending > 0 ? moderationPending
+            : item.href === "/admin/revendications" && claimsPending > 0 ? claimsPending
             : 0;
           return (
             <Link

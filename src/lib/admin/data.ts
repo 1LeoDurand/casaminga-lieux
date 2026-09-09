@@ -555,3 +555,116 @@ export async function getAllFeedback(): Promise<FeedbackRow[]> {
 
   return data ?? [];
 }
+
+// ── Revendications de fiches moissonnées ──────────────────────────────────────
+
+/**
+ * Une demande de reprise, avec ce qu'il faut pour trancher sans ouvrir la base.
+ *
+ * Le seul repère utile tient dans la comparaison de deux champs : le domaine
+ * du courriel du demandeur et celui du site du lieu. Quand ils coïncident, la
+ * décision se prend en trois secondes. Quand ils divergent, il faut appeler.
+ */
+export interface ClaimRow {
+  id: string;
+  created_at: string;
+  status: string;
+  verification: string;
+  fullName: string;
+  roleLabel: string | null;
+  email: string;
+  phone: string | null;
+  message: string | null;
+  orgId: string;
+  orgName: string;
+  orgSlug: string;
+  orgWebsite: string | null;
+  /** Vrai si le domaine du courriel est celui du site du lieu. */
+  domaineConcordant: boolean;
+  eventTitle: string | null;
+  nbEvenements: number;
+}
+
+function domaine(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url.startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+/** Les demandes à arbitrer, les plus anciennes d'abord. */
+export async function getPendingClaims(): Promise<ClaimRow[]> {
+  const admin = createAdminClient();
+  if (!admin) return [];
+
+  const { data: claims } = await admin
+    .from("claims")
+    .select("id, created_at, status, verification, full_name, role_label, email, phone, message, organization_id, event_id")
+    .eq("status", "en_attente")
+    .order("created_at");
+  if (!claims?.length) return [];
+
+  const orgIds = [...new Set(claims.map((c) => c.organization_id))];
+  const eventIds = claims.map((c) => c.event_id).filter(Boolean) as string[];
+
+  const [orgsRes, eventsRes] = await Promise.all([
+    admin.from("organizations").select("id, name, slug, website").in("id", orgIds),
+    eventIds.length
+      ? admin.from("evenements").select("id, title").in("id", eventIds)
+      : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+  ]);
+
+  const orgs = new Map((orgsRes.data ?? []).map((o) => [o.id, o]));
+  const events = new Map((eventsRes.data ?? []).map((e) => [e.id, e.title]));
+
+  // Nombre d'événements à venir par lieu : ce que le lieu récupérerait.
+  const now = new Date().toISOString();
+  const compte = new Map<string, number>();
+  await Promise.all(
+    orgIds.map(async (id) => {
+      const { count } = await admin
+        .from("evenements")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", id)
+        .gte("start_at", now);
+      compte.set(id, count ?? 0);
+    })
+  );
+
+  return claims.map((c) => {
+    const org = orgs.get(c.organization_id);
+    const dSite = domaine(org?.website ?? null);
+    const dMail = c.email.split("@")[1]?.toLowerCase() ?? null;
+    return {
+      id: c.id,
+      created_at: c.created_at,
+      status: c.status,
+      verification: c.verification,
+      fullName: c.full_name,
+      roleLabel: c.role_label,
+      email: c.email,
+      phone: c.phone,
+      message: c.message,
+      orgId: c.organization_id,
+      orgName: org?.name ?? "Lieu inconnu",
+      orgSlug: org?.slug ?? "",
+      orgWebsite: org?.website ?? null,
+      domaineConcordant: !!dSite && !!dMail && (dMail === dSite || dMail.endsWith(`.${dSite}`)),
+      eventTitle: c.event_id ? events.get(c.event_id) ?? null : null,
+      nbEvenements: compte.get(c.organization_id) ?? 0,
+    };
+  });
+}
+
+/** Nombre de demandes en attente (badge sidebar). */
+export async function getClaimsPendingCount(): Promise<number> {
+  const admin = createAdminClient();
+  if (!admin) return 0;
+  const { count } = await admin
+    .from("claims")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "en_attente");
+  return count ?? 0;
+}
