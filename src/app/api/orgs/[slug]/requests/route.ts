@@ -1,7 +1,41 @@
 import { NextResponse } from "next/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createRequest, getOrganizationBySlug, getPublicSiteBySlug } from "@/lib/data";
+import { SUPABASE_URL } from "@/lib/supabase/env";
 import { sendMail, adminEmail } from "@/lib/mail";
+import { orgAdminEmails } from "@/lib/portal/notify";
 import { tplDemandeRecue, tplDemandeAlerteEquipe } from "@/lib/mail-templates";
+
+/**
+ * À qui l'alerte doit parvenir.
+ *
+ * Elle partait vers `adminEmail()`, une adresse unique pour toute la
+ * plateforme : la demande d'un visiteur adressée à une médiathèque atterrissait
+ * dans la boîte de Léo, et le lieu n'en savait rien. Tolérable tant que le
+ * réseau tenait en quatorze lieux et que Léo faisait suivre à la main ; absurde
+ * dès qu'un lieu reprend sa page en pensant justement recevoir ses demandes.
+ *
+ * Ordre : les administrateurs du lieu, puis l'adresse d'accueil qu'il a
+ * publiée, puis seulement l'adresse de la plateforme. La dernière n'est plus
+ * un destinataire, c'est un filet.
+ */
+async function destinatairesAlerte(orgId: string, orgEmail: string | null): Promise<string[]> {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (SUPABASE_URL && serviceRoleKey) {
+    try {
+      const admin = createServiceClient(SUPABASE_URL, serviceRoleKey, {
+        auth: { persistSession: false },
+      });
+      const emails = await orgAdminEmails(admin, orgId);
+      if (emails.length > 0) return emails;
+    } catch (e) {
+      console.error("destinatairesAlerte: lecture des admins impossible", e);
+    }
+  }
+  if (orgEmail && /.+@.+\..+/.test(orgEmail)) return [orgEmail];
+  const global = adminEmail();
+  return global ? [global] : [];
+}
 
 export async function POST(
   request: Request,
@@ -61,31 +95,35 @@ export async function POST(
   const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com"}/dashboard/${slug}/demandes`;
 
   // Emails en parallèle — on n'attend pas qu'ils soient envoyés pour répondre
-  void Promise.all([
-    // Email au demandeur
-    sendMail({
-      to: email,
-      subject: `✓ Votre demande a bien été reçue — ${org.name}`,
-      html: tplDemandeRecue({ orgName: org.name, personName: name, type, message }),
-    }),
-    // Alerte équipe
-    adminEmail()
-      ? sendMail({
-          to: adminEmail(),
-          subject: `🔔 Nouvelle demande de ${name} — ${org.name}`,
-          html: tplDemandeAlerteEquipe({
-            orgName: org.name,
-            orgSlug: slug,
-            personName: name,
-            personEmail: email,
-            type,
-            message,
-            dashboardUrl,
-          }),
-          replyTo: email,
-        })
-      : Promise.resolve(false),
-  ]);
+  void (async () => {
+    const equipe = await destinatairesAlerte(org.id, org.email ?? null);
+    await Promise.all([
+      // Email au demandeur
+      sendMail({
+        to: email,
+        subject: `✓ Votre demande a bien été reçue — ${org.name}`,
+        html: tplDemandeRecue({ orgName: org.name, personName: name, type, message }),
+      }),
+      // Alerte équipe
+      equipe.length
+        ? sendMail({
+            to: equipe,
+            subject: `🔔 Nouvelle demande de ${name} — ${org.name}`,
+            html: tplDemandeAlerteEquipe({
+              orgName: org.name,
+              orgSlug: slug,
+              personName: name,
+              personEmail: email,
+              type,
+              message,
+              dashboardUrl,
+            }),
+            replyTo: email,
+            organizationId: org.id,
+          })
+        : Promise.resolve(false),
+    ]);
+  })();
 
   return NextResponse.json({ ok: true, id: created.id }, { status: 201 });
 }
