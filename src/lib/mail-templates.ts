@@ -1208,3 +1208,138 @@ export function tplFactureEcommunication(opts: {
     opts.issuerName
   );
 }
+
+// ── Revendication d'une fiche importée ──────────────────────────────────────
+//
+// L'agenda public de casaminga.com reprend des événements moissonnés dans les
+// agendas ouverts du territoire. Les lieux concernés n'ont rien demandé et
+// n'ont pas de compte. Ces trois messages accompagnent le geste par lequel
+// l'un d'eux reprend la main sur sa fiche.
+//
+// Aucune icône dans ces trois-là, à la différence du reste du fichier : ils
+// partent vers des adresses institutionnelles, souvent lues dans des clients
+// de messagerie anciens, et par des gens qui n'ont jamais entendu parler de
+// Casa Minga. Le texte doit porter seul.
+
+/**
+ * VOIE AUTOMATIQUE — à l'adresse de contact publiée par le lieu, jamais à
+ * celle saisie dans le formulaire.
+ *
+ * C'est là toute la vérification : quiconque relève le courrier officiel du
+ * lieu est légitime à en reprendre la fiche, et personne d'autre ne reçoit ce
+ * lien. Le message doit donc être lisible par quelqu'un qui n'a rien demandé
+ * et ne sait pas de quoi il s'agit : il explique d'où vient la fiche avant de
+ * proposer quoi que ce soit.
+ */
+export function tplRevendicationInvitation(opts: {
+  orgName: string;
+  demandeurNom: string;
+  demandeurFonction: string | null;
+  inviteUrl: string;
+  ficheUrl: string | null;
+  nbEvenements: number;
+  expiresLabel: string;
+}) {
+  const qualite = opts.demandeurFonction
+    ? `${opts.demandeurNom}, ${opts.demandeurFonction},`
+    : `${opts.demandeurNom}`;
+  const evenements =
+    opts.nbEvenements > 1
+      ? `${opts.nbEvenements} de vos rendez-vous y figurent déjà`
+      : `un de vos rendez-vous y figure déjà`;
+  return base(
+    `
+    ${badge("Votre page sur Casaminga", "#FF8A65")}
+    <div style="height:12px;"></div>
+    ${h1("Reprenez la page de votre lieu")}
+    ${p(`Bonjour,`)}
+    ${p(`Casaminga est un agenda qui rassemble les rendez-vous ouverts du territoire. Il reprend les événements que vous publiez dans les agendas publics ouverts, sous Licence Ouverte : <strong>${opts.orgName}</strong> y a donc une page, et ${evenements}. Vous n'avez rien demandé, et c'est normal.`)}
+    ${p(`${qualite} vient de demander à en reprendre la main. Ce message part à l'adresse de contact que vous avez vous-même publiée, et à elle seule : c'est notre façon de vérifier qu'il s'agit bien de quelqu'un de chez vous.`)}
+    ${p(`<strong>Si cette personne fait partie de votre équipe</strong>, le lien ci-dessous ouvre un compte de gestion. Vous y retrouverez vos événements déjà en ligne, corrigerez ce qui doit l'être, et publierez la suite vous-même.`)}
+    ${btn("Reprendre notre page", opts.inviteUrl)}
+    ${opts.ficheUrl ? p(`La page telle qu'elle est aujourd'hui : <a href="${opts.ficheUrl}" style="color:#FF8A65;">${opts.ficheUrl}</a>`) : ""}
+    ${divider()}
+    ${p(`<strong>Si cette demande vous surprend</strong>, ne suivez pas ce lien et répondez à ce message : nous n'irons pas plus loin. Vous pouvez aussi nous demander le retrait pur et simple de votre lieu, et nous le ferons sans discuter.`)}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Ce lien est personnel et valable jusqu'au ${opts.expiresLabel}. Passé ce délai, il ne fonctionnera plus.</span>`)}
+    ${signatureLeo()}
+  `,
+    opts.orgName
+  );
+}
+
+/**
+ * VOIE MANUELLE — à Léo, quand le lieu n'a publié aucune adresse de contact.
+ *
+ * C'est le cas le plus courant : 103 des 118 lieux importés n'en ont pas. Le
+ * message porte donc tout ce qui permet de trancher sans ouvrir la base.
+ */
+export function tplRevendicationArbitrage(opts: {
+  orgName: string;
+  orgSlug: string;
+  demandeurNom: string;
+  demandeurFonction: string | null;
+  demandeurEmail: string;
+  demandeurTel: string | null;
+  message: string | null;
+  siteWeb: string | null;
+  evenementTitre: string | null;
+  arbitrageUrl: string;
+}) {
+  const rows = [
+    { label: "Lieu", value: opts.orgName },
+    { label: "Demandeur", value: opts.demandeurNom },
+    { label: "Fonction", value: opts.demandeurFonction ?? "non précisée" },
+    { label: "Courriel", value: opts.demandeurEmail },
+    { label: "Téléphone", value: opts.demandeurTel ?? "non précisé" },
+    { label: "Site du lieu", value: opts.siteWeb ?? "aucun connu" },
+    { label: "Depuis l'événement", value: opts.evenementTitre ?? "non précisé" },
+  ];
+  return base(
+    `
+    ${badge("Revendication à arbitrer", "#6366f1")}
+    <div style="height:12px;"></div>
+    ${h1("Une revendication attend ta décision")}
+    ${p(`<strong>${opts.orgName}</strong> n'a pas d'adresse de contact publiée : impossible de vérifier automatiquement. La demande attend donc que tu tranches.`)}
+    ${card(rows)}
+    ${opts.message ? p(`Message du demandeur :<br/><em>${opts.message}</em>`) : ""}
+    ${p(`Le repère le plus simple : le domaine du courriel correspond-il au site du lieu ? Sinon, un appel au numéro public du lieu règle la question en deux minutes.`)}
+    ${btn("Ouvrir l'arbitrage", opts.arbitrageUrl)}
+  `
+  );
+}
+
+/**
+ * Accusé de réception au demandeur.
+ *
+ * Il dit laquelle des deux voies a été suivie, et c'est essentiel : en voie
+ * automatique, le lien part à l'adresse du lieu et non à la sienne. Sans cette
+ * phrase, il attend un courriel qui n'arrivera jamais et conclut que le site
+ * est cassé.
+ */
+export function tplRevendicationRecue(opts: {
+  orgName: string;
+  voie: "auto" | "manuel";
+  adresseIndice: string | null;
+}) {
+  const suite =
+    opts.voie === "auto"
+      ? p(
+          `Nous venons d'envoyer le lien de reprise à l'adresse de contact publiée par le lieu${opts.adresseIndice ? ` (${opts.adresseIndice})` : ""}, et non à la vôtre. C'est notre façon de vérifier qu'une page n'est reprise que par quelqu'un du lieu. Si vous relevez cette boîte, le lien vous attend ; sinon, demandez-le à la personne qui s'en occupe.`
+        )
+      : p(
+          `Ce lieu n'a pas publié d'adresse de contact : nous ne pouvons pas vérifier votre demande automatiquement. Elle part donc en relecture. Nous revenons vers vous sous quelques jours, à cette adresse, et il se peut que nous vous appelions au préalable.`
+        );
+  return base(
+    `
+    ${badge("Demande enregistrée", "#FF8A65")}
+    <div style="height:12px;"></div>
+    ${h1("Votre demande est bien arrivée")}
+    ${p(`Bonjour,`)}
+    ${p(`Vous demandez à reprendre la page de <strong>${opts.orgName}</strong> sur Casaminga.`)}
+    ${suite}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Vous n'avez rien d'autre à faire pour l'instant.</span>`)}
+    ${signatureLeo()}
+  `,
+    opts.orgName
+  );
+}
