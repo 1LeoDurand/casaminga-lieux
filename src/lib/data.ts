@@ -148,6 +148,22 @@ export async function getOrganizationBySlug(
   return data;
 }
 
+/**
+ * Vrai si l'organisation a été moissonnée dans un agenda ouvert et n'a pas
+ * encore été revendiquée par son équipe (migration 0011_revendications).
+ *
+ * Un tel lieu n'a rien demandé. Sa ligne `public_sites` publiée est un
+ * artefact technique, exigé par la RLS pour que ses événements gardent leur
+ * nom sur casaminga.com : elle ne vaut pas consentement. Il ne doit donc ni
+ * avoir de vitrine, ni recevoir quoi que ce soit par l'intermédiaire de
+ * Casa Minga, tant qu'il n'a pas repris sa page.
+ */
+export function isUnclaimedImport(org: object | null | undefined): boolean {
+  if (!org) return false;
+  const { source, claimed_at } = org as { source?: string | null; claimed_at?: string | null };
+  return !!source && source !== "casaminga" && !claimed_at;
+}
+
 export async function getPublicSiteBySlug(
   slug: string
 ): Promise<PublicSite | null> {
@@ -156,11 +172,21 @@ export async function getPublicSiteBySlug(
   const supabase = await createClient();
   const { data } = await supabase
     .from("public_sites")
-    .select("organization_id, slug, title, status, seo_description")
+    .select("organization_id, slug, title, status, seo_description, organizations(source, claimed_at)")
     .eq("slug", slug)
     .eq("status", "publie")
     .maybeSingle();
-  return data;
+  if (!data) return null;
+
+  // Point de passage commun de la vitrine /site/[slug], de ses sous-pages
+  // (loadPublicSite) et du formulaire de contact (api/orgs/[slug]/requests) :
+  // le fermer ici ferme les trois. Le 2026-09-11, les 396 lieux importés
+  // avaient une vitrine ouverte sur admin.casaminga.com, et un formulaire dont
+  // chaque envoi partait vers leur adresse moissonnée.
+  const { organizations, ...site } = data as PublicSite & { organizations: unknown };
+  const org = Array.isArray(organizations) ? organizations[0] : organizations;
+  if (isUnclaimedImport(org as object | null)) return null;
+  return site;
 }
 
 export async function getRequestsForOrg(

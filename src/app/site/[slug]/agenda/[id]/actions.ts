@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { registerForEvent } from "@/lib/events/register";
 import { createAdminClient } from "@/lib/admin/guard";
 import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { isUnclaimedImport } from "@/lib/data";
 
 export interface RegistrationPayload {
   eventId: string;
@@ -32,6 +33,26 @@ export async function createEventRegistration(
 ): Promise<RegistrationActionResult> {
   if (!isSupabaseConfigured()) {
     return { ok: true, id: crypto.randomUUID(), status: "inscrit" };
+  }
+
+  // Un lieu moissonné et non revendiqué ne reçoit pas d'inscription par Casa
+  // Minga : il n'a rien demandé et ne la verrait jamais. Sa page est déjà en
+  // 404, mais une action serveur reste appelable directement, avec n'importe
+  // quel identifiant : la garde doit aussi vivre ici. Le contrôle du lieu
+  // empêche au passage d'associer un événement à l'organisation d'un autre.
+  const garde = createAdminClient();
+  if (garde) {
+    const { data: ev } = await garde
+      .from("evenements")
+      .select("organization_id, organizations(source, claimed_at)")
+      .eq("id", payload.eventId)
+      .maybeSingle();
+    const org = ev
+      ? Array.isArray(ev.organizations) ? ev.organizations[0] : ev.organizations
+      : null;
+    if (!ev || ev.organization_id !== payload.organizationId || isUnclaimedImport(org as object | null)) {
+      return { ok: false, error: "Cet événement n'accepte pas d'inscription ici." };
+    }
   }
 
   const participants = (payload.participants ?? [])

@@ -9,6 +9,7 @@
  */
 
 import "server-only";
+import { isUnclaimedImport } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { mergeSiteContent } from "./types";
@@ -26,10 +27,17 @@ export async function getPublishedSites(): Promise<PublishedSite[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("public_sites")
-    .select("slug, organization_id, updated_at, content_blocks, status")
+    .select("slug, organization_id, updated_at, content_blocks, status, organizations(source, claimed_at)")
     .eq("status", "publie");
 
-  return (data ?? []).map((row) => {
+  // Un lieu moissonné et non revendiqué n'a pas de vitrine : il ne doit pas
+  // non plus être soumis aux moteurs (voir isUnclaimedImport, lib/data.ts).
+  const publiables = (data ?? []).filter((row) => {
+    const org = (row as { organizations?: unknown }).organizations;
+    return !isUnclaimedImport((Array.isArray(org) ? org[0] : org) as object | null);
+  });
+
+  return publiables.map((row) => {
     const content = mergeSiteContent((row as { content_blocks: unknown }).content_blocks);
     return {
       slug: (row as { slug: string }).slug,

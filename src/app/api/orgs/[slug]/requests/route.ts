@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createRequest, getOrganizationBySlug, getPublicSiteBySlug } from "@/lib/data";
+import { createRequest, getOrganizationBySlug, getPublicSiteBySlug, isUnclaimedImport } from "@/lib/data";
 import { SUPABASE_URL } from "@/lib/supabase/env";
 import { sendMail, adminEmail } from "@/lib/mail";
 import { orgAdminEmails } from "@/lib/portal/notify";
@@ -96,7 +96,14 @@ export async function POST(
 
   // Emails en parallèle — on n'attend pas qu'ils soient envoyés pour répondre
   void (async () => {
-    const equipe = await destinatairesAlerte(org.id, org.email ?? null);
+    // L'adresse d'un lieu importé et non revendiqué a été moissonnée : elle
+    // n'est pas un consentement à recevoir quoi que ce soit de Casa Minga.
+    // getPublicSiteBySlug renvoie déjà 404 pour ce lieu, et ce garde-fou
+    // tient même si cette porte venait à se rouvrir.
+    const equipe = await destinatairesAlerte(
+      org.id,
+      isUnclaimedImport(org) ? null : org.email ?? null
+    );
     await Promise.all([
       // Email au demandeur
       sendMail({

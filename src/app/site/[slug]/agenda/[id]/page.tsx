@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getOrganizationBySlug, getEvenementById } from "@/lib/data";
+import { getOrganizationBySlug, getEvenementById, isUnclaimedImport } from "@/lib/data";
 import { getPublishedSiteContent } from "@/lib/site-public/data";
 import { mergeSiteContent } from "@/lib/site-public/types";
 import { PublicEventPage } from "@/components/mc/public-event-page";
@@ -17,7 +17,7 @@ export async function generateMetadata({
     getOrganizationBySlug(slug),
     getEvenementById(id),
   ]);
-  if (!org || !event) return { title: "Événement introuvable" };
+  if (!org || !event || isUnclaimedImport(org)) return { title: "Événement introuvable" };
   return {
     title: `${event.title} · ${org.name}`,
     description: event.description?.slice(0, 160) ?? undefined,
@@ -37,6 +37,11 @@ export default async function PublicEventDetailPage({
   ]);
 
   if (!org || !event) notFound();
+
+  // Un lieu moissonné et non revendiqué n'a pas de page sur Casa Minga : il
+  // n'a rien demandé, et une inscription prise ici ne lui parviendrait pas.
+  // Ses événements restent lisibles sur casaminga.com, avec leur source.
+  if (isUnclaimedImport(org)) notFound();
 
   // L'événement doit être publié et appartenir à cet org
   if (event.organization_id !== org.id || event.status !== "publie") notFound();
