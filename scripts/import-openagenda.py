@@ -1,0 +1,483 @@
+# -*- coding: utf-8 -*-
+"""
+Import d'événements OpenAgenda (Licence Ouverte) dans la base Casa Minga.
+
+Pourquoi un script, et pas un modèle
+------------------------------------
+La source est structurée : lieu, dates, conditions, canaux d'inscription y sont
+déjà typés. Transformer une ligne en fiche est un mapping, pas un travail
+d'interprétation. Faire passer ces données par un modèle de langage coûterait
+environ 156 000 tokens pour 667 événements (mesuré le 2026-09-10) sans rien
+apporter, et exposerait chaque champ à une altération silencieuse. Ce script
+lit l'API et écrit en base directement : rien ne transite par une conversation.
+
+Ce qu'il garantit
+-----------------
+- Rejouable sans doublon. Les identifiants sont dérivés de ceux d'OpenAgenda
+  (uuid5), les mêmes que pour l'import montpelliérain du 2026-09-09 : un lieu
+  ou un événement déjà présent est reconnu et laissé tel quel, y compris s'il
+  a été corrigé à la main ou revendiqué depuis.
+- Par lots. `--max 50` importe les 50 prochains événements non encore
+  présents. Relancer la même commande importe les 50 suivants.
+- Réparable. Si un lot s'interrompt entre deux tables, la relance complète ce
+  qui manque (vitrine technique, établissement, provenance) sans rien dupliquer.
+- Rien n'est deviné. Un champ absent à la source reste absent en base.
+
+Règles de contenu, héritées du site
+-----------------------------------
+Aucun émoji, aucun tiret cadratin, aucun HTML : les descriptions OpenAgenda
+sont en HTML, et l'import de Montpellier l'avait recopié tel quel avant d'être
+corrigé en base. Le nettoyage est fait ici, avant l'écriture.
+
+Usage
+-----
+  python scripts/import-openagenda.py --departement "Hérault" \\
+      --exclure "Mes événements France Travail" --max 50
+  ... --essai     compte ce qui serait importé, n'écrit rien
+
+La clé de service est lue dans .env.local et n'est jamais affichée.
+"""
+
+import argparse
+import html
+import json
+import re
+import sys
+import time
+import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+from pathlib import Path
+
+sys.stdout.reconfigure(encoding="utf-8")
+
+SOURCE = "openagenda"
+API = ("https://public.opendatasoft.com/api/explore/v2.1/catalog/"
+       "datasets/evenements-publics-openagenda/records")
+FIELDS = ",".join([
+    "uid", "canonicalurl", "title_fr", "longdescription_fr", "description_fr",
+    "conditions_fr", "keywords_fr", "image", "firstdate_begin", "firstdate_end",
+    "registration", "location_uid", "location_name", "location_address",
+    "location_city", "location_postalcode", "location_coordinates",
+    "location_phone", "location_website",
+])
+
+# Espace de noms des identifiants d'import. NE PAS CHANGER : c'est lui qui
+# permet de reconnaître un lieu ou un événement déjà importé.
+NS = uuid.UUID("6f1b7d9e-0000-4000-8000-000000000000")
+
+# Types Casaminga, repris de l'import de Montpellier. On ne mappe que ce qu'on
+# peut justifier ; le reste tombe dans « autre », qui est honnête.
+TYPE_RULES = [
+    ("atelier", r"\batelier|stage\b|initiation|fabriqu"),
+    ("exposition", r"exposition|expo\b|vernissage"),
+    ("concert", r"concert|musique|live\b|dj set|festival"),
+    ("spectacle", r"spectacle|th[eé][aâ]tre|danse|cin[eé]ma|projection|film|conte"),
+    ("rencontre", r"rencontre|conf[eé]rence|d[eé]bat|table ronde|caf[eé]|lecture|visite"),
+    ("marche", r"march[eé]|troc|brocante|vide-grenier|bourse"),
+]
+
+# Gratuité : affirmée seulement sur une formule sans ambiguïté. « Gratuit pour
+# les moins de 16 ans » n'est pas un événement gratuit.
+FREE = re.compile(
+    r"^(entr[eé]e\s*(libre|gratuite)|gratuit|acc[eè]s\s*libre|libre)"
+    r"(\s*et\s*gratuit(e)?)?\s*[.!]?$", re.I)
+
+# Émoji et pictogrammes. Plages explicites plutôt que \p{Extended_Pictographic},
+# que le module `re` ne connaît pas ; ©, ® et ™ restent, comme sur le site.
+EMOJI = re.compile(
+    "[⌀-⏿☀-➿⬀-⯿\U0001F000-\U0001FAFF"
+    "️⃣‍]")
+
+DESCRIPTION_MAX = 1400
+
+
+# ── Environnement ───────────────────────────────────────────────────────────
+
+def load_env():
+    path = Path(__file__).resolve().parent.parent / ".env.local"
+    if not path.exists():
+        raise SystemExit(f"Fichier introuvable : {path}")
+    env = dict(re.findall(r"^([A-Z_]+)=(.*)$", path.read_text(encoding="utf-8"), re.M))
+    url = env.get("NEXT_PUBLIC_SUPABASE_URL", "").strip().rstrip("/")
+    key = env.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not url or not key:
+        raise SystemExit("NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY absente de .env.local.")
+    return url, key
+
+
+# ── Nettoyage ───────────────────────────────────────────────────────────────
+
+def texte(raw):
+    """HTML OpenAgenda -> texte conforme aux règles du site."""
+    if not raw:
+        return None
+    t = re.sub(r"(?i)<br\s*/?>|</p>|</div>|</li>|</h[1-6]>", "\n", raw)
+    t = re.sub(r"(?i)<li[^>]*>", "• ", t)
+    t = re.sub(r"<[^>]+>", "", t)
+    t = html.unescape(t)
+    t = EMOJI.sub("", t)
+    t = re.sub(r"\s+—\s+", ", ", t).replace("—", ",")
+    t = re.sub(r"[ \t ]+", " ", t)
+    t = "\n".join(line.strip() for line in t.split("\n"))
+    t = re.sub(r"\n{3,}", "\n\n", t).strip()
+    return t or None
+
+
+def couper(t, n=DESCRIPTION_MAX):
+    """Coupe au dernier espace avant la limite, plutôt qu'au milieu d'un mot."""
+    if not t or len(t) <= n:
+        return t
+    cut = t.rfind(" ", 0, n)
+    return t[:cut if cut > n * 0.6 else n].rstrip(" ,;:") + "…"
+
+
+# Ligne ajoutée par un agenda agrégateur au bas de ses fiches (« source:
+# Balèti occitan enfants-familles - AgendaTrad ») : de la plomberie, pas du
+# contenu. Motif volontairement étroit : un texte patrimonial peut citer une
+# vraie source (« Source : Archives départementales »), qu'il faut garder.
+AGREGATEUR = re.compile(r"(?im)^source\s*:.*\s-\s*AgendaTrad\s*$\n?")
+
+
+def corps_evenement(r):
+    """Description d'un événement, nettoyée et coupée."""
+    t = texte(r.get("longdescription_fr")) or texte(r.get("description_fr"))
+    if t:
+        t = AGREGATEUR.sub("", t).strip() or None
+    return couper(t)
+
+
+def slugify(text, maxlen=48):
+    s = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    s = re.sub(r"[^a-zA-Z0-9]+", "-", s).strip("-").lower()
+    return s[:maxlen].rstrip("-") or "lieu"
+
+
+def guess_type(title, keywords):
+    hay = f"{title} {keywords or ''}".lower()
+    for code, pattern in TYPE_RULES:
+        if re.search(pattern, hay):
+            return code
+    return "autre"
+
+
+def as_list(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            return json.loads(value) or None
+        except json.JSONDecodeError:
+            return None
+    return value or None
+
+
+def adresse(addr, cp, city):
+    """L'adresse source contient souvent déjà code postal et ville : on ne les
+    rajoute que s'ils manquent, sans quoi on obtient « 34080 Montpellier,
+    34080, Montpellier », comme lors de l'import précédent.
+
+    La comparaison se fait sur des formes normalisées : la source écrit la
+    même commune « Causse de la Selle » dans l'adresse et « Causse-de-la-Selle »
+    dans le champ ville, et une comparaison littérale les croyait différentes.
+
+    Le code postal, lui, ne doit pas disparaître en chemin : il se place devant
+    la commune, au format postal français (« rue Roger Salasc, 34800
+    Clermont-l'Hérault »), plutôt qu'en segment isolé en fin de ligne."""
+    addr, cp, city = (addr or "").strip(), (cp or "").strip(), (city or "").strip()
+    if not addr:
+        return f"{cp} {city}".strip() or None
+    if not cp or cp in addr:
+        return addr[:200]
+    segments = [s.strip() for s in addr.split(",")]
+    if city and slugify(segments[-1], 200) == slugify(city, 200):
+        segments[-1] = f"{cp} {segments[-1]}"
+        return ", ".join(segments)[:200]
+    if city and slugify(city, 200) in slugify(addr, 400):
+        return addr[:200]
+    return ", ".join(x for x in [addr, f"{cp} {city}".strip()] if x)[:200]
+
+
+# ── Réseau ──────────────────────────────────────────────────────────────────
+
+class Base:
+    def __init__(self, url, key):
+        self.url = url
+        self.auth = {"apikey": key, "Authorization": f"Bearer {key}"}
+        self.octets = 0
+
+    def _call(self, method, path, body=None, headers=None):
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
+        req = urllib.request.Request(
+            f"{self.url}/rest/v1/{path}", data=data, method=method,
+            headers={**self.auth, "Content-Type": "application/json", **(headers or {})})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                raw = r.read()
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", "replace")[:500]
+            raise SystemExit(f"Échec {method} {path.split('?')[0]} : HTTP {e.code} {detail}")
+        self.octets += len(data or b"")
+        return json.loads(raw) if raw else None
+
+    def lire_tout(self, path):
+        rows, start = [], 0
+        while True:
+            page = self._call("GET", path, headers={"Range": f"{start}-{start + 999}"})
+            rows += page
+            if len(page) < 1000:
+                return rows
+            start += 1000
+
+    def inserer(self, table, rows, conflit):
+        """Insère en ignorant les doublons : jamais d'écrasement d'une ligne
+        existante, qui peut avoir été corrigée à la main ou revendiquée."""
+        for i in range(0, len(rows), 200):
+            self._call(
+                "POST", f"{table}?on_conflict={conflit}", rows[i:i + 200],
+                headers={"Prefer": "resolution=ignore-duplicates,return=minimal"})
+        return len(rows)
+
+
+def lire_source(departement, exclus):
+    where = f'location_department="{departement}" and firstdate_begin >= now()'
+    for agenda in exclus:
+        where += ' and originagenda_title != "{}"'.format(agenda.replace('"', '\\"'))
+    rows, offset = [], 0
+    while True:
+        q = {"where": where, "select": FIELDS, "limit": 100, "offset": offset,
+             "order_by": "firstdate_begin"}
+        with urllib.request.urlopen(f"{API}?{urllib.parse.urlencode(q)}", timeout=120) as r:
+            page = json.load(r)["results"]
+        rows += page
+        if len(page) < 100:
+            return rows
+        offset += 100
+
+
+# ── Import ──────────────────────────────────────────────────────────────────
+
+def reparer(db, source, essai):
+    """
+    Réécrit ce qu'un import a lui-même mal écrit, et rien d'autre.
+
+    Un import n'écrase jamais une ligne existante, si bien qu'une règle de
+    nettoyage corrigée ne s'applique pas aux fiches déjà en base. Ce mode les
+    rattrape, sous une condition stricte : la valeur actuelle doit être
+    EXACTEMENT celle qu'une version précédente de l'import a produite. Une
+    adresse ou une description retouchée à la main n'y correspond plus, et
+    reste donc intacte. Les lieux revendiqués ne sont jamais touchés.
+
+    Deux corrections, datées du 2026-09-11 :
+    - adresses : « 34080 Montpellier, 34185, Montpellier », où code postal et
+      commune étaient recollés à une adresse qui les contenait déjà ;
+    - descriptions : la ligne « source: … - AgendaTrad » d'un agrégateur.
+
+    Portée : les lieux et événements présents dans la source lue. Un lieu
+    importé qui n'a plus d'événement à venir n'y figure pas et n'est pas revu.
+    """
+    def adresse_v0(a, cp, c):  # import de Montpellier, 2026-09-09
+        return (", ".join(x for x in [a, cp, c] if x)[:200]) or None
+
+    def adresse_v1(a, cp, c):  # premier lot de l'Hérault, 2026-09-11
+        a = (a or "").strip()
+        if a and (not c or c.lower() in a.lower()):
+            return a[:200]
+        return adresse_v0(a, cp, c)
+
+    def corps_v1(r):  # avant le retrait de la ligne d'agrégateur
+        return couper(texte(r.get("longdescription_fr")) or texte(r.get("description_fr")))
+
+    orgs = db.lire_tout("organizations?select=id,address&source=neq.casaminga&claimed_at=is.null")
+    non_revendiquees = {o["id"] for o in orgs}
+
+    lieux = {}
+    for r in source:
+        if r.get("location_uid"):
+            lieux.setdefault(str(uuid.uuid5(NS, "org:" + r["location_uid"])),
+                             (r.get("location_address"), r.get("location_postalcode"), r.get("location_city")))
+
+    adresses = []
+    for o in orgs:
+        src = lieux.get(o["id"])
+        if not src:
+            continue
+        neuve = adresse(*src)
+        if o["address"] != neuve and o["address"] in {adresse_v0(*src), adresse_v1(*src)}:
+            adresses.append((o["id"], neuve))
+
+    par_evt = {str(uuid.uuid5(NS, "evt:" + r["uid"])): r for r in source}
+    actuels = db.lire_tout("evenements_import?select=event_id,evenements(description,organization_id)")
+    descriptions = []
+    for row in actuels:
+        e, r = row.get("evenements") or {}, par_evt.get(row["event_id"])
+        if not r or e.get("organization_id") not in non_revendiquees:
+            continue
+        neuve = corps_evenement(r)
+        if e.get("description") != neuve and e.get("description") == corps_v1(r):
+            descriptions.append((row["event_id"], neuve))
+
+    if not essai:
+        for oid, valeur in adresses:
+            db._call("PATCH", f"organizations?id=eq.{oid}", {"address": valeur},
+                     headers={"Prefer": "return=minimal"})
+        for eid, valeur in descriptions:
+            db._call("PATCH", f"evenements?id=eq.{eid}", {"description": valeur},
+                     headers={"Prefer": "return=minimal"})
+
+    mode = "ESSAI, rien n'est écrit" if essai else "corrigé en base"
+    print(f"Réparation ({mode}) : {len(adresses)} adresses, {len(descriptions)} descriptions")
+    for oid, valeur in adresses[:3]:
+        print(f"  adresse -> {valeur}")
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Import OpenAgenda -> Casa Minga")
+    ap.add_argument("--departement", required=True)
+    ap.add_argument("--exclure", action="append", default=[],
+                    help="titre d'agenda d'origine à écarter (répétable)")
+    ap.add_argument("--max", type=int, default=50, help="événements nouveaux à importer")
+    ap.add_argument("--essai", action="store_true", help="n'écrit rien")
+    ap.add_argument("--reparer", action="store_true",
+                    help="corrige les fiches déjà importées selon les règles actuelles, sans rien importer")
+    args = ap.parse_args()
+
+    t0 = time.time()
+    url, key = load_env()
+    db = Base(url, key)
+
+    source = lire_source(args.departement, args.exclure)
+
+    if args.reparer:
+        reparer(db, source, args.essai)
+        print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+        return
+
+    # Lieux : attributs réunis sur TOUTES les fiches de la source, car un lieu
+    # ne déclare son téléphone ou son adresse que sur certaines d'entre elles.
+    lieux, ecartes = {}, 0
+    for r in source:
+        luid, nom = r.get("location_uid"), (r.get("location_name") or "").strip()
+        if not luid or not nom or not r.get("firstdate_begin") or not r.get("firstdate_end"):
+            ecartes += 1
+            continue
+        v = lieux.setdefault(luid, {
+            "uid": luid, "name": texte(nom) or nom, "address": r.get("location_address"),
+            "postal": r.get("location_postalcode"), "city": r.get("location_city"),
+            "phone": None, "website": None, "email": None, "lat": None, "lng": None,
+        })
+        v["phone"] = v["phone"] or r.get("location_phone")
+        v["website"] = v["website"] or r.get("location_website")
+        coords = r.get("location_coordinates")
+        if isinstance(coords, dict) and v["lat"] is None:
+            v["lat"], v["lng"] = coords.get("lat"), coords.get("lon")
+        for entry in as_list(r.get("registration")) or []:
+            if entry.get("type") == "email" and not v["email"]:
+                v["email"] = entry.get("value")
+
+    # État de la base.
+    org_rows = db.lire_tout("organizations?select=id,slug")
+    org_slug = {o["id"]: o["slug"] for o in org_rows}
+    slugs_pris = set(org_slug.values())
+    orgs_avec_site = {s["organization_id"] for s in db.lire_tout("public_sites?select=organization_id")}
+    etab_rows = db.lire_tout("establishments?select=id,organization_id")
+    etab_ids = {e["id"] for e in etab_rows}
+    orgs_avec_etab = {e["organization_id"] for e in etab_rows}
+    deja = {i["event_id"] for i in db.lire_tout("evenements_import?select=event_id")}
+
+    candidats = [r for r in source if r.get("location_uid") in lieux]
+    nouveaux = sorted(
+        (r for r in candidats if str(uuid.uuid5(NS, "evt:" + r["uid"])) not in deja),
+        key=lambda r: (r["firstdate_begin"], r["uid"]))
+    lot = nouveaux[:args.max]
+
+    # Lieux du lot : création, vitrine technique, établissement.
+    orgs, sites, etabs = [], [], []
+    etab_de = {}
+    for luid in dict.fromkeys(r["location_uid"] for r in lot):
+        v = lieux[luid]
+        oid = str(uuid.uuid5(NS, "org:" + luid))
+        eid = str(uuid.uuid5(NS, "est:" + luid))
+        if oid in org_slug:
+            slug = org_slug[oid]
+        else:
+            base = "import-" + slugify(v["name"])
+            slug, n = base, 1
+            while slug in slugs_pris:
+                n += 1
+                slug = f"{base}-{n}"
+            slugs_pris.add(slug)
+            orgs.append({
+                "id": oid, "slug": slug, "name": v["name"][:120],
+                "address": adresse(v["address"], v["postal"], v["city"]),
+                "email": v["email"], "phone": v["phone"], "website": v["website"],
+                "structure": "autre", "org_type": "autre",
+                # Sans cette ligne, la valeur par défaut 'casaminga' ferait
+                # passer le lieu pour un membre du réseau, dans l'annuaire.
+                "source": SOURCE,
+            })
+        # La vitrine technique est indispensable : sans ligne `public_sites`
+        # publiée, la RLS rend l'organisation invisible et les fiches perdent
+        # le nom de leur lieu. Le site public, lui, ne l'affiche pas tant que
+        # le lieu n'a pas revendiqué sa page.
+        if oid not in orgs_avec_site:
+            sites.append({"organization_id": oid, "slug": slug,
+                          "title": v["name"][:120], "status": "publie"})
+            orgs_avec_site.add(oid)
+        if eid in etab_ids:
+            etab_de[luid] = eid
+        elif oid not in orgs_avec_etab:
+            etabs.append({
+                "id": eid, "organization_id": oid, "name": v["name"][:120], "slug": slug,
+                "city": v["city"], "address": v["address"], "postal_code": v["postal"],
+                "latitude": v["lat"], "longitude": v["lng"], "is_primary": True, "active": True,
+            })
+            etab_de[luid] = eid
+            orgs_avec_etab.add(oid)
+        else:
+            etab_de[luid] = None
+
+    evenements, provenance = [], []
+    for r in lot:
+        eid = str(uuid.uuid5(NS, "evt:" + r["uid"]))
+        conditions = texte(r.get("conditions_fr"))
+        evenements.append({
+            "id": eid,
+            "organization_id": str(uuid.uuid5(NS, "org:" + r["location_uid"])),
+            "establishment_id": etab_de.get(r["location_uid"]),
+            "title": (texte(r.get("title_fr")) or "Événement")[:200],
+            "type": guess_type(r.get("title_fr"), r.get("keywords_fr")),
+            "status": "publie",
+            "start_at": r["firstdate_begin"], "end_at": r["firstdate_end"],
+            "description": corps_evenement(r),
+            "price": 0 if conditions and FREE.match(conditions) else None,
+            "photos": [r["image"]] if r.get("image") else [],
+            "show_on_public_site": True,
+            # Aucun humain n'a validé ces fiches : le portail doit pouvoir le savoir.
+            "portal_status": "pending",
+        })
+        provenance.append({
+            "event_id": eid, "source": SOURCE, "source_uid": r["uid"],
+            "source_url": r.get("canonicalurl"), "conditions": conditions,
+            "registration": as_list(r.get("registration")),
+        })
+
+    if not args.essai:
+        db.inserer("organizations", orgs, "id")
+        db.inserer("public_sites", sites, "organization_id")
+        db.inserer("establishments", etabs, "id")
+        db.inserer("evenements", evenements, "id")
+        db.inserer("evenements_import", provenance, "event_id")
+
+    mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
+    print(f"Source   : {len(source)} événements à venir ({args.departement}), {ecartes} écartés faute de lieu ou de dates")
+    print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
+    print(f"Lot      : {len(lot)} événements, {len(orgs)} lieux créés, {len(sites)} vitrines techniques, {len(etabs)} établissements ({mode})")
+    print(f"Reste    : {len(nouveaux) - len(lot)} événements après ce lot")
+    print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+
+
+if __name__ == "__main__":
+    main()
