@@ -1,0 +1,237 @@
+{
+ "_lecture": "Liste blanche de lieux pour --lieux. Etablie le 2026-09-22 en croisant les 8179 lieux qui publient sur OpenAgenda du 1er octobre au 31 decembre 2026 avec les recensements France Tiers-Lieux 2023 et 2026 publies sur data.gouv.fr. Retenus : meme ville et au moins 60 % de mots communs entre les deux noms, puis relecture une par une. « canonique » regroupe les identifiants OpenAgenda qui designent le meme lieu reel, pour ne pas creer plusieurs organisations.",
+ "lieux": [
+  {
+   "uid": "98112523",
+   "canonique": "98112523",
+   "nom": "Le Temps des Cerises",
+   "ville": "Issy-les-Moulineaux",
+   "recense": "Le Temps des Cerises",
+   "evenements": 78
+  },
+  {
+   "uid": "17526002",
+   "canonique": "17526002",
+   "nom": "La Cantine Quimper - Coworking",
+   "ville": "Quimper",
+   "recense": "La Cantine Quimper",
+   "evenements": 6
+  },
+  {
+   "uid": "78926485",
+   "canonique": "78926485",
+   "nom": "La pepiterre",
+   "ville": "Sarzeau",
+   "recense": "La Pépiterre",
+   "evenements": 6
+  },
+  {
+   "uid": "90512786",
+   "canonique": "90512786",
+   "nom": "La Condition Publique - Roubaix",
+   "ville": "Roubaix",
+   "recense": "LA CONDITION PUBLIQUE",
+   "evenements": 4
+  },
+  {
+   "uid": "64101544",
+   "canonique": "64101544",
+   "nom": "Bazaar St-So",
+   "ville": "Lille",
+   "recense": "Bazaar St So",
+   "evenements": 3
+  },
+  {
+   "uid": "72085728",
+   "canonique": "72085728",
+   "nom": "Solilab (le)",
+   "ville": "Nantes",
+   "recense": "Le Solilab",
+   "evenements": 3
+  },
+  {
+   "uid": "59432018",
+   "canonique": "59432018",
+   "nom": "Grand Bain (Le)",
+   "ville": "Nantes",
+   "recense": "Le Grand Bain",
+   "evenements": 2
+  },
+  {
+   "uid": "12404583",
+   "canonique": "90512786",
+   "nom": "La Condition Publique",
+   "ville": "Roubaix",
+   "recense": "LA CONDITION PUBLIQUE",
+   "evenements": 2
+  },
+  {
+   "uid": "22487351",
+   "canonique": "22487351",
+   "nom": "Open Lande",
+   "ville": "Nantes",
+   "recense": "Open Lande",
+   "evenements": 2
+  },
+  {
+   "uid": "96433812",
+   "canonique": "96433812",
+   "nom": "Café associatif du Breil \"Au petit bonheur\"",
+   "ville": "Nantes",
+   "recense": "Café associatif \"Au petit bonheur\"",
+   "evenements": 1
+  },
+  {
+   "uid": "98143892",
+   "canonique": "98143892",
+   "nom": "Caserne Mellinet/La Générale",
+   "ville": "Nantes",
+   "recense": "La Générale - Maison du projet de la Caserne Mellinet",
+   "evenements": 1
+  },
+  {
+   "uid": "29764002",
+   "canonique": "29764002",
+   "nom": "Galerie Les 2 Rives",
+   "ville": "Perpignan",
+   "recense": "Les 2 Rives",
+   "evenements": 1
+  },
+  {
+   "uid": "92665419",
+   "canonique": "92665419",
+   "nom": "Halle Tropisme",
+   "ville": "Montpellier",
+   "recense": "Halle Tropisme",
+   "evenements": 1
+  },
+  {
+   "uid": "415287",
+   "canonique": "90512786",
+   "nom": "La Condition Publique",
+   "ville": "Roubaix",
+   "recense": "LA CONDITION PUBLIQUE",
+   "evenements": 1
+  },
+  {
+   "uid": "13282222",
+   "canonique": "90512786",
+   "nom": "La Condition Publique de Roubaix",
+   "ville": "Roubaix",
+   "recense": "LA CONDITION PUBLIQUE",
+   "evenements": 1
+  },
+  {
+   "uid": "89876639",
+   "canonique": "89876639",
+   "nom": "La Glissade",
+   "ville": "Aurignac",
+   "recense": "La Glissade",
+   "evenements": 1
+  },
+  {
+   "uid": "89494972",
+   "canonique": "89494972",
+   "nom": "La Planche",
+   "ville": "Bordeaux",
+   "recense": "La Planche",
+   "evenements": 1
+  },
+  {
+   "uid": "68155204",
+   "canonique": "68155204",
+   "nom": "La Plume à Loup",
+   "ville": "Attin",
+   "recense": "La Plume à Loup",
+   "evenements": 1
+  },
+  {
+   "uid": "75136480",
+   "canonique": "75136480",
+   "nom": "La Rayonne",
+   "ville": "Villeurbanne",
+   "recense": "La Rayonne",
+   "evenements": 1
+  },
+  {
+   "uid": "41660371",
+   "canonique": "41660371",
+   "nom": "Le Bus Magique, Lille",
+   "ville": "Lille",
+   "recense": "Le bus magique",
+   "evenements": 1
+  },
+  {
+   "uid": "50132552",
+   "canonique": "50132552",
+   "nom": "Le Dôme",
+   "ville": "Caen",
+   "recense": "Le Dôme",
+   "evenements": 1
+  },
+  {
+   "uid": "39751307",
+   "canonique": "98112523",
+   "nom": "Le Temps des Cerises",
+   "ville": "Issy-les-Moulineaux",
+   "recense": "Le Temps des Cerises",
+   "evenements": 1
+  },
+  {
+   "uid": "8181128",
+   "canonique": "98112523",
+   "nom": "Le Temps des cerises",
+   "ville": "Issy-les-Moulineaux",
+   "recense": "Le Temps des Cerises",
+   "evenements": 1
+  },
+  {
+   "uid": "44596862",
+   "canonique": "44596862",
+   "nom": "Lycée professionnel Jean Nicoli",
+   "ville": "Bastia",
+   "recense": "Makerspace du lycée professionnel Jean Nicoli",
+   "evenements": 1
+  },
+  {
+   "uid": "73246623",
+   "canonique": "73246623",
+   "nom": "MAME",
+   "ville": "Tours",
+   "recense": "Mame",
+   "evenements": 1
+  },
+  {
+   "uid": "24683080",
+   "canonique": "24683080",
+   "nom": "MIKADO",
+   "ville": "Martigues",
+   "recense": "MIKADO",
+   "evenements": 1
+  },
+  {
+   "uid": "69934607",
+   "canonique": "69934607",
+   "nom": "Médiathèque du Luc en Provence",
+   "ville": "Le Luc",
+   "recense": "Médiathèque du Luc en Provence",
+   "evenements": 1
+  },
+  {
+   "uid": "89178042",
+   "canonique": "89178042",
+   "nom": "Nouveau Gare au Théâtre",
+   "ville": "Vitry-sur-Seine",
+   "recense": "Nouveau Gare au Théâtre",
+   "evenements": 1
+  },
+  {
+   "uid": "96770499",
+   "canonique": "96770499",
+   "nom": "Ostal del Telh",
+   "ville": "Aurillac",
+   "recense": "OSTAL DEL TELH",
+   "evenements": 1
+  }
+ ]
+}

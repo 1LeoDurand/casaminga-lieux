@@ -35,6 +35,14 @@ Usage
       --exclure "Mes événements France Travail" --max 50
   ... --essai     compte ce qui serait importé, n'écrit rien
 
+  python scripts/import-openagenda.py --lieux scripts/lieux-tiers-lieux.json \
+      --depuis 2026-10-01 --jusqu-a 2027-01-01 --max 50
+
+Deux façons de choisir la source, exclusives l'une de l'autre. Par département,
+on prend tout ce qui s'y publie, bibliothèques et cinémas compris. Par liste de
+lieux, on ne prend que les lieux nommés dans le fichier : c'est le seul moyen
+de viser les tiers-lieux, qu'OpenAgenda ne distingue pas des autres.
+
 La clé de service est lue dans .env.local et n'est jamais affichée.
 """
 
@@ -119,7 +127,13 @@ def texte(raw):
     t = re.sub(r"<[^>]+>", "", t)
     t = html.unescape(t)
     t = EMOJI.sub("", t)
-    t = re.sub(r"\s+—\s+", ", ", t).replace("—", ",")
+    # Cadratin et demi-cadratin sont interdits par les règles du site. Entre deux
+    # nombres, le tiret marque un intervalle (« 10–12 ans ») : un trait d'union
+    # le dit aussi bien. Ailleurs, entouré d'espaces, il sépare deux membres de
+    # phrase, et la virgule le remplace sans rien perdre.
+    t = re.sub(r"(?<=\d)[—–](?=\d)", "-", t)
+    t = re.sub(r"\s+[—–]\s+", ", ", t)
+    t = t.replace("—", ",").replace("–", ",")
     t = re.sub(r"[ \t ]+", " ", t)
     t = "\n".join(line.strip() for line in t.split("\n"))
     t = re.sub(r"\n{3,}", "\n\n", t).strip()
@@ -241,20 +255,64 @@ class Base:
         return len(rows)
 
 
-def lire_source(departement, exclus):
-    where = f'location_department="{departement}" and firstdate_begin >= now()'
-    for agenda in exclus:
-        where += ' and originagenda_title != "{}"'.format(agenda.replace('"', '\\"'))
-    rows, offset = [], 0
+def fenetre_temporelle(depuis, jusqua):
+    """
+    Clause de dates de la requete.
+
+    Par defaut, tout le futur, comme pour l'import montpellierain. Un import
+    cible une periode precise (une saison, un trimestre) : « depuis » et
+    « jusqu-a » la bornent, en dates ISO.
+    """
+    clause = f"firstdate_begin >= date'{depuis}'" if depuis else "firstdate_begin >= now()"
+    if jusqua:
+        clause += f" and firstdate_begin < date'{jusqua}'"
+    return clause
+
+
+def pages(where):
+    """Parcourt une requete Opendatasoft page par page, 100 lignes a la fois."""
+    offset = 0
     while True:
         q = {"where": where, "select": FIELDS, "limit": 100, "offset": offset,
              "order_by": "firstdate_begin"}
         with urllib.request.urlopen(f"{API}?{urllib.parse.urlencode(q)}", timeout=120) as r:
             page = json.load(r)["results"]
-        rows += page
+        for ligne in page:
+            yield ligne
         if len(page) < 100:
-            return rows
+            return
         offset += 100
+
+
+def lire_lieux(fichier, depuis, jusqua):
+    """
+    Lit les evenements d'une liste blanche de lieux, et d'eux seuls.
+
+    OpenAgenda ne dit pas ce qu'est un lieu : ni tiers-lieu, ni bibliotheque,
+    ni cinema. Selectionner par departement ramene donc tout le monde. Le
+    fichier passe en argument porte les identifiants de lieux retenus et dit
+    comment il a ete etabli.
+
+    Un meme lieu reel y apparait parfois sous plusieurs identifiants
+    OpenAgenda. Le champ « canonique » les ramene a un seul, sans quoi l'import
+    creerait autant d'organisations que d'identifiants pour le meme endroit.
+    """
+    liste = json.loads(Path(fichier).read_text(encoding="utf-8"))["lieux"]
+    canonique = {l["uid"]: (l.get("canonique") or l["uid"]) for l in liste}
+    fenetre = fenetre_temporelle(depuis, jusqua)
+    rows = []
+    for uid, vers in canonique.items():
+        for r in pages(f'location_uid="{uid}" and {fenetre}'):
+            r["location_uid"] = vers
+            rows.append(r)
+    return rows
+
+
+def lire_source(departement, exclus, depuis=None, jusqua=None):
+    where = f'location_department="{departement}" and ' + fenetre_temporelle(depuis, jusqua)
+    for agenda in exclus:
+        where += ' and originagenda_title != "{}"'.format(agenda.replace('"', '\\"'))
+    return list(pages(where))
 
 
 # ── Import ──────────────────────────────────────────────────────────────────
@@ -335,7 +393,10 @@ def reparer(db, source, essai):
 
 def main():
     ap = argparse.ArgumentParser(description="Import OpenAgenda -> Casa Minga")
-    ap.add_argument("--departement", required=True)
+    ap.add_argument("--departement", help="import par departement (exclusif de --lieux)")
+    ap.add_argument("--lieux", help="fichier JSON de liste blanche de lieux (exclusif de --departement)")
+    ap.add_argument("--depuis", help="date ISO de debut de fenetre, ex. 2026-10-01")
+    ap.add_argument("--jusqu-a", dest="jusqua", help="date ISO de fin exclue, ex. 2027-01-01")
     ap.add_argument("--exclure", action="append", default=[],
                     help="titre d'agenda d'origine à écarter (répétable)")
     ap.add_argument("--max", type=int, default=50, help="événements nouveaux à importer")
@@ -343,12 +404,15 @@ def main():
     ap.add_argument("--reparer", action="store_true",
                     help="corrige les fiches déjà importées selon les règles actuelles, sans rien importer")
     args = ap.parse_args()
+    if bool(args.departement) == bool(args.lieux):
+        ap.error("choisir soit --departement, soit --lieux")
 
     t0 = time.time()
     url, key = load_env()
     db = Base(url, key)
 
-    source = lire_source(args.departement, args.exclure)
+    source = (lire_lieux(args.lieux, args.depuis, args.jusqua) if args.lieux
+              else lire_source(args.departement, args.exclure, args.depuis, args.jusqua))
 
     if args.reparer:
         reparer(db, source, args.essai)
@@ -387,7 +451,21 @@ def main():
     orgs_avec_etab = {e["organization_id"] for e in etab_rows}
     deja = {i["event_id"] for i in db.lire_tout("evenements_import?select=event_id")}
 
-    candidats = [r for r in source if r.get("location_uid") in lieux]
+    # Un lieu qui existe sous plusieurs identifiants OpenAgenda publie parfois
+    # deux fois la meme seance, une fois par identifiant. Ramenes au meme lieu
+    # canonique, ces enregistrements deviennent des doublons visibles. On garde
+    # celui dont l'identifiant Casaminga vient en premier, regle stable d'une
+    # execution a l'autre.
+    candidats, vus = [], {}
+    for r in source:
+        if r.get("location_uid") not in lieux:
+            continue
+        cle = (r["location_uid"], (r.get("title_fr") or "").strip().lower(), r["firstdate_begin"])
+        eid = str(uuid.uuid5(NS, "evt:" + r["uid"]))
+        garde = vus.get(cle)
+        if garde is None or eid < garde[0]:
+            vus[cle] = (eid, r)
+    candidats = [r for _, r in vus.values()]
     nouveaux = sorted(
         (r for r in candidats if str(uuid.uuid5(NS, "evt:" + r["uid"])) not in deja),
         key=lambda r: (r["firstdate_begin"], r["uid"]))
@@ -472,7 +550,8 @@ def main():
         db.inserer("evenements_import", provenance, "event_id")
 
     mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
-    print(f"Source   : {len(source)} événements à venir ({args.departement}), {ecartes} écartés faute de lieu ou de dates")
+    portee = args.departement or Path(args.lieux).name
+    print(f"Source   : {len(source)} événements ({portee}), {ecartes} écartés faute de lieu ou de dates")
     print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
     print(f"Lot      : {len(lot)} événements, {len(orgs)} lieux créés, {len(sites)} vitrines techniques, {len(etabs)} établissements ({mode})")
     print(f"Reste    : {len(nouveaux) - len(lot)} événements après ce lot")
