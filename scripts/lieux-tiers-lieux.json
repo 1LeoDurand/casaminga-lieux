@@ -1,5 +1,5 @@
 {
- "_lecture": "Liste blanche de lieux pour --lieux. Etablie le 2026-09-22, elargie le 2026-09-26 en croisant les 11 094 lieux qui publient un evenement a venir sur OpenAgenda avec les recensements France Tiers-Lieux 2023 et 2026 publies sur data.gouv.fr. Retenus : meme ville et au moins 60 % de mots communs entre les deux noms, ou nom strictement identique d'au moins trois mots significatifs. Dans ce second cas, si le recensement 2023 declare une ville, elle doit concorder : « Maison de la Formation et de l'insertion » publie en Guadeloupe et le recensement en place une au Puy-en-Velay. Chaque appariement a ete relu un par un. « canonique » regroupe les identifiants OpenAgenda qui designent le meme lieu reel, pour ne pas creer plusieurs organisations. « methode » dit lequel des deux criteres a retenu le lieu.",
+ "_lecture": "Liste blanche de lieux pour --lieux. Etablie le 2026-09-22, elargie le 2026-09-26 en croisant les 11 094 lieux qui publient un evenement a venir sur OpenAgenda avec trois referentiels publies sur data.gouv.fr : les recensements France Tiers-Lieux 2023 et 2026, et la base de la Cooperative Tiers-Lieux en Nouvelle-Aquitaine, qui couvre une region mal connue des deux premiers. Retenus : meme ville et au moins 60 % de mots communs entre les deux noms, ou nom strictement identique d'au moins trois mots significatifs. Dans ce second cas, si le recensement 2023 declare une ville, elle doit concorder : « Maison de la Formation et de l'insertion » publie en Guadeloupe et le recensement en place une au Puy-en-Velay. Chaque appariement a ete relu un par un. « canonique » regroupe les identifiants OpenAgenda qui designent le meme lieu reel, pour ne pas creer plusieurs organisations. « methode » dit lequel des deux criteres a retenu le lieu.",
  "lieux": [
   {
    "uid": "98112523",
@@ -65,11 +65,29 @@
    "methode": "nom + ville"
   },
   {
+   "uid": "35538218",
+   "canonique": "35538218",
+   "nom": "Cap Sciences",
+   "ville": "Bordeaux",
+   "recense": "Fablab Cap Sciences",
+   "evenements": 3,
+   "methode": "nom + ville"
+  },
+  {
    "uid": "17141263",
    "canonique": "17141263",
    "nom": "KAL - Konk Ar Lab",
    "ville": "Concarneau",
    "recense": "Konk Ar Lab",
+   "evenements": 3,
+   "methode": "nom + ville"
+  },
+  {
+   "uid": "97254849",
+   "canonique": "97254849",
+   "nom": "La Ruelle",
+   "ville": "Ségur-le-Château",
+   "recense": "La Ruelle",
    "evenements": 3,
    "methode": "nom + ville"
   },
@@ -155,6 +173,15 @@
    "methode": "nom + ville"
   },
   {
+   "uid": "90848790",
+   "canonique": "90848790",
+   "nom": "Le Garage Moderne",
+   "ville": "Bordeaux",
+   "recense": "Garage Moderne (Le)",
+   "evenements": 2,
+   "methode": "nom + ville"
+  },
+  {
    "uid": "46956258",
    "canonique": "46956258",
    "nom": "Atelier Dulcie-September",
@@ -169,6 +196,15 @@
    "nom": "Café associatif du Breil \"Au petit bonheur\"",
    "ville": "Nantes",
    "recense": "Café associatif \"Au petit bonheur\"",
+   "evenements": 1,
+   "methode": "nom + ville"
+  },
+  {
+   "uid": "18281510",
+   "canonique": "35538218",
+   "nom": "Cap Sciences",
+   "ville": "Bordeaux",
+   "recense": "Fablab Cap Sciences",
    "evenements": 1,
    "methode": "nom + ville"
   },
@@ -191,6 +227,15 @@
    "methode": "nom + ville"
   },
   {
+   "uid": "20006576",
+   "canonique": "20006576",
+   "nom": "Centre de ressources Médi@-tech",
+   "ville": "Saint-Loup-Lamairé",
+   "recense": "Centre de Ressources Medi@-Tech",
+   "evenements": 1,
+   "methode": "nom + ville"
+  },
+  {
    "uid": "32694264",
    "canonique": "32694264",
    "nom": "ESS Cargo & Cie",
@@ -205,6 +250,15 @@
    "nom": "Galerie Les 2 Rives",
    "ville": "Perpignan",
    "recense": "Les 2 Rives",
+   "evenements": 1,
+   "methode": "nom + ville"
+  },
+  {
+   "uid": "48780332",
+   "canonique": "90848790",
+   "nom": "Garage moderne, Bordeaux",
+   "ville": "Bordeaux",
+   "recense": "Garage Moderne (Le)",
    "evenements": 1,
    "methode": "nom + ville"
   },
