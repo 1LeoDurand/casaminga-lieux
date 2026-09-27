@@ -61,9 +61,27 @@ le bouton plutôt que d'échouer.
 
 `casaminga.com` = plateforme publique type HelloAsso : associations, événements et levées de fonds de toutes les orgs sur admin.casaminga.com.
 
+## Catalogue public : modération éditoriale (contexte, 2026-09-11)
+
+L'admin est le **futur point de modération éditoriale** du catalogue
+d'événements de casaminga.com : le portail public reste en lecture seule, et
+toute validation, sélection ou mise en avant sera écrite ici. Décision de
+référence : `D:\0 - Sync cloud Kdrive\01 Casaminga\0.2 Contexte public-casaminga\00-CONTEXTE-PRODUIT.md`.
+
+- Existant à réutiliser plutôt qu'à dupliquer : `/admin/moderation` et
+  `setEventPortalStatus` (`evenements.portal_status` : `pending`, `approved`,
+  `rejected`).
+- Rien n'est à construire tant que restent ouverts : critères de validation,
+  rôle qui valide, modèle de données des axes d'impact et de la mise en avant.
+- sejour.casaminga.com (autre base) n'est pas concerné.
+
 ## Déploiement SSH Infomaniak
 
-Pas d'interface Vercel, pas de CI/CD : **un `git push` ne déploie rien.**
+**Un `git push` sur `main` déclenche le build de production.** Le workflow
+`.github/workflows/deploy.yml` appelle l'API Infomaniak, qui fait le `git pull`
+et le build configurés dans le panel. Constaté le 26/09/2026 : la phrase
+précédente de cette section, « un git push ne déploie rien », était fausse
+depuis le 03/06/2026.
 
 Constaté le 27/07/2026 sur le serveur, contre ce que disait cette section :
 
