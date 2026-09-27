@@ -1,11 +1,27 @@
 "use server";
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { SUPABASE_URL } from "@/lib/supabase/env";
-import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
+import { headers } from "next/headers";
+import { rateLimit } from "@/lib/rate-limit";
+import {
+  EMAIL_RE,
+  EMAIL_PAR_HEURE,
+  IP_PAR_HEURE,
+  IP_PAR_JOUR,
+  LIEU_PAR_JOUR,
+  LIEU_INVITATIONS_7J,
+  CONFIRMATION_HEURES,
+  adminClaims,
+  confirmationUrl,
+  demandesDuJour,
+  depotsDepuisIp,
+  invitationsRecentes,
+  nouveauJeton,
+  type ServiceClient,
+  type Voie,
+} from "@/lib/claims/revendication";
 
 /**
- * Revendication d'une fiche moissonnée.
+ * Dépôt d'une demande de revendication.
  *
  * L'agenda de casaminga.com reprend des événements publiés dans les agendas
  * ouverts du territoire. 118 des 132 organisations en base sont arrivées par
@@ -18,26 +34,35 @@ import { PUBLIC_SITE_BASE } from "@/lib/site-public/url";
  * /rejoindre/[token], inchangé. `signup/actions.ts` fait l'inverse et n'a rien
  * à faire ici.
  *
- * Cette action tourne en clé de service parce qu'elle s'exécute pour un
- * visiteur anonyme : `claims` est fermée à `anon` comme à `authenticated`, et
- * `invitations` ne s'écrit pas depuis un navigateur. Elle ne renvoie jamais au
- * client autre chose qu'un état et un message.
+ * CE QUE CETTE ACTION N'ENVOIE PLUS : rien ne part vers le lieu ici. La page
+ * est publique, sans compte ni captcha ; dans sa première forme, une requête
+ * POST suffisait à déclencher un courriel, et 118 requêtes à en déclencher
+ * 118 — depuis casaminga.com, vers des lieux qui n'avaient rien demandé, au
+ * risque de faire classer le domaine comme spammeur. Trois garde-fous
+ * encadrent maintenant le dépôt :
+ *
+ *   1. une limite par IP  — cinq dépôts par heure (mémoire), vingt par jour
+ *                            (comptés en base, pour survivre à un
+ *                            redémarrage) ;
+ *   2. une limite par lieu — trois demandes par jour, et surtout deux
+ *                            courriels vers un même lieu par semaine, vérifiés
+ *                            à l'instant de l'envoi ;
+ *   3. la vérification du demandeur — un lien de confirmation part à SON
+ *                            adresse, et le lieu n'est prévenu que s'il le
+ *                            suit. Un script qui ne relève pas la boîte qu'il
+ *                            déclare ne déclenche plus rien du tout.
+ *
+ * La suite du parcours vit dans `lib/claims/revendication.ts`, appelée par
+ * /revendiquer/confirmer/[token].
  */
 
-/** Un mois, et non les sept jours d'une invitation d'équipe. Le courriel
- *  générique d'une médiathèque ou d'une mairie est relevé une fois par
- *  semaine ; sept jours condamnaient la moitié des invitations. */
-const VALIDITE_JOURS = 30;
-
-export type Voie = "auto" | "manuel";
+export type { Voie };
 
 export interface ClaimResult {
   ok: boolean;
-  /** Renseignée si ok : dit au demandeur où le lien est parti. */
-  voie?: Voie;
-  /** Indice d'adresse (« c…t@ville.fr ») en voie automatique, jamais l'adresse
-   *  entière : la page est publique, elle ne doit pas divulguer un contact. */
-  adresseIndice?: string | null;
+  /** Vrai quand la demande existait déjà et que le lien a simplement été
+   *  renvoyé : le message affiché n'est pas tout à fait le même. */
+  renvoi?: boolean;
   error?: string;
 }
 
@@ -51,33 +76,90 @@ export interface ClaimInput {
   message: string;
 }
 
-/** Masque une adresse : « contact@ville.fr » → « c…t@ville.fr ». */
-function indiceAdresse(email: string): string {
-  const [local, domaine] = email.split("@");
-  if (!domaine) return "…";
-  const masque =
-    local.length <= 2 ? `${local[0]}…` : `${local[0]}…${local[local.length - 1]}`;
-  return `${masque}@${domaine}`;
+/** L'IP du visiteur derrière le proxy Infomaniak. `unknown` quand aucun
+ *  en-tête ne la porte : la limite s'applique alors à ce seau commun, ce qui
+ *  est le comportement prudent. */
+async function ipDuVisiteur(): Promise<string> {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0].trim() ||
+    h.get("x-real-ip") ||
+    "inconnue"
+  );
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** Envoie (ou renvoie) le lien de confirmation au demandeur. */
+async function envoyerConfirmation(args: {
+  email: string;
+  orgName: string;
+  token: string;
+}): Promise<boolean> {
+  try {
+    const { sendMail } = await import("@/lib/mail");
+    const { tplRevendicationConfirmation } = await import("@/lib/mail-templates");
+    return await sendMail({
+      to: args.email,
+      subject: `Confirmez votre demande pour ${args.orgName}`,
+      html: tplRevendicationConfirmation({
+        orgName: args.orgName,
+        confirmUrl: confirmationUrl(args.token),
+        heures: CONFIRMATION_HEURES,
+      }),
+      category: "revendication",
+      // Pas d'organizationId : ce message part au demandeur, pas au lieu, et
+      // à ce stade rien ne dit encore qu'il en fait partie.
+    });
+  } catch (e) {
+    console.error("envoyerConfirmation: envoi impossible", e);
+    return false;
+  }
+}
+
+const TROP_DE_DEMANDES =
+  "Trop de demandes ont été envoyées depuis cet appareil. Réessayez dans une heure, ou écrivez-nous à contact@casaminga.com.";
 
 /**
- * Fabrique du client de service, factorisée pour une raison de typage : passer
- * le client à une fonction annotée `ReturnType<typeof createServiceClient>`
- * fait retomber ses paramètres génériques sur `never`, et toute requête
- * devient inutilisable. Le type dérivé de cette fabrique est concret.
+ * Le lien de confirmation est déjà parti pour cette demande : on le renvoie
+ * plutôt que d'échouer sur l'index d'unicité. C'est le cas d'un
+ * rafraîchissement de page, et celui d'un courriel qui s'est perdu.
  */
-function serviceClient(url: string, key: string) {
-  return createServiceClient(url, key, { auth: { persistSession: false } });
+async function renvoyerLien(
+  admin: ServiceClient,
+  orgId: string,
+  orgName: string,
+  email: string
+): Promise<ClaimResult> {
+  const { data: existante } = await admin
+    .from("claims")
+    .select("id, status")
+    .eq("organization_id", orgId)
+    .ilike("email", email)
+    .in("status", ["non_confirme", "en_attente", "invite"])
+    .maybeSingle();
+
+  if (existante?.status !== "non_confirme") {
+    return {
+      ok: false,
+      error:
+        "Une demande est déjà en cours pour ce lieu avec cette adresse. Nous revenons vers vous, inutile de la renvoyer.",
+    };
+  }
+
+  // Le compteur par adresse a déjà été prélevé par l'appelant : réactualiser
+  // la page dix fois renvoie au plus trois courriels, pas dix.
+  const token = nouveauJeton();
+  await admin
+    .from("claims")
+    .update({ confirm_token: token, confirm_sent_at: new Date().toISOString() })
+    .eq("id", existante.id);
+
+  await envoyerConfirmation({ email, orgName, token });
+  return { ok: true, renvoi: true };
 }
-type ServiceClient = ReturnType<typeof serviceClient>;
 
 export async function submitClaim(input: ClaimInput): Promise<ClaimResult> {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_URL || !serviceRoleKey) {
-    return { ok: false, error: "Configuration serveur manquante." };
-  }
+  const admin = adminClaims();
+  if (!admin) return { ok: false, error: "Configuration serveur manquante." };
 
   const fullName = input.fullName.trim();
   const email = input.email.trim().toLowerCase();
@@ -88,12 +170,19 @@ export async function submitClaim(input: ClaimInput): Promise<ClaimResult> {
   if (fullName.length < 2) return { ok: false, error: "Merci d'indiquer votre nom." };
   if (!EMAIL_RE.test(email)) return { ok: false, error: "Cette adresse ne semble pas valide." };
 
-  const admin = serviceClient(SUPABASE_URL, serviceRoleKey);
+  // ── Garde-fou n°1 : la rafale, avant toute requête en base ───
+  const ip = await ipDuVisiteur();
+  if (!rateLimit(`claim-ip:${ip}`, IP_PAR_HEURE, 3_600_000)) {
+    return { ok: false, error: TROP_DE_DEMANDES };
+  }
+  if (!rateLimit(`claim-mail:${email}`, EMAIL_PAR_HEURE, 3_600_000)) {
+    return { ok: false, error: TROP_DE_DEMANDES };
+  }
 
   // ── 1. Le lieu, et son droit à être revendiqué ───────────────
   const { data: org } = await admin
     .from("organizations")
-    .select("id, slug, name, email, website, source, claimed_at")
+    .select("id, slug, name, email, source, claimed_at")
     .eq("slug", input.slug)
     .maybeSingle();
 
@@ -113,32 +202,57 @@ export async function submitClaim(input: ClaimInput): Promise<ClaimResult> {
     };
   }
 
+  // ── Garde-fou n°1, suite : la part qui survit au redémarrage ─
+  if (ip !== "inconnue" && (await depotsDepuisIp(admin, ip)) >= IP_PAR_JOUR) {
+    return { ok: false, error: TROP_DE_DEMANDES };
+  }
+
+  // ── Garde-fou n°2 : la limite par lieu ───────────────────────
+  // Deux seuils : le nombre de demandes déposées, qui protège la table, et le
+  // nombre de courriels déjà partis là-bas, qui protège le lieu. Le second
+  // est revérifié au moment de l'envoi — c'est là qu'il est décisif.
+  if ((await demandesDuJour(admin, org.id)) >= LIEU_PAR_JOUR) {
+    return {
+      ok: false,
+      error:
+        "Plusieurs demandes ont déjà été déposées pour ce lieu aujourd'hui. Écrivez-nous à contact@casaminga.com, nous les regardons ensemble.",
+    };
+  }
+  const adresseLieu = (org.email ?? "").trim();
+  const voieInitiale: Voie = EMAIL_RE.test(adresseLieu) ? "auto" : "manuel";
+  if (
+    voieInitiale === "auto" &&
+    (await invitationsRecentes(admin, org.id)) >= LIEU_INVITATIONS_7J
+  ) {
+    // Le lieu a déjà reçu deux courriels cette semaine. Refuser franchement
+    // vaut mieux que d'accepter une demande qui finira en arbitrage sans que
+    // le demandeur comprenne pourquoi.
+    return {
+      ok: false,
+      error:
+        "Ce lieu a déjà été sollicité récemment ; nous ne lui écrirons pas une troisième fois cette semaine. Écrivez-nous à contact@casaminga.com.",
+    };
+  }
+
   // ── 2. L'événement d'où part la demande ──────────────────────
   // Vérifié : un identifiant glissé dans l'URL ne doit pas rattacher la
   // demande à l'événement d'un autre lieu.
   let eventId: string | null = null;
-  let eventTitre: string | null = null;
   if (input.eventId) {
     const { data: ev } = await admin
       .from("evenements")
-      .select("id, title")
+      .select("id")
       .eq("id", input.eventId)
       .eq("organization_id", org.id)
       .maybeSingle();
-    if (ev) {
-      eventId = ev.id;
-      eventTitre = ev.title;
-    }
+    if (ev) eventId = ev.id;
   }
 
-  // ── 3. La voie de vérification ───────────────────────────────
-  // Le lieu a-t-il publié une adresse de contact ? Si oui, le lien part
-  // là-bas et nulle part ailleurs : quiconque relève ce courrier est
-  // légitime, et le demandeur n'a pas à être cru sur parole.
-  const adresseLieu = (org.email ?? "").trim();
-  const voieInitiale: Voie = EMAIL_RE.test(adresseLieu) ? "auto" : "manuel";
-
-  // ── 4. La demande ────────────────────────────────────────────
+  // ── 3. La demande, non confirmée ─────────────────────────────
+  // `verification` dit la voie que la demande SUIVRA une fois confirmée. Elle
+  // est recalculée au moment du clic : le lieu a pu publier une adresse ou
+  // reprendre sa page entre-temps.
+  const token = nouveauJeton();
   const { data: claim, error: claimErr } = await admin
     .from("claims")
     .insert({
@@ -149,223 +263,38 @@ export async function submitClaim(input: ClaimInput): Promise<ClaimResult> {
       email,
       phone: phone || null,
       message: message || null,
-      status: "en_attente",
+      status: "non_confirme",
       verification: voieInitiale,
+      confirm_token: token,
+      confirm_sent_at: new Date().toISOString(),
+      request_ip: ip === "inconnue" ? null : ip,
     })
     .select("id")
     .maybeSingle();
 
   if (claimErr) {
     // 23505 : l'index partiel `claims_vivante_unique`. Une demande de cette
-    // personne pour ce lieu est déjà en cours — un rafraîchissement de page,
+    // personne pour ce lieu est déjà vivante — un rafraîchissement de page,
     // le plus souvent. Ce n'est pas une erreur à afficher comme telle.
     if (claimErr.code === "23505") {
-      return {
-        ok: false,
-        error:
-          "Une demande est déjà en cours pour ce lieu avec cette adresse. Nous revenons vers vous, inutile de la renvoyer.",
-      };
+      return renvoyerLien(admin, org.id, org.name, email);
     }
     return { ok: false, error: "La demande n'a pas pu être enregistrée." };
   }
-  const claimId = claim?.id as string | undefined;
 
-  // ── 5. Voie automatique : l'invitation part à l'adresse du lieu ──
-  let voie: Voie = voieInitiale;
-  if (voieInitiale === "auto" && claimId) {
-    const envoye = await inviterLeLieu({
-      admin,
-      claimId,
-      org: { id: org.id, slug: org.slug, name: org.name },
-      adresseLieu,
-      demandeurNom: fullName,
-      demandeurFonction: roleLabel || null,
-      eventId,
-    });
-    // Le courriel n'est pas parti (SMTP muet, adresse refusée) : la demande
-    // ne peut pas être annoncée comme vérifiée. Elle bascule en arbitrage
-    // plutôt que de laisser croire à un envoi.
-    if (!envoye) {
-      voie = "manuel";
-      await admin.from("claims").update({ verification: "manuel" }).eq("id", claimId);
-    }
-  }
-
-  // ── 6. Voie manuelle : la demande attend un arbitrage ────────
-  if (voie === "manuel") {
-    await alerterArbitrage({
-      org: { name: org.name, slug: org.slug, website: org.website },
-      fullName,
-      roleLabel: roleLabel || null,
-      email,
-      phone: phone || null,
-      message: message || null,
-      eventTitre,
-    });
-  }
-
-  // ── 7. Accusé de réception au demandeur ──────────────────────
-  // Il dit laquelle des deux voies a été suivie. Sans cette phrase, un
-  // demandeur en voie automatique attend un courriel qui part chez son
-  // employeur et conclut que le site est cassé.
-  try {
-    const { sendMail } = await import("@/lib/mail");
-    const { tplRevendicationRecue } = await import("@/lib/mail-templates");
-    await sendMail({
-      to: email,
-      subject: `Votre demande pour ${org.name} sur Casaminga`,
-      html: tplRevendicationRecue({
-        orgName: org.name,
-        voie,
-        adresseIndice: voie === "auto" ? indiceAdresse(adresseLieu) : null,
-      }),
-      category: "revendication",
-      organizationId: org.id,
-    });
-  } catch (e) {
-    console.error("submitClaim: accusé de réception non envoyé", e);
-  }
-
-  return {
-    ok: true,
-    voie,
-    adresseIndice: voie === "auto" ? indiceAdresse(adresseLieu) : null,
-  };
-}
-
-/* ══════════════════════════════════════════════════════════════
-   Voie automatique
-   ══════════════════════════════════════════════════════════════ */
-
-/**
- * Crée l'invitation et l'envoie à l'adresse publiée par le lieu.
- * Renvoie `false` si le courriel n'est pas parti : l'appelant bascule alors en
- * arbitrage, plutôt que d'annoncer un envoi qui n'a pas eu lieu.
- */
-async function inviterLeLieu(args: {
-  admin: ServiceClient;
-  claimId: string;
-  org: { id: string; slug: string; name: string };
-  adresseLieu: string;
-  demandeurNom: string;
-  demandeurFonction: string | null;
-  eventId: string | null;
-}): Promise<boolean> {
-  const { admin, claimId, org, adresseLieu } = args;
-
-  const expires = new Date(Date.now() + VALIDITE_JOURS * 24 * 60 * 60 * 1000);
-
-  // Rôle `admin` : la voie automatique EST la vérification, il n'y a pas de
-  // second contrôle à attendre. Un lieu qui reprend sa page doit pouvoir
-  // inviter son équipe le jour même.
-  const { data: invitation, error: invErr } = await admin
-    .from("invitations")
-    .insert({
-      organization_id: org.id,
-      email: adresseLieu,
-      role: "admin",
-      expires_at: expires.toISOString(),
-    })
-    .select("id, token")
-    .maybeSingle();
-
-  if (invErr || !invitation) {
-    console.error("inviterLeLieu: invitation non créée", invErr);
-    return false;
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
-  const inviteUrl = `${appUrl}/rejoindre/${invitation.token}`;
-  const ficheUrl = args.eventId
-    ? `${PUBLIC_SITE_BASE.replace(/\/$/, "")}/evenement/${args.eventId}`
-    : null;
-
-  const { count } = await admin
-    .from("evenements")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", org.id)
-    .gte("start_at", new Date().toISOString());
-
-  let envoye = false;
-  try {
-    const { sendMail } = await import("@/lib/mail");
-    const { tplRevendicationInvitation } = await import("@/lib/mail-templates");
-    envoye = await sendMail({
-      to: adresseLieu,
-      subject: `Reprenez la page de ${org.name} sur Casaminga`,
-      html: tplRevendicationInvitation({
-        orgName: org.name,
-        demandeurNom: args.demandeurNom,
-        demandeurFonction: args.demandeurFonction,
-        inviteUrl,
-        ficheUrl,
-        nbEvenements: count ?? 0,
-        expiresLabel: expires.toLocaleDateString("fr-FR", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        }),
-      }),
-      category: "revendication",
-      organizationId: org.id,
-    });
-  } catch (e) {
-    console.error("inviterLeLieu: envoi impossible", e);
-  }
-
+  // ── 4. Garde-fou n°3 : le lien de confirmation ───────────────
+  const envoye = await envoyerConfirmation({ email, orgName: org.name, token });
   if (!envoye) {
-    // L'invitation existe mais personne ne l'a reçue : elle serait un jeton
-    // valable dans la nature, sans destinataire. On la retire.
-    await admin.from("invitations").delete().eq("id", invitation.id);
-    return false;
+    // Sans ce courriel, la demande est un cul-de-sac : elle occuperait l'index
+    // d'unicité sans pouvoir être confirmée ni renvoyée utilement. On la
+    // retire pour que le demandeur puisse réessayer.
+    if (claim?.id) await admin.from("claims").delete().eq("id", claim.id);
+    return {
+      ok: false,
+      error:
+        "Nous n'arrivons pas à vous envoyer le courriel de confirmation. Réessayez dans un moment, ou écrivez-nous à contact@casaminga.com.",
+    };
   }
 
-  await admin
-    .from("claims")
-    .update({ status: "invite", invitation_id: invitation.id })
-    .eq("id", claimId);
-  return true;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   Voie manuelle
-   ══════════════════════════════════════════════════════════════ */
-
-async function alerterArbitrage(args: {
-  org: { name: string; slug: string; website: string | null };
-  fullName: string;
-  roleLabel: string | null;
-  email: string;
-  phone: string | null;
-  message: string | null;
-  eventTitre: string | null;
-}): Promise<void> {
-  try {
-    const { sendMail, adminEmail } = await import("@/lib/mail");
-    const { tplRevendicationArbitrage } = await import("@/lib/mail-templates");
-    const destinataire = adminEmail();
-    if (!destinataire) return;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://admin.casaminga.com";
-    await sendMail({
-      to: destinataire,
-      subject: `Revendication à arbitrer : ${args.org.name}`,
-      html: tplRevendicationArbitrage({
-        orgName: args.org.name,
-        orgSlug: args.org.slug,
-        demandeurNom: args.fullName,
-        demandeurFonction: args.roleLabel,
-        demandeurEmail: args.email,
-        demandeurTel: args.phone,
-        message: args.message,
-        siteWeb: args.org.website,
-        evenementTitre: args.eventTitre,
-        arbitrageUrl: `${appUrl}/admin/revendications`,
-      }),
-      category: "revendication",
-      // Pas d'organizationId : l'alerte va à Léo, pas au lieu. La passer
-      // ferait taire le message pour une organisation de démonstration.
-    });
-  } catch (e) {
-    console.error("alerterArbitrage: alerte non envoyée", e);
-  }
+  return { ok: true };
 }

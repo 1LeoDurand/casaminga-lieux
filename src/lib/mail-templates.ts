@@ -1309,35 +1309,34 @@ export function tplRevendicationArbitrage(opts: {
 }
 
 /**
- * Accusé de réception au demandeur.
+ * ÉTAPE 1 SUR 2 — le lien de confirmation, au demandeur.
  *
- * Il dit laquelle des deux voies a été suivie, et c'est essentiel : en voie
- * automatique, le lien part à l'adresse du lieu et non à la sienne. Sans cette
- * phrase, il attend un courriel qui n'arrivera jamais et conclut que le site
- * est cassé.
+ * Il existe parce que la page de revendication est publique : sans compte ni
+ * captcha, une simple requête suffisait à faire écrire Casaminga à un lieu qui
+ * n'avait rien demandé, et cent dix-huit requêtes à écrire aux cent dix-huit
+ * lieux moissonnés. Le lieu n'est désormais prévenu qu'une fois ce lien suivi.
+ *
+ * Le message s'adresse aussi à quelqu'un qui n'a rien demandé du tout : si une
+ * autre personne a saisi son adresse, il doit pouvoir ignorer ce courriel sans
+ * conséquence, et le texte le dit.
  */
-export function tplRevendicationRecue(opts: {
+export function tplRevendicationConfirmation(opts: {
   orgName: string;
-  voie: "auto" | "manuel";
-  adresseIndice: string | null;
+  confirmUrl: string;
+  heures: number;
 }) {
-  const suite =
-    opts.voie === "auto"
-      ? p(
-          `Nous venons d'envoyer le lien de reprise à l'adresse de contact publiée par le lieu${opts.adresseIndice ? ` (${opts.adresseIndice})` : ""}, et non à la vôtre. C'est notre façon de vérifier qu'une page n'est reprise que par quelqu'un du lieu. Si vous relevez cette boîte, le lien vous attend ; sinon, demandez-le à la personne qui s'en occupe.`
-        )
-      : p(
-          `Ce lieu n'a pas publié d'adresse de contact : nous ne pouvons pas vérifier votre demande automatiquement. Elle part donc en relecture. Nous revenons vers vous sous quelques jours, à cette adresse, et il se peut que nous vous appelions au préalable.`
-        );
   return base(
     `
-    ${badge("Demande enregistrée", "#FF8A65")}
+    ${badge("Une dernière étape", "#FF8A65")}
     <div style="height:12px;"></div>
-    ${h1("Votre demande est bien arrivée")}
+    ${h1("Confirmez votre demande")}
     ${p(`Bonjour,`)}
-    ${p(`Vous demandez à reprendre la page de <strong>${opts.orgName}</strong> sur Casaminga.`)}
-    ${suite}
-    ${p(`<span style="font-size:13px;color:#9C9590;">Vous n'avez rien d'autre à faire pour l'instant.</span>`)}
+    ${p(`Vous venez de demander à reprendre la page de <strong>${opts.orgName}</strong> sur Casaminga. Avant d'aller plus loin, nous vérifions que cette adresse est bien la vôtre.`)}
+    ${btn("Confirmer ma demande", opts.confirmUrl)}
+    ${p(`Tant que ce lien n'est pas suivi, <strong>personne n'est prévenu</strong> : ni le lieu, ni son équipe. C'est ce qui nous évite d'écrire à des lieux au nom de gens qui ne les connaissent pas.`)}
+    ${divider()}
+    ${p(`<strong>Vous n'avez rien demandé ?</strong> Ne suivez pas ce lien et supprimez ce message : la demande expirera d'elle-même, et le lieu n'en saura rien.`)}
+    ${p(`<span style="font-size:13px;color:#9C9590;">Ce lien est valable ${opts.heures} heures.</span>`)}
     ${signatureLeo()}
   `,
     opts.orgName

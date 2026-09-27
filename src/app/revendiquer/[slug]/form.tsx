@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { submitClaim, type Voie } from "./actions";
+import { submitClaim } from "./actions";
 import type { ClaimTarget } from "./data";
 import { inputCls, cardStyle, btnStyle, labelStyle, fieldStyle } from "./styles";
 
 /**
  * Le formulaire, et ce qui le remplace une fois envoyé.
  *
- * L'accusé de réception change selon la voie suivie, et c'est le point le plus
- * important de cette page. En voie automatique, le lien de reprise part à
- * l'adresse publiée par le lieu, pas à celle qu'on vient de saisir : un
- * demandeur qui l'ignore attend un courriel qui arrive chez son employeur, et
- * conclut que le site ne marche pas.
+ * Envoyer ne déclenche plus rien vers le lieu : un lien de confirmation part à
+ * l'adresse saisie, et c'est lui qui autorise la suite. Sans cette étape, une
+ * requête suffisait à faire écrire Casaminga à un lieu qui n'avait rien
+ * demandé. L'écran d'après doit donc dire une seule chose, clairement : allez
+ * relever votre boîte.
+ *
+ * Il annonce aussi ce qui se passera APRÈS le clic, car c'est contre-intuitif
+ * en voie automatique : le lien de reprise partira à l'adresse publiée par le
+ * lieu, pas à celle qu'on vient de saisir. Un demandeur qui l'ignore attend un
+ * courriel qui arrive chez son employeur, et conclut que le site ne marche pas.
  */
 export function ClaimForm({ target }: { target: ClaimTarget }) {
   const [fullName, setFullName] = useState("");
@@ -22,7 +27,7 @@ export function ClaimForm({ target }: { target: ClaimTarget }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ voie: Voie; adresseIndice: string | null } | null>(null);
+  const [done, setDone] = useState<{ renvoi: boolean } | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,45 +47,50 @@ export function ClaimForm({ target }: { target: ClaimTarget }) {
       setError(res.error ?? "La demande n'a pas pu être envoyée.");
       return;
     }
-    setDone({ voie: res.voie ?? "manuel", adresseIndice: res.adresseIndice ?? null });
+    setDone({ renvoi: res.renvoi === true });
   }
 
   if (done) {
     return (
       <div style={cardStyle}>
         <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 12px" }}>
-          Votre demande est enregistrée
+          {done.renvoi ? "Le lien vient de repartir" : "Vérifiez votre boîte mail"}
         </h2>
-        {done.voie === "auto" ? (
-          <>
-            <p style={paraStyle}>
-              Nous venons d&apos;envoyer le lien de reprise à l&apos;adresse de contact que{" "}
-              <strong>{target.name}</strong> a publiée
-              {done.adresseIndice ? ` (${done.adresseIndice})` : ""}, et non à la vôtre.
-            </p>
-            <p style={paraStyle}>
-              C&apos;est notre façon de vérifier qu&apos;une page n&apos;est reprise que par
-              quelqu&apos;un du lieu, sans avoir à vous demander de justificatif. Si vous relevez
-              cette boîte, le lien vous y attend. Sinon, demandez-le à la personne qui s&apos;en
-              occupe.
-            </p>
-          </>
+        <p style={paraStyle}>
+          {done.renvoi ? (
+            <>
+              Une demande était déjà en cours pour <strong>{target.name}</strong> avec cette
+              adresse. Nous venons de vous renvoyer le lien de confirmation à{" "}
+              <strong>{email}</strong>.
+            </>
+          ) : (
+            <>
+              Nous venons d&apos;envoyer un lien de confirmation à <strong>{email}</strong>.
+              Ouvrez-le : c&apos;est ce clic qui lance la reprise de la page de{" "}
+              <strong>{target.name}</strong>.
+            </>
+          )}
+        </p>
+        <p style={paraStyle}>
+          Tant que ce lien n&apos;est pas suivi, <strong>personne n&apos;est prévenu</strong> : ni
+          le lieu, ni son équipe. C&apos;est ce qui nous évite d&apos;écrire à des lieux au nom de
+          gens qui ne les connaissent pas.
+        </p>
+        {target.verifiable ? (
+          <p style={paraStyle}>
+            Ensuite, le lien de reprise partira à l&apos;adresse de contact que{" "}
+            <strong>{target.name}</strong> a publiée, et non à la vôtre : c&apos;est notre façon de
+            vérifier qu&apos;une page n&apos;est reprise que par quelqu&apos;un du lieu.
+          </p>
         ) : (
-          <>
-            <p style={paraStyle}>
-              <strong>{target.name}</strong> n&apos;a pas publié d&apos;adresse de contact : nous
-              ne pouvons pas vérifier votre demande automatiquement, et nous n&apos;allons pas
-              confier une page à quelqu&apos;un sur sa seule parole.
-            </p>
-            <p style={paraStyle}>
-              Votre demande part donc en relecture. Nous revenons vers vous sous quelques jours, et
-              il se peut que nous vous appelions avant.
-            </p>
-          </>
+          <p style={paraStyle}>
+            Ensuite, votre demande partira en relecture : <strong>{target.name}</strong> n&apos;a
+            pas publié d&apos;adresse de contact, et nous ne confierons pas une page à
+            quelqu&apos;un sur sa seule parole. Nous revenons vers vous sous quelques jours.
+          </p>
         )}
-        <p style={{ ...paraStyle, color: "#9C9590", fontSize: 13 }}>
-          Un accusé de réception vient de partir à votre adresse. Vous n&apos;avez rien d&apos;autre
-          à faire.
+        <p style={{ ...paraStyle, color: "#9C9590", fontSize: 13, marginBottom: 0 }}>
+          Le lien est valable 48 heures. Rien dans vos messages ? Regardez dans les indésirables.
         </p>
       </div>
     );
@@ -90,9 +100,11 @@ export function ClaimForm({ target }: { target: ClaimTarget }) {
     <div style={cardStyle}>
       <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px" }}>Qui êtes-vous ?</h2>
       <p style={{ ...paraStyle, fontSize: 14 }}>
+        Nous vous enverrons d&apos;abord un lien de confirmation, et rien ne partira vers le lieu
+        avant que vous l&apos;ayez suivi.{" "}
         {target.verifiable
-          ? "Ce lieu a publié une adresse de contact : le lien de reprise y sera envoyé directement, et vous n'aurez rien à nous prouver."
-          : "Ce lieu n'a pas publié d'adresse de contact. Votre demande nous parviendra et nous la relirons, en vous appelant si besoin."}
+          ? "Ce lieu a publié une adresse de contact : le lien de reprise y sera ensuite envoyé directement, et vous n'aurez rien à nous prouver."
+          : "Ce lieu n'a pas publié d'adresse de contact : votre demande nous parviendra ensuite et nous la relirons, en vous appelant si besoin."}
       </p>
 
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
