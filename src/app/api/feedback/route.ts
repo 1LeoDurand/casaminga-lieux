@@ -6,6 +6,7 @@ import {
   checkScreenshot,
   validateFeedbackFields,
   MAX_SCREENSHOT_BYTES,
+  MAX_REQUEST_BYTES,
   RATE_LIMIT_PER_IP_PER_HOUR,
   RATE_LIMIT_PER_EMAIL_PER_HOUR,
   RATE_WINDOW_MS,
@@ -65,9 +66,9 @@ async function uploadScreenshot(
   file: File
 ): Promise<string | null> {
   if (!admin) return null;
-  // Content-Length déclaré par le formulaire multipart, vérifié avant de lire
-  // le fichier en mémoire ; `checkScreenshot` revérifie après lecture (un
-  // client peut mentir sur la taille annoncée).
+  // The File comes from an already-parsed body, so `size` is the real byte
+  // count (not client-declared); the memory bound itself is the Content-Length
+  // check in POST. `checkScreenshot` re-checks the bytes anyway.
   if (file.size > MAX_SCREENSHOT_BYTES) return null;
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -91,6 +92,14 @@ async function uploadScreenshot(
 
 export async function POST(req: Request) {
   if (isForeignOrigin(req)) return json(req, { error: "forbidden_origin" }, 403);
+
+  // Reject oversized bodies before req.formData() buffers the whole multipart
+  // in memory. Browsers always send Content-Length for a FormData fetch, so a
+  // missing or non-numeric value is refused too (no chunked uploads here).
+  const contentLength = Number(req.headers.get("content-length"));
+  if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > MAX_REQUEST_BYTES) {
+    return badRequest(req);
+  }
 
   let form: FormData;
   try {

@@ -31,6 +31,11 @@ export const OS_HINT_MAX = 50;
 export const SCREEN_DIMENSION_MAX = 10_000;
 
 export const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024; // 3 Mo
+/**
+ * Whole multipart request cap (screenshot + text fields + boundaries), checked
+ * on Content-Length before the body is parsed into memory.
+ */
+export const MAX_REQUEST_BYTES = MAX_SCREENSHOT_BYTES + 64 * 1024;
 export const ALLOWED_SCREENSHOT_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 
 export const RATE_LIMIT_PER_IP_PER_HOUR = 5;
