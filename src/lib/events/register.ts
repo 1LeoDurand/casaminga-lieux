@@ -29,6 +29,13 @@ export interface RegisterInput {
    * onsite = payant au guichet → billets créés 'paid', QR immédiat.
    */
   paymentMode?: "free" | "online" | "onsite";
+  /**
+   * Refuse l'inscription avant toute écriture si l'événement est payant.
+   * Posé par la route publique quand l'appelant (casaminga.com) ne peut
+   * encaisser aucun paiement en ligne : aucune organisation n'a Stripe
+   * aujourd'hui (prompt 6, PLAN-ESPACE-PARTICULIER.md).
+   */
+  rejectIfPaid?: boolean;
 }
 
 export type RegisterResult =
@@ -155,12 +162,15 @@ export async function registerForEvent(input: RegisterInput): Promise<RegisterRe
 
   const { data: event } = await admin
     .from("evenements")
-    .select("id, organization_id, title, capacity, status, start_at")
+    .select("id, organization_id, title, capacity, status, start_at, price")
     .eq("id", input.eventId)
     .maybeSingle();
   if (!event) return { ok: false, error: "Événement introuvable." };
   if (event.status !== "publie") {
     return { ok: false, error: "Cet événement n'est plus ouvert aux inscriptions." };
+  }
+  if (input.rejectIfPaid && event.price !== null && event.price > 0) {
+    return { ok: false, error: "Cet événement est payant : l'inscription en ligne n'est pas proposée pour le moment." };
   }
 
   // Capacité = nombre de billets déjà émis
