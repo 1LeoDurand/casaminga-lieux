@@ -853,14 +853,18 @@ export function tplNewsletter(opts: {
 
 export function tplPortalLink(opts: {
   firstName: string;
+  /** Adresse de l'espace : page de l'admin ou Mon espace de casaminga.com, selon la porte d'origine. */
   portalUrl: string;
   orgName?: string;
   establishmentName?: string | null;
+  /** Durée de validité annoncée, à tenir alignée sur PORTAL_TOKEN_TTL_MS (lib/portal/token.ts). */
+  validityDays?: number;
 }) {
+  const validityDays = opts.validityDays ?? 30;
   const orgName = opts.orgName || "Casa Minga";
   const sender =
     opts.establishmentName && opts.establishmentName !== orgName
-      ? `<strong>${orgName}</strong> — ${opts.establishmentName}`
+      ? `<strong>${orgName}</strong>, ${opts.establishmentName}`
       : `<strong>${orgName}</strong>`;
   return base(
     `
@@ -878,7 +882,7 @@ export function tplPortalLink(opts: {
     </div>
     ${btn("Accéder à mon espace →", opts.portalUrl)}
     ${p(`<span style="font-size:13px;color:#9C9590;">Cet espace est propulsé par <strong>Casa Minga</strong>, l'outil avec lequel ${orgName} gère ses adhésions, ses événements et sa communauté. Rien à installer : tout se passe en ligne, depuis ce lien.</span>`)}
-    ${p(`Ce lien est strictement personnel — ne le partagez pas. Il reste valide jusqu'à ce que vous en demandiez un nouveau.`)}
+    ${p(`Ce lien est strictement personnel : ne le partagez pas. Il reste valable ${validityDays} jours. Passé ce délai, demandez-en simplement un nouveau avec votre adresse email.`)}
     <p style="margin:24px 0 0;font-size:12px;color:#9C9590;text-align:center;">
       Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br/>
       <span style="font-size:11px;word-break:break-all;">${opts.portalUrl}</span>

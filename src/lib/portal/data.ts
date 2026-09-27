@@ -1,7 +1,7 @@
 /**
  * Couche données du portail adhérent.
  * Lecture multi-org par email (service-role, pas de RLS).
- * Server-only — jamais importé côté client.
+ * Server-only : jamais importé côté client.
  */
 import "server-only";
 import { createAdminClient } from "@/lib/admin/guard";
@@ -51,6 +51,16 @@ export interface PortalFacture {
   canDeclare: boolean;
 }
 
+/** Réservation d'espace à venir (salle, bureau), annulable depuis l'espace. */
+export interface PortalReservation {
+  id: string;
+  title: string | null;
+  spaceName: string | null;
+  startAt: string;
+  endAt: string | null;
+  status: string;            // "demandee" ou "confirmee"
+}
+
 export interface PortalOrgData {
   orgId: string;
   orgSlug: string;
@@ -60,6 +70,7 @@ export interface PortalOrgData {
   billets: PortalBillet[];
   recus: PortalRecu[];
   factures: PortalFacture[];
+  reservations: PortalReservation[];
   activeCampaignSlug: string | null;  // slug pour le lien renouvellement
 }
 
@@ -69,6 +80,24 @@ export interface PortalData {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Motif ILIKE qui ne correspond qu'à ce courriel. ILIKE sert ici à ignorer la
+ * casse, mais "_" et "%" y sont des jokers : sans échappement, le jeton de
+ * a_b@exemple.fr ouvrirait aussi les données de axb@exemple.fr.
+ */
+export function exactEmailPattern(email: string): string {
+  return email.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Seconde barrière, côté code : ne garder que les lignes dont le courriel est
+ * exactement celui du jeton. Elle couvre ce que l'échappement ne couvre pas
+ * (PostgREST traduit aussi "*" en joker).
+ */
+function sameEmail(value: string | null | undefined, email: string): boolean {
+  return normalizeEmail(value ?? "") === email;
+}
 
 function deriveStatus(
   status: string,
@@ -100,39 +129,45 @@ export async function getPortalDataByEmail(
   if (!admin) return null;
 
   const email = normalizeEmail(rawEmail);
+  const pattern = exactEmailPattern(email);
 
   // ── 1. Collecter tous les org_ids qui contiennent cet email ──────────────
   const [personsRes, adhesionsRes, billetsRes, facturesRes] = await Promise.all([
     admin
       .from("persons")
-      .select("id, organization_id, name")
-      .ilike("email", email)
+      .select("id, organization_id, name, email")
+      .ilike("email", pattern)
       .is("anonymized_at", null),
     admin
       .from("membership_applications")
-      .select("id, organization_id, tier_id, status, membership_start, membership_end, amount_paid, first_name, last_name, created_at")
-      .ilike("email", email)
+      .select("id, organization_id, tier_id, status, membership_start, membership_end, amount_paid, first_name, last_name, created_at, email")
+      .ilike("email", pattern)
       .order("created_at", { ascending: false }),
     admin
       .from("event_registrations")
-      .select("ticket_token, full_name, event_id, organization_id, checked_in_at")
-      .ilike("email", email),
+      .select("ticket_token, full_name, event_id, organization_id, checked_in_at, email")
+      .ilike("email", pattern),
     // Factures émises au nom de cet email. Les brouillons et annulées ne
     // concernent pas le client ; les avoirs sont des pièces comptables internes.
     admin
       .from("invoices")
-      .select("id, organization_id, number, object, total_ttc, status, due_date, issue_date, payment_declared_at")
-      .ilike("client_email", email)
+      .select("id, organization_id, number, object, total_ttc, status, due_date, issue_date, payment_declared_at, client_email")
+      .ilike("client_email", pattern)
       .eq("kind", "facture")
       .not("status", "in", "(brouillon,annulee)")
       .order("issue_date", { ascending: false }),
   ]);
 
+  const personsRows = (personsRes.data ?? []).filter((r) => sameEmail(r.email, email));
+  const adhesionsRows = (adhesionsRes.data ?? []).filter((r) => sameEmail(r.email, email));
+  const billetsRows = (billetsRes.data ?? []).filter((r) => sameEmail(r.email, email));
+  const facturesRows = (facturesRes.data ?? []).filter((r) => sameEmail(r.client_email, email));
+
   const allOrgIds = new Set<string>();
-  for (const p of personsRes.data ?? []) allOrgIds.add(p.organization_id);
-  for (const a of adhesionsRes.data ?? []) allOrgIds.add(a.organization_id);
-  for (const b of billetsRes.data ?? []) allOrgIds.add(b.organization_id);
-  for (const f of facturesRes.data ?? []) allOrgIds.add(f.organization_id);
+  for (const p of personsRows) allOrgIds.add(p.organization_id);
+  for (const a of adhesionsRows) allOrgIds.add(a.organization_id);
+  for (const b of billetsRows) allOrgIds.add(b.organization_id);
+  for (const f of facturesRows) allOrgIds.add(f.organization_id);
 
   if (allOrgIds.size === 0) return { email, orgs: [] };
 
@@ -141,14 +176,14 @@ export async function getPortalDataByEmail(
   // Index persons IDs par org (pour la jointure tax_receipts via donor_person_id)
   const personIdsByOrg = new Map<string, string[]>();
   const allPersonIds: string[] = [];
-  for (const p of personsRes.data ?? []) {
+  for (const p of personsRows) {
     if (!personIdsByOrg.has(p.organization_id)) personIdsByOrg.set(p.organization_id, []);
     personIdsByOrg.get(p.organization_id)!.push(p.id);
     allPersonIds.push(p.id);
   }
 
   // ── 2. Infos orgs ─────────────────────────────────────────────────────────
-  const [orgsRes, tiersRes, campaignsRes, eventsRes, taxReceiptsRes] = await Promise.all([
+  const [orgsRes, tiersRes, campaignsRes, eventsRes, taxReceiptsRes, reservationsRes] = await Promise.all([
     admin
       .from("organizations")
       .select("id, slug, name")
@@ -166,7 +201,7 @@ export async function getPortalDataByEmail(
       .eq("status", "publie"),
     // Événements à venir cités dans les billets
     (() => {
-      const eventIds = [...new Set((billetsRes.data ?? []).map((b) => b.event_id))];
+      const eventIds = [...new Set(billetsRows.map((b) => b.event_id))];
       if (!eventIds.length) return Promise.resolve({ data: [] });
       return admin
         .from("evenements")
@@ -182,6 +217,18 @@ export async function getPortalDataByEmail(
         .select("id, number, fiscal_year, amount, donation_date, donor_person_id, organization_id")
         .in("donor_person_id", allPersonIds)
         .order("donation_date", { ascending: false });
+    })(),
+    // Réservations d'espace à venir, rattachées aux fiches persons de ce
+    // courriel : c'est la même jointure que la page d'annulation vérifie.
+    (() => {
+      if (!allPersonIds.length) return Promise.resolve({ data: [] });
+      return admin
+        .from("reservations")
+        .select("id, title, start_at, end_at, status, organization_id, person_id, spaces(name)")
+        .in("person_id", allPersonIds)
+        .in("status", ["demandee", "confirmee"])
+        .gte("start_at", new Date().toISOString())
+        .order("start_at", { ascending: true });
     })(),
   ]);
 
@@ -204,7 +251,7 @@ export async function getPortalDataByEmail(
 
   // ── 3. Fiche de nom par org (persons) ─────────────────────────────────────
   const displayNameByOrg = new Map<string, string>();
-  for (const p of personsRes.data ?? []) {
+  for (const p of personsRows) {
     if (!displayNameByOrg.has(p.organization_id) && p.name) {
       displayNameByOrg.set(p.organization_id, p.name);
     }
@@ -218,7 +265,7 @@ export async function getPortalDataByEmail(
     if (!org) continue;
 
     // Dernière adhésion (déjà triée desc par created_at)
-    const adhesionRow = (adhesionsRes.data ?? []).find(
+    const adhesionRow = adhesionsRows.find(
       (a) => a.organization_id === orgId
     );
     let adhesion: PortalAdhesion | null = null;
@@ -237,10 +284,10 @@ export async function getPortalDataByEmail(
 
     // Billets à venir pour cette org
     const billets: PortalBillet[] = [];
-    for (const b of billetsRes.data ?? []) {
+    for (const b of billetsRows) {
       if (b.organization_id !== orgId) continue;
       const ev = eventsMap.get(b.event_id);
-      if (!ev) continue; // filtré par gte(now) au-dessus — pas dans la map = passé
+      if (!ev) continue; // filtré par gte(now) au-dessus : pas dans la map = passé
       billets.push({
         ticketToken: b.ticket_token,
         holderName: b.full_name ?? "",
@@ -267,7 +314,7 @@ export async function getPortalDataByEmail(
 
     // Factures de cette org
     const today = new Date().toISOString().slice(0, 10);
-    const factures: PortalFacture[] = (facturesRes.data ?? [])
+    const factures: PortalFacture[] = facturesRows
       .filter((f) => f.organization_id === orgId)
       .map((f) => {
         const paid = f.status === "payee";
@@ -286,6 +333,21 @@ export async function getPortalDataByEmail(
         } satisfies PortalFacture;
       });
 
+    // Réservations d'espace à venir pour cette org
+    const reservations: PortalReservation[] = ((reservationsRes.data ?? []) as unknown as Array<{
+      id: string; title: string | null; start_at: string; end_at: string | null;
+      status: string; organization_id: string; spaces: { name: string } | null;
+    }>)
+      .filter((r) => r.organization_id === orgId)
+      .map((r) => ({
+        id: r.id,
+        title: r.title,
+        spaceName: r.spaces?.name ?? null,
+        startAt: r.start_at,
+        endAt: r.end_at,
+        status: r.status,
+      }));
+
     result.push({
       orgId,
       orgSlug: org.slug,
@@ -295,6 +357,7 @@ export async function getPortalDataByEmail(
       billets,
       recus,
       factures,
+      reservations,
       activeCampaignSlug: campaignByOrg.get(orgId) ?? null,
     });
   }
@@ -322,28 +385,29 @@ export async function emailHasPortalContent(rawEmail: string): Promise<boolean> 
   if (!admin) return false;
 
   const email = normalizeEmail(rawEmail);
+  const pattern = exactEmailPattern(email);
 
   const [p, a, b, f] = await Promise.all([
     admin
       .from("persons")
       .select("id", { count: "exact", head: true })
-      .ilike("email", email)
+      .ilike("email", pattern)
       .is("anonymized_at", null),
     admin
       .from("membership_applications")
       .select("id", { count: "exact", head: true })
-      .ilike("email", email),
+      .ilike("email", pattern),
     admin
       .from("event_registrations")
       .select("id", { count: "exact", head: true })
-      .ilike("email", email),
+      .ilike("email", pattern),
     // Un coworker facturé n'a parfois ni fiche, ni adhésion, ni billet : sans
     // cette ligne, /espace lui répondait « aucun dossier » et il ne pouvait
     // obtenir aucun lien de portail.
     admin
       .from("invoices")
       .select("id", { count: "exact", head: true })
-      .ilike("client_email", email)
+      .ilike("client_email", pattern)
       .eq("kind", "facture")
       .not("status", "in", "(brouillon,annulee)"),
   ]);
