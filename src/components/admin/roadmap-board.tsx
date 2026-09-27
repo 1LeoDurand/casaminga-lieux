@@ -5,8 +5,8 @@ import { Plus, X, Trash2, Calendar, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { TaskBoard, type BoardColumn } from "@/components/mc/task-board";
 import {
-  ROADMAP_STATUSES,
-  type RoadmapEffort, type RoadmapPriority, type RoadmapStatus, type RoadmapTask,
+  ROADMAP_STATUSES, ROADMAP_PLATFORMS, ROADMAP_KINDS,
+  type RoadmapEffort, type RoadmapKind, type RoadmapPlatform, type RoadmapPriority, type RoadmapStatus, type RoadmapTask,
 } from "@/lib/admin/roadmap-meta";
 import {
   createRoadmapTask, deleteRoadmapTask, moveRoadmapTask, updateRoadmapTask,
@@ -174,6 +174,7 @@ function Detail({ task, busy, onClose, onSave, onDelete }: {
     title?: string; description?: string | null; status?: RoadmapStatus;
     priority?: RoadmapPriority; effort?: RoadmapEffort | null;
     roadmap_ref?: string | null; due_date?: string | null;
+    platform?: RoadmapPlatform; kind?: RoadmapKind | null;
   }) => void;
   onDelete?: () => void;
 }) {
@@ -184,6 +185,8 @@ function Detail({ task, busy, onClose, onSave, onDelete }: {
   const [effort, setEffort] = useState<string>(task?.effort ?? "");
   const [ref, setRef] = useState(task?.roadmap_ref ?? "");
   const [due, setDue] = useState(task?.due_date ?? "");
+  const [platform, setPlatform] = useState<RoadmapPlatform>(task?.platform ?? "admin");
+  const [kind, setKind] = useState<string>(task?.kind ?? "");
 
   function submit() {
     if (!title.trim()) { toast.error("Le titre est obligatoire."); return; }
@@ -194,6 +197,8 @@ function Detail({ task, busy, onClose, onSave, onDelete }: {
       effort: (effort || null) as RoadmapEffort | null,
       roadmap_ref: ref.trim() || null,
       due_date: due || null,
+      platform,
+      kind: (kind || null) as RoadmapKind | null,
     });
   }
 
@@ -246,6 +251,19 @@ function Detail({ task, busy, onClose, onSave, onDelete }: {
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold uppercase text-warmgray">Réf. ROADMAP</span>
               <input className="mc-input" placeholder="B2" value={ref} onChange={(e) => setRef(e.target.value)} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase text-warmgray">Plateforme</span>
+              <select className="mc-input" value={platform} onChange={(e) => setPlatform(e.target.value as RoadmapPlatform)}>
+                {ROADMAP_PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase text-warmgray">Nature</span>
+              <select className="mc-input" value={kind} onChange={(e) => setKind(e.target.value)}>
+                <option value="">—</option>
+                {ROADMAP_KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+              </select>
             </label>
           </div>
 

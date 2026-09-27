@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperAdmin, createAdminClient } from "@/lib/admin/guard";
 import {
-  isRoadmapStatus,
-  type RoadmapEffort, type RoadmapPriority, type RoadmapStatus,
+  isRoadmapStatus, isRoadmapPlatform, isRoadmapKind,
+  type RoadmapEffort, type RoadmapKind, type RoadmapPlatform, type RoadmapPriority, type RoadmapStatus,
 } from "@/lib/admin/roadmap-meta";
 
 const PRIORITIES: RoadmapPriority[] = ["haute", "normale", "basse"];
@@ -18,6 +18,8 @@ export interface RoadmapInput {
   effort?: RoadmapEffort | null;
   roadmap_ref?: string | null;
   due_date?: string | null;
+  platform?: RoadmapPlatform;
+  kind?: RoadmapKind | null;
 }
 
 /** Rejette ce que la contrainte CHECK refuserait, avec un message lisible. */
@@ -26,6 +28,8 @@ function validate(input: Partial<RoadmapInput>): string | null {
   if (input.status !== undefined && !isRoadmapStatus(input.status)) return "Colonne inconnue.";
   if (input.priority !== undefined && !PRIORITIES.includes(input.priority)) return "Priorité inconnue.";
   if (input.effort != null && !EFFORTS.includes(input.effort)) return "Ampleur inconnue.";
+  if (input.platform !== undefined && !isRoadmapPlatform(input.platform)) return "Plateforme inconnue.";
+  if (input.kind != null && !isRoadmapKind(input.kind)) return "Nature de carte inconnue.";
   return null;
 }
 
@@ -45,6 +49,8 @@ export async function createRoadmapTask(input: RoadmapInput): Promise<{ ok: bool
     effort: input.effort ?? null,
     roadmap_ref: input.roadmap_ref?.trim() || null,
     due_date: input.due_date || null,
+    platform: input.platform ?? "admin",
+    kind: input.kind ?? null,
   });
   if (error) return { ok: false, error: error.message };
 
@@ -73,6 +79,8 @@ export async function updateRoadmapTask(
   if (patch.effort !== undefined) row.effort = patch.effort;
   if (patch.roadmap_ref !== undefined) row.roadmap_ref = patch.roadmap_ref?.trim() || null;
   if (patch.due_date !== undefined) row.due_date = patch.due_date || null;
+  if (patch.platform !== undefined) row.platform = patch.platform;
+  if (patch.kind !== undefined) row.kind = patch.kind;
   if (Object.keys(row).length === 0) return { ok: true };
 
   const { error } = await admin.from("platform_tasks").update(row).eq("id", id);

@@ -42,6 +42,9 @@ export interface FeedbackRow {
   // Compte utilisateur (migration v5_46_feedback_user_info)
   user_id: string | null;
   user_email: string | null;
+  // Plateforme d'origine et courriel du visiteur (migration 0015_platform)
+  platform: string;
+  reporter_email: string | null;
 }
 
 /** Statistiques globales de la plateforme. */
@@ -113,6 +116,8 @@ export interface HelpArticleAdmin {
   view_count: number;
   helpful_yes: number;
   helpful_no: number;
+  // Public (associations, particuliers) ou admin (migration 0015_platform)
+  audience: string;
 }
 
 export interface HelpCategoryAdmin {
@@ -120,6 +125,7 @@ export interface HelpCategoryAdmin {
   label: string;
   icon: string;
   description: string | null;
+  audience: string;
 }
 
 export async function getAllHelpArticles(): Promise<HelpArticleAdmin[]> {
@@ -127,7 +133,7 @@ export async function getAllHelpArticles(): Promise<HelpArticleAdmin[]> {
   if (!admin) return [];
   const { data } = await admin
     .from("help_articles")
-    .select("slug, category_slug, title, excerpt, keywords, body, published, view_count, helpful_yes, helpful_no, sort_order")
+    .select("slug, category_slug, title, excerpt, keywords, body, published, view_count, helpful_yes, helpful_no, sort_order, audience")
     .order("sort_order", { ascending: true });
   return (data as HelpArticleAdmin[]) ?? [];
 }
@@ -137,7 +143,7 @@ export async function getAllHelpCategories(): Promise<HelpCategoryAdmin[]> {
   if (!admin) return [];
   const { data } = await admin
     .from("help_categories")
-    .select("slug, label, icon, description, sort_order")
+    .select("slug, label, icon, description, sort_order, audience")
     .order("sort_order", { ascending: true });
   return (data as HelpCategoryAdmin[]) ?? [];
 }
@@ -550,7 +556,7 @@ export async function getAllFeedback(): Promise<FeedbackRow[]> {
 
   const { data } = await admin
     .from("feedback")
-    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at, admin_note, user_agent, device_type, screen_width, screen_height, os_hint, user_id, user_email")
+    .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at, admin_note, user_agent, device_type, screen_width, screen_height, os_hint, user_id, user_email, platform, reporter_email")
     .order("created_at", { ascending: false });
 
   return data ?? [];

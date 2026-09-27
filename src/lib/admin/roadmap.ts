@@ -9,7 +9,7 @@ import type { RoadmapPriority, RoadmapTask } from "./roadmap-meta";
  * requireSuperAdmin(). Aucune organisation ne peut l'apercevoir.
  */
 
-const SELECT = "id, title, description, status, priority, effort, roadmap_ref, due_date, created_at, updated_at";
+const SELECT = "id, title, description, status, priority, effort, roadmap_ref, due_date, platform, kind, created_at, updated_at";
 
 /** Priorité haute d'abord, puis échéance la plus proche, puis les plus récentes. */
 const PRIORITY_RANK: Record<RoadmapPriority, number> = { haute: 0, normale: 1, basse: 2 };

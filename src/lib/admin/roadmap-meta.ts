@@ -10,6 +10,12 @@
 export type RoadmapStatus = "a_trier" | "valide" | "en_cours" | "a_deployer" | "fait";
 export type RoadmapPriority = "haute" | "normale" | "basse";
 export type RoadmapEffort = "XS" | "S" | "M" | "L" | "XL";
+// Plateforme propriétaire de la carte (migration 0015_platform) : chaque
+// plateforme a sa vue dans le même admin, plutôt qu'un back office par site.
+export type RoadmapPlatform = "admin" | "public" | "sejour";
+// Nature de la carte, facultative : distingue un bug remonté d'un contenu à
+// écrire. Nullable, les cartes existantes n'ont pas cette information.
+export type RoadmapKind = "bug" | "amelioration" | "article" | "contenu" | "decision";
 
 export interface RoadmapTask {
   id: string;
@@ -20,8 +26,34 @@ export interface RoadmapTask {
   effort: RoadmapEffort | null;
   roadmap_ref: string | null;
   due_date: string | null;
+  platform: RoadmapPlatform;
+  kind: RoadmapKind | null;
   created_at: string;
   updated_at: string;
+}
+
+export const ROADMAP_PLATFORMS: { value: RoadmapPlatform; label: string }[] = [
+  { value: "admin", label: "Admin" },
+  { value: "public", label: "Portail" },
+  { value: "sejour", label: "Séjours" },
+];
+
+export const ROADMAP_KINDS: { value: RoadmapKind; label: string }[] = [
+  { value: "bug", label: "Bug" },
+  { value: "amelioration", label: "Amélioration" },
+  { value: "article", label: "Article" },
+  { value: "contenu", label: "Contenu" },
+  { value: "decision", label: "Décision" },
+];
+
+const PLATFORM_VALUES = ROADMAP_PLATFORMS.map((p) => p.value);
+export function isRoadmapPlatform(v: string): v is RoadmapPlatform {
+  return (PLATFORM_VALUES as string[]).includes(v);
+}
+
+const KIND_VALUES = ROADMAP_KINDS.map((k) => k.value);
+export function isRoadmapKind(v: string): v is RoadmapKind {
+  return (KIND_VALUES as string[]).includes(v);
 }
 
 export const ROADMAP_STATUSES: { value: RoadmapStatus; label: string; dot: string; hint: string }[] = [
