@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import { getRoadmapTasks } from "@/lib/admin/roadmap";
 import { RoadmapBoard } from "@/components/admin/roadmap-board";
+import { getAdminPlatform } from "@/lib/admin/platform-context";
+import { getAdminPlatformMeta } from "@/lib/admin/platforms";
 
 export const dynamic = "force-dynamic";
 
+type PageProps = { searchParams: Promise<{ plateforme?: string }> };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const platform = await getAdminPlatform(await searchParams);
+  return { title: `${getAdminPlatformMeta(platform).label} · Feuille de route` };
+}
+
+// Le contexte de plateforme n'est encore que lu (titre d'onglet, ci-dessus) :
+// le filtre des cartes par plateforme est le prompt 6, pas celui-ci.
 export default async function AdminRoadmapPage() {
   const tasks = await getRoadmapTasks();
 

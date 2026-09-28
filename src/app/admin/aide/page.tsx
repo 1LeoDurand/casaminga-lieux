@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import { getAllHelpArticles, getAllHelpCategories } from "@/lib/admin/data";
 import { HelpEditor } from "@/components/admin/help-editor";
+import { getAdminPlatform } from "@/lib/admin/platform-context";
+import { getAdminPlatformMeta } from "@/lib/admin/platforms";
 
 export const dynamic = "force-dynamic";
 
+type PageProps = { searchParams: Promise<{ plateforme?: string }> };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const platform = await getAdminPlatform(await searchParams);
+  return { title: `${getAdminPlatformMeta(platform).label} · Centre d'aide` };
+}
+
+// Le contexte de plateforme n'est encore que lu (titre d'onglet, ci-dessus) :
+// le filtre des articles par audience est le prompt 6, pas celui-ci.
 export default async function AdminHelpPage() {
   const [articles, categories] = await Promise.all([
     getAllHelpArticles(),

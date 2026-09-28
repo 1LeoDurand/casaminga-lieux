@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useCallback, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 import { AdminSidebar } from "./admin-sidebar";
+import { setAdminPlatform } from "@/app/admin/platform-actions";
+import { getAdminPlatformMeta, isAdminPlatform, type AdminPlatform } from "@/lib/admin/platforms";
+
+// Pages qui lisent le contexte de plateforme dans l'URL (prompt 6) : changer
+// de plateforme dessus met `?plateforme=` à jour plutôt que de l'ajouter à
+// une page qui l'ignorerait.
+const PLATFORM_AWARE_PATHS = ["/admin/feedback", "/admin/roadmap", "/admin/aide"];
 
 /**
  * Coquille responsive du super-admin /admin.
@@ -12,22 +19,39 @@ import { AdminSidebar } from "./admin-sidebar";
  *  - Desktop (≥ lg) : sidebar statique dans la grille (232 px + contenu).
  *  - Mobile (< lg)  : topbar avec hamburger + sidebar en tiroir off-canvas,
  *    voile de fond et verrou de scroll. Le tiroir se ferme à chaque navigation.
+ *
+ * Contexte de plateforme : `initialPlatform` vient du cookie lu côté serveur
+ * (layout.tsx, qui n'a pas accès à `?plateforme=` — les layouts App Router ne
+ * reçoivent pas les searchParams). La query, quand elle est présente, prime
+ * sur ce prop initial ; un changement via le sélecteur écrit tout de suite
+ * dans l'état local (retour visuel immédiat, liseré compris), persiste le
+ * cookie en arrière-plan, et ne touche l'URL que sur les pages qui le lisent.
  */
 export function AdminShell({
   email,
   feedbackOpen = 0,
   moderationPending = 0,
   claimsPending = 0,
+  initialPlatform,
   children,
 }: {
   email: string;
   feedbackOpen?: number;
   moderationPending?: number;
   claimsPending?: number;
+  initialPlatform: AdminPlatform;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [manualPlatform, setManualPlatform] = useState<AdminPlatform | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const fromQuery = searchParams.get("plateforme");
+  const platform: AdminPlatform = isAdminPlatform(fromQuery) ? fromQuery : manualPlatform ?? initialPlatform;
+  const platformColor = getAdminPlatformMeta(platform).color;
 
   // Fermer le tiroir à chaque changement de page
   useEffect(() => {
@@ -41,6 +65,21 @@ export function AdminShell({
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  const handleChangePlatform = useCallback(
+    (id: AdminPlatform) => {
+      setManualPlatform(id);
+      startTransition(() => {
+        void setAdminPlatform(id);
+      });
+      if (PLATFORM_AWARE_PATHS.some((p) => pathname.startsWith(p))) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("plateforme", id);
+        router.replace(`${pathname}?${params.toString()}`);
+      }
+    },
+    [pathname, router, searchParams],
+  );
 
   return (
     <div className="grid h-[100dvh] grid-cols-1 grid-rows-[52px_1fr] overflow-hidden bg-cream lg:grid-cols-[232px_1fr] lg:grid-rows-1">
@@ -71,6 +110,8 @@ export function AdminShell({
           feedbackOpen={feedbackOpen}
           moderationPending={moderationPending}
           claimsPending={claimsPending}
+          platform={platform}
+          onChangePlatform={handleChangePlatform}
         />
       </div>
 
@@ -84,7 +125,9 @@ export function AdminShell({
         />
       )}
 
-      <main className="min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+      <main className="min-w-0 overflow-y-auto border-t-[3px] p-4 sm:p-6 lg:p-8" style={{ borderTopColor: platformColor }}>
+        {children}
+      </main>
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare, KeyRound, Globe2 } from "lucide-react";
+import { getAdminPlatformMeta, type AdminPlatform } from "@/lib/admin/platforms";
+import { PlatformSelector } from "./platform-selector";
 
 const NAV = [
   { href: "/admin", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
@@ -22,11 +24,34 @@ const NAV = [
   { href: "/admin/aide", label: "Centre d'aide", icon: BookOpen, exact: false },
 ];
 
-export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0, claimsPending = 0 }: { email: string; feedbackOpen?: number; moderationPending?: number; claimsPending?: number }) {
+// Ces trois pages lisent le contexte de plateforme (prompt 6) : leurs liens
+// portent `?plateforme=` pour que la navigation ne le perde pas. Les autres
+// pages de /admin sont par nature celles de l'admin, elles ne changent pas.
+const PLATFORM_AWARE_HREFS = new Set(["/admin/feedback", "/admin/roadmap", "/admin/aide"]);
+
+export function AdminSidebar({
+  email,
+  feedbackOpen = 0,
+  moderationPending = 0,
+  claimsPending = 0,
+  platform,
+  onChangePlatform,
+}: {
+  email: string;
+  feedbackOpen?: number;
+  moderationPending?: number;
+  claimsPending?: number;
+  platform: AdminPlatform;
+  onChangePlatform: (id: AdminPlatform) => void;
+}) {
   const pathname = usePathname();
+  const platformColor = getAdminPlatformMeta(platform).color;
 
   return (
-    <aside className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto bg-[#1a1a1a] text-white/90">
+    <aside
+      className="flex h-full w-[232px] shrink-0 flex-col overflow-y-auto bg-[#1a1a1a] text-white/90 border-r-[3px]"
+      style={{ borderRightColor: platformColor }}
+    >
       {/* En-tête */}
       <div className="flex shrink-0 items-center gap-2.5 border-b border-white/10 px-5 pb-4 pt-5">
         <img src="/logo-icon.webp" alt="Casa Minga" className="size-[34px] shrink-0 rounded-lg bg-white object-contain p-0.5" />
@@ -35,6 +60,9 @@ export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0, c
           <div className="truncate text-[10px] text-white/40">Plateforme Casa Minga</div>
         </div>
       </div>
+
+      {/* Contexte de travail */}
+      <PlatformSelector platform={platform} onChange={onChangePlatform} />
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3">
@@ -46,10 +74,13 @@ export function AdminSidebar({ email, feedbackOpen = 0, moderationPending = 0, c
             : item.href === "/admin/moderation" && moderationPending > 0 ? moderationPending
             : item.href === "/admin/revendications" && claimsPending > 0 ? claimsPending
             : 0;
+          const href = PLATFORM_AWARE_HREFS.has(item.href)
+            ? `${item.href}?plateforme=${encodeURIComponent(platform)}`
+            : item.href;
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={`mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${
                 active ? "bg-coral text-white" : "text-white/70 hover:bg-white/[0.07] hover:text-white"
               }`}
