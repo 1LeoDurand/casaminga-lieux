@@ -325,6 +325,9 @@ def pages(where):
         offset += 100
 
 
+LOT_UID = 80  # identifiants par requete : au-dela, l'URL devient trop longue
+
+
 def lire_lieux(fichier, depuis, jusqua):
     """
     Lit les evenements d'une liste blanche de lieux, et d'eux seuls.
@@ -337,16 +340,39 @@ def lire_lieux(fichier, depuis, jusqua):
     Un meme lieu reel y apparait parfois sous plusieurs identifiants
     OpenAgenda. Le champ « canonique » les ramene a un seul, sans quoi l'import
     creerait autant d'organisations que d'identifiants pour le meme endroit.
+
+    Les identifiants sont regroupes par lots de LOT_UID dans une seule clause
+    `location_uid in (...)` : une liste de plusieurs centaines de lieux (issue
+    du rapprochement avec l'annuaire, par exemple) ferait sinon une requete par
+    lieu, beaucoup trop lente.
     """
     liste = json.loads(Path(fichier).read_text(encoding="utf-8"))["lieux"]
     canonique = {l["uid"]: (l.get("canonique") or l["uid"]) for l in liste}
     fenetre = fenetre_temporelle(depuis, jusqua)
+    uids = list(canonique)
     rows = []
-    for uid, vers in canonique.items():
-        for r in pages(f'location_uid="{uid}" and {fenetre}'):
-            r["location_uid"] = vers
+    for i in range(0, len(uids), LOT_UID):
+        groupe = uids[i:i + LOT_UID]
+        clause = "location_uid in (" + ",".join(f'"{u}"' for u in groupe) + ")"
+        for r in pages(f"{clause} and {fenetre}"):
+            r["location_uid"] = canonique[r["location_uid"]]
             rows.append(r)
     return rows
+
+
+def lire_mapping_annuaire(fichier):
+    """
+    Association identifiant-lieu-canonique -> tiers-lieu de l'annuaire, quand
+    le fichier de liste blanche en porte (produit par
+    rapprocher-annuaire-openagenda.py). Une liste blanche etablie a la main
+    n'a pas ce champ : le mapping est alors vide, sans erreur.
+    """
+    liste = json.loads(Path(fichier).read_text(encoding="utf-8"))["lieux"]
+    mapping = {}
+    for l in liste:
+        if l.get("annuaire_id"):
+            mapping[l.get("canonique") or l["uid"]] = l["annuaire_id"]
+    return mapping
 
 
 def lire_source(departement, exclus, depuis=None, jusqua=None):
@@ -475,6 +501,39 @@ def retyper(db, source, essai):
           f"{len(changements)} changent de type, {hors_source} hors de la source lue (non traités)")
     for code, n in sorted(compte.items(), key=lambda x: -x[1]):
         print(f"  {code} : {n}")
+
+
+def rattacher_annuaire(db, mapping, existants, essai):
+    """
+    Rattache `annuaire_lieux.organization_id` a l'organisation issue de ce
+    lieu OpenAgenda, pour les tiers-lieux de l'annuaire representes dans ce
+    lot (import-openagenda.py --lieux <fichier issu du rapprochement>).
+
+    Ne touche jamais une ligne deja rattachee : un rattachement existant peut
+    venir d'une revendication ou d'un import precedent, on ne l'ecrase pas.
+    `essai` compte sans rien ecrire, comme le reste du script.
+    """
+    if not mapping:
+        return 0, 0
+    candidats = [(str(uuid.uuid5(NS, "org:" + luid)), aid) for luid, aid in mapping.items()]
+    candidats = [(oid, aid) for oid, aid in candidats if oid in existants]
+    if not candidats:
+        return 0, 0
+
+    ids = sorted({aid for _, aid in candidats})
+    libres = set()
+    for i in range(0, len(ids), 200):
+        clause = "id=in.(" + ",".join(ids[i:i + 200]) + ")"
+        for row in db._call("GET", f"annuaire_lieux?select=id,organization_id&{clause}"):
+            if row["organization_id"] is None:
+                libres.add(row["id"])
+    a_ecrire = [(oid, aid) for oid, aid in candidats if aid in libres]
+
+    if not essai:
+        for oid, aid in a_ecrire:
+            db._call("PATCH", f"annuaire_lieux?id=eq.{aid}", {"organization_id": oid},
+                     headers={"Prefer": "return=minimal"})
+    return len(a_ecrire), len(candidats)
 
 
 def main():
@@ -610,6 +669,12 @@ def main():
         else:
             etab_de[luid] = None
 
+    # Rattachement annuaire_lieux.organization_id (uniquement si --lieux vient
+    # du rapprochement avec l'annuaire, càd si le fichier porte "annuaire_id").
+    mapping_annuaire = lire_mapping_annuaire(args.lieux) if args.lieux else {}
+    existants = set(org_slug) | {o["id"] for o in orgs}
+    ecrits_annuaire, candidats_annuaire = rattacher_annuaire(db, mapping_annuaire, existants, args.essai)
+
     evenements, provenance = [], []
     for r in lot:
         eid = str(uuid.uuid5(NS, "evt:" + r["uid"]))
@@ -649,6 +714,9 @@ def main():
     print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
     print(f"Lot      : {len(lot)} événements, {len(orgs)} lieux créés, {len(sites)} vitrines techniques, {len(etabs)} établissements ({mode})")
     print(f"Reste    : {len(nouveaux) - len(lot)} événements après ce lot")
+    if mapping_annuaire:
+        verbe = "à rattacher (essai)" if args.essai else "rattachés"
+        print(f"Annuaire : {ecrits_annuaire} organization_id {verbe} sur {candidats_annuaire} tiers-lieux représentés dans ce lot")
     print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
 
 
