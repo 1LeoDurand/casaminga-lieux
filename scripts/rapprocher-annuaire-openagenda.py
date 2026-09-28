@@ -102,6 +102,33 @@ DISTANCE_SURE_M = 30
 SCORE_MIN = 0.5
 CELLULE_DEG = 0.01  # ~1,1 km : grande marge devant le rayon de 150 m recherche
 
+# Resserrement du 2026-09-28 (rapport 2.2 : 103 des 239 retenus l'etaient sur
+# la seule distance, score de nom nul, avec des faux positifs manifestes :
+# agences France Travail, mediatheques, hotels colocalises avec un vrai
+# tiers-lieu). Un lieu OpenAgenda dont le nom correspond a l'un de ces motifs
+# est ecarte d'office, quel que soit le score de nom ou la distance. Liste a
+# ajuster si la relecture des douteux ou des retenus montre un motif manquant
+# ou trop large. « ecole » est un cas particulier : voir EXCLUSION_ECOLE_SAUF
+# ci-dessous (le mot ne disqualifie pas si le tiers-lieu de l'annuaire porte
+# lui-meme ce mot, ex. une vraie « ecole de … » tiers-lieu).
+EXCLUSIONS_NOM = [
+    r"\bagence\b", r"france\s*travail", r"p[oô]le\s*emploi", r"mission\s*locale",
+    r"m[eé]diath[eè]que", r"biblioth[eè]que", r"ludoth[eè]que",
+    r"\bmairie\b", r"h[oô]tel\s*de\s*ville", r"office\s*de\s*tourisme",
+    r"cin[eé]ma", r"\bh[oô]tel\b", r"\bcamping\b", r"\b[eé]glise\b",
+    r"\bparoisse\b", r"\bcoll[eè]ge\b", r"\blyc[eé]e\b",
+    # Antennes de Mission locale nommees par un code de site plutot que par le
+    # mot entier (ex. « Bellac - 87-ML ST YRIEIX LA PERCHE ») : releve sur
+    # l'echantillon des « distance seule » du 2026-09-28.
+    r"\d{2}-ml\b",
+]
+EXCLUSION_ECOLE = r"\b[eé]cole\b"
+
+# Agenda source dont le titre trahit une agence France Travail meme quand le
+# nom du lieu ne le dit pas (relecture 2.2). Non applicable ici : l'agregation
+# group_by de ce script ne lit pas `originagenda_title` (voir lire_lieux_openagenda).
+# Ce filtre-la vit dans import-openagenda.py (--exclure), applique par evenement.
+
 
 # ── Environnement ───────────────────────────────────────────────────────────
 
@@ -181,6 +208,16 @@ def tokens_nom(nom):
     return {m for m in mots if len(m) > 1 and m not in STOPWORDS}
 
 
+def nom_exclu(nom_openagenda, nom_annuaire):
+    """True si le nom du lieu OpenAgenda correspond a un motif d'exclusion
+    (agence, mediatheque, mairie, etc.). « ecole » ne disqualifie pas si le
+    tiers-lieu de l'annuaire porte lui-meme ce mot (vraie ecole tiers-lieu)."""
+    n = sans_accents(nom_openagenda or "").lower()
+    if re.search(EXCLUSION_ECOLE, n) and not re.search(EXCLUSION_ECOLE, sans_accents(nom_annuaire or "").lower()):
+        return True
+    return any(re.search(motif, n) for motif in EXCLUSIONS_NOM)
+
+
 def score_nom(a, b):
     """Coefficient de Dice sur les mots significatifs communs : 1 si les deux
     ensembles de mots sont identiques, 0 s'ils n'ont rien en commun. Un nom
@@ -211,6 +248,7 @@ def apparier(annuaire, oa_lieux):
         grille.setdefault(cellule(a["latitude"], a["longitude"]), []).append(i)
 
     retenus, douteux = {}, []
+    exclus_nom = 0
     for oa in oa_lieux:
         if oa["lat"] is None or oa["lon"] is None:
             continue
@@ -248,11 +286,24 @@ def apparier(annuaire, oa_lieux):
 
         entree = {**meilleur, "uid": oa["uid"], "nom_openagenda": oa["nom"],
                   "ville_openagenda": oa["ville"], "cp_openagenda": oa["cp"], "evenements": oa["nb"]}
-        if meilleur["distance_m"] <= DISTANCE_SURE_M or meilleur["score"] >= SCORE_MIN:
+
+        if nom_exclu(oa["nom"], meilleur["nom_annuaire"]):
+            exclus_nom += 1
+            continue
+
+        distance_seule = meilleur["score"] == 0.0 and meilleur["distance_m"] <= DISTANCE_SURE_M
+        if distance_seule:
+            # Resserrement 2.3 : la seule proximite ne suffit plus si le lieu
+            # OpenAgenda colocalise avec plusieurs tiers-lieux (ambigu).
+            if len(candidats) == 1:
+                retenus[oa["uid"]] = entree
+            else:
+                douteux.append(entree)
+        elif meilleur["distance_m"] <= DISTANCE_SURE_M or meilleur["score"] >= SCORE_MIN:
             retenus[oa["uid"]] = entree
         else:
             douteux.append(entree)
-    return retenus, douteux
+    return retenus, douteux, exclus_nom
 
 
 def grouper_canonique(retenus):
@@ -286,9 +337,10 @@ def main():
     print(f"  {len(oa_lieux)} lieux distincts, {sum(l['nb'] for l in oa_lieux)} evenements a venir au total")
 
     print("Rapprochement (grille, distance haversine, code postal ou commune, score de nom)...")
-    retenus, douteux = apparier(annuaire, oa_lieux)
+    retenus, douteux, exclus_nom = apparier(annuaire, oa_lieux)
     lieux = grouper_canonique(retenus)
     tiers_lieux_touches = len({l["annuaire_id"] for l in lieux})
+    distance_seule = sum(1 for l in lieux if l["score"] == 0.0)
 
     DOSSIER_SORTIE.mkdir(parents=True, exist_ok=True)
 
@@ -316,8 +368,10 @@ def main():
             "annuaire_non_masques_geolocalises": len(annuaire),
             "lieux_openagenda_a_venir": len(oa_lieux),
             "uid_openagenda_retenus": len(lieux),
+            "dont_distance_seule": distance_seule,
             "tiers_lieux_annuaire_touches": tiers_lieux_touches,
             "douteux": len(douteux),
+            "exclus_par_nom": exclus_nom,
         },
         "lieux": lieux,
     }
@@ -337,7 +391,8 @@ def main():
     (DOSSIER_SORTIE / "lieux-annuaire-openagenda-douteux.json").write_text(
         json.dumps(sortie_douteux, ensure_ascii=False, indent=1), encoding="utf-8")
 
-    print(f"\nRetenus  : {len(lieux)} identifiants OpenAgenda, {tiers_lieux_touches} tiers-lieux de l'annuaire touches")
+    print(f"\nRetenus  : {len(lieux)} identifiants OpenAgenda ({distance_seule} sur la seule distance), {tiers_lieux_touches} tiers-lieux de l'annuaire touches")
+    print(f"Exclus   : {exclus_nom} par motif de nom (agence, mediatheque, mairie, etc.)")
     print(f"Douteux  : {len(douteux)} (dans lieux-annuaire-openagenda-douteux.json, non retenus)")
     print(f"Fichiers : {DOSSIER_SORTIE / 'lieux-annuaire-openagenda.json'}")
     print(f"           {DOSSIER_SORTIE / 'lieux-annuaire-openagenda-douteux.json'}")

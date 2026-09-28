@@ -22,9 +22,11 @@
  "compte": {
   "annuaire_non_masques_geolocalises": 3950,
   "lieux_openagenda_a_venir": 11010,
-  "uid_openagenda_retenus": 239,
-  "tiers_lieux_annuaire_touches": 195,
-  "douteux": 596
+  "uid_openagenda_retenus": 156,
+  "dont_distance_seule": 37,
+  "tiers_lieux_annuaire_touches": 125,
+  "douteux": 395,
+  "exclus_par_nom": 284
  },
  "lieux": [
   {
@@ -80,19 +82,6 @@
    "canonique": "15548371"
   },
   {
-   "annuaire_id": "056f765a-a171-5d2d-932c-ae01b32b0209",
-   "nom_annuaire": "La Chahutte",
-   "commune_annuaire": "Cluny",
-   "distance_m": 1.8,
-   "score": 0.0,
-   "uid": "18865380",
-   "nom_openagenda": "Cluny - Agence MACON",
-   "ville_openagenda": "Cluny",
-   "cp_openagenda": "71250",
-   "evenements": 2,
-   "canonique": "18865380"
-  },
-  {
    "annuaire_id": "05e5b2f8-0396-5f07-bbda-d1965d7c6c7b",
    "nom_annuaire": "Atelier Partagé du Breil",
    "commune_annuaire": "Nantes",
@@ -104,19 +93,6 @@
    "cp_openagenda": "44036",
    "evenements": 1,
    "canonique": "70447035"
-  },
-  {
-   "annuaire_id": "0a225e4b-2070-5c51-9eb4-9850b9c3e3a1",
-   "nom_annuaire": "L'@telier du Palais",
-   "commune_annuaire": "Bellac",
-   "distance_m": 15.2,
-   "score": 0.0,
-   "uid": "28994629",
-   "nom_openagenda": "Bellac - 87-ML ST YRIEIX LA PERCHE",
-   "ville_openagenda": "Bellac",
-   "cp_openagenda": "87300",
-   "evenements": 6,
-   "canonique": "28994629"
   },
   {
    "annuaire_id": "0c5eadc7-add4-55ea-becd-2fd69bf23461",
@@ -184,19 +160,6 @@
    "canonique": "14270820"
   },
   {
-   "annuaire_id": "12fcdfd1-d157-5805-90fd-0f42ba713f0a",
-   "nom_annuaire": "Epicentre Factory",
-   "commune_annuaire": "Clermont-Ferrand",
-   "distance_m": 21.3,
-   "score": 0.0,
-   "uid": "77265672",
-   "nom_openagenda": "Hôtel Fontfreyde - Centre photographique",
-   "ville_openagenda": "Clermont-Ferrand",
-   "cp_openagenda": "63000",
-   "evenements": 1,
-   "canonique": "77265672"
-  },
-  {
    "annuaire_id": "147036c1-a7b7-58b5-972d-6389445abd17",
    "nom_annuaire": "La Cômerie",
    "commune_annuaire": "Marseille",
@@ -210,32 +173,6 @@
    "canonique": "22698024"
   },
   {
-   "annuaire_id": "157ae565-cb87-58a5-ba63-cd2e96a618ed",
-   "nom_annuaire": "Coworking WTCMP",
-   "commune_annuaire": "Marseille",
-   "distance_m": 23.4,
-   "score": 0.0,
-   "uid": "35427875",
-   "nom_openagenda": "Agence MARSEILLE CAP PINEDE",
-   "ville_openagenda": "Marseille",
-   "cp_openagenda": "13001",
-   "evenements": 1,
-   "canonique": "60687388"
-  },
-  {
-   "annuaire_id": "157ae565-cb87-58a5-ba63-cd2e96a618ed",
-   "nom_annuaire": "Coworking WTCMP",
-   "commune_annuaire": "Marseille",
-   "distance_m": 23.4,
-   "score": 0.0,
-   "uid": "60687388",
-   "nom_openagenda": "Agence MARSEILLE SAINT CHARLES",
-   "ville_openagenda": "Marseille",
-   "cp_openagenda": "13001",
-   "evenements": 19,
-   "canonique": "60687388"
-  },
-  {
    "annuaire_id": "168f0e6e-f8d4-54df-aa72-dfc865543147",
    "nom_annuaire": "Ancien Collège Fieffé",
    "commune_annuaire": "Bordeaux",
@@ -247,45 +184,6 @@
    "cp_openagenda": "33800",
    "evenements": 4,
    "canonique": "32143952"
-  },
-  {
-   "annuaire_id": "168f0e6e-f8d4-54df-aa72-dfc865543147",
-   "nom_annuaire": "Ancien Collège Fieffé",
-   "commune_annuaire": "Bordeaux",
-   "distance_m": 27.4,
-   "score": 0.0,
-   "uid": "78093366",
-   "nom_openagenda": "KIno Session",
-   "ville_openagenda": "Bordeaux",
-   "cp_openagenda": "33800",
-   "evenements": 2,
-   "canonique": "32143952"
-  },
-  {
-   "annuaire_id": "17e5d48f-a894-529c-82cb-f25d7c58704c",
-   "nom_annuaire": "La Cycklette",
-   "commune_annuaire": "Paris",
-   "distance_m": 13.6,
-   "score": 0.0,
-   "uid": "2489174",
-   "nom_openagenda": "Agence Paris 11eme Beaumarchais",
-   "ville_openagenda": "Paris",
-   "cp_openagenda": "75011",
-   "evenements": 11,
-   "canonique": "2489174"
-  },
-  {
-   "annuaire_id": "19edbeaa-a9ef-5344-b59f-20b1dd2e6908",
-   "nom_annuaire": "La maison Phare",
-   "commune_annuaire": "Dijon",
-   "distance_m": 8.0,
-   "score": 0.0,
-   "uid": "59068029",
-   "nom_openagenda": "Bibliothèque Fontaine D'ouche",
-   "ville_openagenda": "Dijon",
-   "cp_openagenda": "21000",
-   "evenements": 3,
-   "canonique": "59068029"
   },
   {
    "annuaire_id": "1b4b90bc-75da-5964-9be4-0531acae9a5f",
@@ -314,45 +212,6 @@
    "canonique": "57496969"
   },
   {
-   "annuaire_id": "1c1d7062-bad1-5cbc-88df-78585d1dd46e",
-   "nom_annuaire": "FabLab Micro-Folie Levallois",
-   "commune_annuaire": "Levallois-Perret",
-   "distance_m": 2.7,
-   "score": 0.25,
-   "uid": "86754231",
-   "nom_openagenda": "Médiathèque de Levallois Gustave Eiffel",
-   "ville_openagenda": "Levallois-Perret",
-   "cp_openagenda": "92300",
-   "evenements": 1,
-   "canonique": "86754231"
-  },
-  {
-   "annuaire_id": "1f10e650-30f4-5be6-8b59-3e08ac4adca3",
-   "nom_annuaire": "FacLab",
-   "commune_annuaire": "Gennevilliers",
-   "distance_m": 13.4,
-   "score": 0.0,
-   "uid": "86724947",
-   "nom_openagenda": "Médiathèque François-Rabelais",
-   "ville_openagenda": "Gennevilliers",
-   "cp_openagenda": "92230",
-   "evenements": 4,
-   "canonique": "86724947"
-  },
-  {
-   "annuaire_id": "210b87ae-458a-5bb2-b191-2027e657af02",
-   "nom_annuaire": "BiblioFab",
-   "commune_annuaire": "Paris",
-   "distance_m": 4.8,
-   "score": 0.0,
-   "uid": "78886070",
-   "nom_openagenda": "Médiathèque Marguerite Duras",
-   "ville_openagenda": "Paris",
-   "cp_openagenda": "75020",
-   "evenements": 1,
-   "canonique": "78886070"
-  },
-  {
    "annuaire_id": "22b30547-f0a3-58cc-a88a-7e275b8c8822",
    "nom_annuaire": "Auberge participative El Capitan",
    "commune_annuaire": "Athis-Val de Rouvre",
@@ -379,19 +238,6 @@
    "canonique": "91924869"
   },
   {
-   "annuaire_id": "2348bb09-f612-5455-9e6c-ace9ab03b73b",
-   "nom_annuaire": "L'Escalier",
-   "commune_annuaire": "Saint-Léonard-de-Noblat",
-   "distance_m": 3.8,
-   "score": 0.0,
-   "uid": "31715695",
-   "nom_openagenda": "Saint-Léonard-de-Noblat - 87-ML ST YRIEIX LA PERCHE",
-   "ville_openagenda": "Saint-Léonard-de-Noblat",
-   "cp_openagenda": "87400",
-   "evenements": 1,
-   "canonique": "31715695"
-  },
-  {
    "annuaire_id": "23c199ad-8345-5400-b945-499be7a164dd",
    "nom_annuaire": "Les Douves",
    "commune_annuaire": "Bordeaux",
@@ -408,19 +254,6 @@
    "annuaire_id": "24d5e345-3679-57f3-8c26-a875286b96e9",
    "nom_annuaire": "Atelier Dulcie September",
    "commune_annuaire": "Nantes",
-   "distance_m": 14.1,
-   "score": 0.0,
-   "uid": "12770666",
-   "nom_openagenda": "Galerie Gaïa",
-   "ville_openagenda": "Nantes",
-   "cp_openagenda": "44000",
-   "evenements": 1,
-   "canonique": "12770666"
-  },
-  {
-   "annuaire_id": "24d5e345-3679-57f3-8c26-a875286b96e9",
-   "nom_annuaire": "Atelier Dulcie September",
-   "commune_annuaire": "Nantes",
    "distance_m": 28.9,
    "score": 1.0,
    "uid": "46956258",
@@ -428,20 +261,7 @@
    "ville_openagenda": "Nantes",
    "cp_openagenda": "44000",
    "evenements": 1,
-   "canonique": "12770666"
-  },
-  {
-   "annuaire_id": "27fcc8de-c365-5042-965e-63f93fb5c1f1",
-   "nom_annuaire": "Chlorofeel Coworking Lyon-Meyzieu",
-   "commune_annuaire": "Meyzieu",
-   "distance_m": 0.7,
-   "score": 0.286,
-   "uid": "95249136",
-   "nom_openagenda": "Meyzieu - Agence VENISSIEUX",
-   "ville_openagenda": "Meyzieu",
-   "cp_openagenda": "69330",
-   "evenements": 1,
-   "canonique": "95249136"
+   "canonique": "46956258"
   },
   {
    "annuaire_id": "2a30441b-a662-549b-8cfb-037c56aaf594",
@@ -535,19 +355,6 @@
    "canonique": "89494972"
   },
   {
-   "annuaire_id": "3655887b-f256-5ca4-b228-407c24d08453",
-   "nom_annuaire": "Tiers-Lieu Le Château",
-   "commune_annuaire": "Lassigny",
-   "distance_m": 3.4,
-   "score": 0.0,
-   "uid": "37748644",
-   "nom_openagenda": "Lassigny - Agence NOYON",
-   "ville_openagenda": "Lassigny",
-   "cp_openagenda": "60310",
-   "evenements": 2,
-   "canonique": "37748644"
-  },
-  {
    "annuaire_id": "391f9804-b359-5d21-abbf-d948b021975f",
    "nom_annuaire": "La Filature des Possibles",
    "commune_annuaire": "Lisieux",
@@ -587,19 +394,6 @@
    "canonique": "97254849"
   },
   {
-   "annuaire_id": "3baf70a4-e39c-50b3-9a05-01c3ae0973ef",
-   "nom_annuaire": "OUSTAL DE BOURDEAUX",
-   "commune_annuaire": "Bourdeaux",
-   "distance_m": 132.3,
-   "score": 0.5,
-   "uid": "80301145",
-   "nom_openagenda": "médiathèque de bourdeaux",
-   "ville_openagenda": "Bourdeaux",
-   "cp_openagenda": "26460",
-   "evenements": 1,
-   "canonique": "80301145"
-  },
-  {
    "annuaire_id": "3d91d219-4562-59a8-a568-6499de0b7389",
    "nom_annuaire": "Maison des Entreprises de l'île d'Oléron (La)",
    "commune_annuaire": "Saint-Georges-d'Oléron",
@@ -624,19 +418,6 @@
    "cp_openagenda": "51100",
    "evenements": 1,
    "canonique": "73121746"
-  },
-  {
-   "annuaire_id": "43827ae8-6615-5005-a1dd-4f8e2258e377",
-   "nom_annuaire": "Afpa- Village des Solutions Saint Herblain",
-   "commune_annuaire": "Saint-Herblain",
-   "distance_m": 1.8,
-   "score": 0.4,
-   "uid": "72138252",
-   "nom_openagenda": "Saint-Herblain - Agence NANTES NORD",
-   "ville_openagenda": "Saint-Herblain",
-   "cp_openagenda": "44800",
-   "evenements": 1,
-   "canonique": "72138252"
   },
   {
    "annuaire_id": "44b414f2-95bf-5604-9f23-af515f61acac",
@@ -691,19 +472,6 @@
    "canonique": "46264627"
   },
   {
-   "annuaire_id": "4e025644-78ee-5de6-af52-0522caafa418",
-   "nom_annuaire": "Tiers-Lieu du Numérique de Saint-Pol-sur-ternoise",
-   "commune_annuaire": "Saint-Pol-sur-Ternoise",
-   "distance_m": 114.5,
-   "score": 0.8,
-   "uid": "20985386",
-   "nom_openagenda": "Agence SAINT-POL-SUR-TERNOISE",
-   "ville_openagenda": "Saint-Pol-sur-Ternoise",
-   "cp_openagenda": "62130",
-   "evenements": 3,
-   "canonique": "20985386"
-  },
-  {
    "annuaire_id": "4ebf7e9a-80bb-5cbb-a733-82b5b5b07c40",
    "nom_annuaire": "La Fabrique ENSAM",
    "commune_annuaire": "Montpellier",
@@ -743,19 +511,6 @@
    "canonique": "90848790"
   },
   {
-   "annuaire_id": "52c93ab0-5162-528d-a7d9-29fff9842f35",
-   "nom_annuaire": "Micro Atelier",
-   "commune_annuaire": "Proville",
-   "distance_m": 4.5,
-   "score": 0.0,
-   "uid": "40193903",
-   "nom_openagenda": "Médiathèque, Proville",
-   "ville_openagenda": "Proville",
-   "cp_openagenda": "59267",
-   "evenements": 1,
-   "canonique": "40193903"
-  },
-  {
    "annuaire_id": "52ed37d6-dbe8-51ea-8b71-f35bcfcb37d8",
    "nom_annuaire": "Etincelle coworking Montauban",
    "commune_annuaire": "Montauban",
@@ -780,19 +535,6 @@
    "cp_openagenda": "83137",
    "evenements": 1,
    "canonique": "63746548"
-  },
-  {
-   "annuaire_id": "5403d538-4672-51d4-b333-7639ab096b93",
-   "nom_annuaire": "Mobilab",
-   "commune_annuaire": "Rennes",
-   "distance_m": 29.8,
-   "score": 0.0,
-   "uid": "6626449",
-   "nom_openagenda": "Triangle - cité de la danse",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35200",
-   "evenements": 2,
-   "canonique": "6626449"
   },
   {
    "annuaire_id": "5566f179-ef8e-52f2-b61d-c18017c4f629",
@@ -845,32 +587,6 @@
    "cp_openagenda": "75019",
    "evenements": 1,
    "canonique": "12172052"
-  },
-  {
-   "annuaire_id": "58d85d88-5b59-53f7-ac27-97db06fc601a",
-   "nom_annuaire": "Thiercelieux",
-   "commune_annuaire": "Aups",
-   "distance_m": 5.1,
-   "score": 0.0,
-   "uid": "34518128",
-   "nom_openagenda": "Aups - Agence DRAGUIGNAN",
-   "ville_openagenda": "Aups",
-   "cp_openagenda": "83630",
-   "evenements": 2,
-   "canonique": "34518128"
-  },
-  {
-   "annuaire_id": "5960e3d6-7b6d-5997-839e-ae923cfd2855",
-   "nom_annuaire": "La K'Fet Solidaire",
-   "commune_annuaire": "Le Lamentin",
-   "distance_m": 6.7,
-   "score": 0.0,
-   "uid": "49327578",
-   "nom_openagenda": "Le Lamentin - Agence LA TRINITE",
-   "ville_openagenda": "Le Lamentin",
-   "cp_openagenda": "97232",
-   "evenements": 1,
-   "canonique": "49327578"
   },
   {
    "annuaire_id": "5a9c99e8-f510-52c0-92ea-0c11bdc80352",
@@ -977,32 +693,6 @@
    "canonique": "45593492"
   },
   {
-   "annuaire_id": "6907c98c-fdc6-5cd0-9c37-be35595249f0",
-   "nom_annuaire": "Lasécu",
-   "commune_annuaire": "Lille",
-   "distance_m": 21.0,
-   "score": 0.0,
-   "uid": "18711142",
-   "nom_openagenda": "Médiathèque de Fives",
-   "ville_openagenda": "Lille",
-   "cp_openagenda": "59000",
-   "evenements": 5,
-   "canonique": "18711142"
-  },
-  {
-   "annuaire_id": "6907c98c-fdc6-5cd0-9c37-be35595249f0",
-   "nom_annuaire": "Lasécu",
-   "commune_annuaire": "Lille",
-   "distance_m": 21.0,
-   "score": 0.0,
-   "uid": "48588685",
-   "nom_openagenda": "Médiathèque de Fives",
-   "ville_openagenda": "Lille",
-   "cp_openagenda": "59000",
-   "evenements": 1,
-   "canonique": "18711142"
-  },
-  {
    "annuaire_id": "6c04d0bb-cdbb-548c-ade8-a01aa6573e4f",
    "nom_annuaire": "La Pop",
    "commune_annuaire": "Paris",
@@ -1014,32 +704,6 @@
    "cp_openagenda": "75019",
    "evenements": 1,
    "canonique": "63982087"
-  },
-  {
-   "annuaire_id": "6fd76973-9f39-5520-acee-3819a42a6208",
-   "nom_annuaire": "Tiers lieu Familles Rurales Moyon-Tessy",
-   "commune_annuaire": "Moyon Villages",
-   "distance_m": 15.3,
-   "score": 0.333,
-   "uid": "4493020",
-   "nom_openagenda": "Médiathèque de Moyon",
-   "ville_openagenda": "Moyon Villages",
-   "cp_openagenda": "50860",
-   "evenements": 1,
-   "canonique": "4493020"
-  },
-  {
-   "annuaire_id": "70a9e97f-d859-5f52-9319-24f057c06290",
-   "nom_annuaire": "Le CRIJ",
-   "commune_annuaire": "Besançon",
-   "distance_m": 19.0,
-   "score": 0.0,
-   "uid": "32492980",
-   "nom_openagenda": "Médiathèque Pierre Bayle - Besancon",
-   "ville_openagenda": "Besançon",
-   "cp_openagenda": "25000",
-   "evenements": 2,
-   "canonique": "32492980"
   },
   {
    "annuaire_id": "7285c4e9-aaa3-5f1a-9c95-f60b602c45ee",
@@ -1092,19 +756,6 @@
    "cp_openagenda": "13009",
    "evenements": 1,
    "canonique": "43429891"
-  },
-  {
-   "annuaire_id": "77fcfaad-7549-5b1b-a348-535f40c2a82b",
-   "nom_annuaire": "La Buvette de l'Académie du Climat",
-   "commune_annuaire": "Paris",
-   "distance_m": 1.4,
-   "score": 0.0,
-   "uid": "24632242",
-   "nom_openagenda": "Bibliothèque Arthur Rimbaud",
-   "ville_openagenda": "Paris",
-   "cp_openagenda": "75004",
-   "evenements": 3,
-   "canonique": "24632242"
   },
   {
    "annuaire_id": "787117c8-ed7d-54c6-b2c4-ae56b9af2744",
@@ -1182,7 +833,7 @@
    "ville_openagenda": "Marseille",
    "cp_openagenda": "13003",
    "evenements": 1,
-   "canonique": "52982511"
+   "canonique": "40968154"
   },
   {
    "annuaire_id": "7acea902-32b7-5e11-9edf-f257512e314f",
@@ -1195,20 +846,7 @@
    "ville_openagenda": "Marseille",
    "cp_openagenda": "13003",
    "evenements": 3,
-   "canonique": "52982511"
-  },
-  {
-   "annuaire_id": "7acea902-32b7-5e11-9edf-f257512e314f",
-   "nom_annuaire": "Friche La Belle de Mai",
-   "commune_annuaire": "Marseille",
-   "distance_m": 95.7,
-   "score": 0.571,
-   "uid": "52982511",
-   "nom_openagenda": "Agence MARSEILLE BELLE DE MAI",
-   "ville_openagenda": "Marseille",
-   "cp_openagenda": "13003",
-   "evenements": 37,
-   "canonique": "52982511"
+   "canonique": "40968154"
   },
   {
    "annuaire_id": "7afbeb20-51fb-5535-8549-b2aa039c3352",
@@ -1222,19 +860,6 @@
    "cp_openagenda": "59100",
    "evenements": 1,
    "canonique": "95373711"
-  },
-  {
-   "annuaire_id": "7b038ff2-0e50-5fd5-ab07-7ce21d0788b5",
-   "nom_annuaire": "Le Vaisseau Poitiers",
-   "commune_annuaire": "Poitiers",
-   "distance_m": 8.5,
-   "score": 0.4,
-   "uid": "63096855",
-   "nom_openagenda": "Poitiers - Agence FUTUROSCOPE",
-   "ville_openagenda": "Poitiers",
-   "cp_openagenda": "86000",
-   "evenements": 2,
-   "canonique": "63096855"
   },
   {
    "annuaire_id": "7ba82cb9-0d3c-5ace-a50a-98e8680df67f",
@@ -1287,19 +912,6 @@
    "cp_openagenda": "15000",
    "evenements": 1,
    "canonique": "96770499"
-  },
-  {
-   "annuaire_id": "7e98dd80-a7be-5f38-beca-d3dca525a5a3",
-   "nom_annuaire": "La Capsule",
-   "commune_annuaire": "Grenoble",
-   "distance_m": 14.5,
-   "score": 0.0,
-   "uid": "15894668",
-   "nom_openagenda": "La Bouillotte",
-   "ville_openagenda": "Grenoble",
-   "cp_openagenda": "38000",
-   "evenements": 1,
-   "canonique": "15894668"
   },
   {
    "annuaire_id": "7eff6f13-09ee-5380-af5c-beb5ab114dc4",
@@ -1367,19 +979,6 @@
    "canonique": "10510127"
   },
   {
-   "annuaire_id": "81a8a9ce-381e-531d-a1e5-5511adfba061",
-   "nom_annuaire": "Sofffa",
-   "commune_annuaire": "Lyon",
-   "distance_m": 3.9,
-   "score": 0.0,
-   "uid": "63474667",
-   "nom_openagenda": "ballad TM café - Terreaux",
-   "ville_openagenda": "Lyon",
-   "cp_openagenda": "69001",
-   "evenements": 1,
-   "canonique": "63474667"
-  },
-  {
    "annuaire_id": "821275bf-53a4-5ec7-9d47-ed49f937445e",
    "nom_annuaire": "LE MOULIN DE ROQUES",
    "commune_annuaire": "Roques",
@@ -1406,19 +1005,6 @@
    "canonique": "81695559"
   },
   {
-   "annuaire_id": "8434d133-e783-5ba6-ad4b-a0da4208e73d",
-   "nom_annuaire": "La Halle Girondins",
-   "commune_annuaire": "Lyon",
-   "distance_m": 16.7,
-   "score": 0.0,
-   "uid": "12832480",
-   "nom_openagenda": "Lyon - DT RHONE",
-   "ville_openagenda": "Lyon",
-   "cp_openagenda": "69007",
-   "evenements": 4,
-   "canonique": "12832480"
-  },
-  {
    "annuaire_id": "869fb5fd-7bc6-5090-9f72-b7d2ff2ee226",
    "nom_annuaire": "Le Nautilus",
    "commune_annuaire": "Perpignan",
@@ -1430,45 +1016,6 @@
    "cp_openagenda": "66000",
    "evenements": 8,
    "canonique": "38849794"
-  },
-  {
-   "annuaire_id": "875ccb8f-f423-5b5b-94d9-205752ddf592",
-   "nom_annuaire": "AFPA - Village des Solutions, Village du Care Lardy",
-   "commune_annuaire": "Lardy",
-   "distance_m": 4.5,
-   "score": 0.25,
-   "uid": "98715855",
-   "nom_openagenda": "Lardy - Agence Dourdan",
-   "ville_openagenda": "Lardy",
-   "cp_openagenda": "91510",
-   "evenements": 1,
-   "canonique": "98715855"
-  },
-  {
-   "annuaire_id": "88d330ee-6934-551c-ae93-0f4bc91683fa",
-   "nom_annuaire": "Tiers Lieu des Deux Rives - Valence d'Agen",
-   "commune_annuaire": "Valence",
-   "distance_m": 2.5,
-   "score": 0.286,
-   "uid": "48971463",
-   "nom_openagenda": "Valence - Agence CASTELSARRASIN",
-   "ville_openagenda": "Valence",
-   "cp_openagenda": "82400",
-   "evenements": 2,
-   "canonique": "48971463"
-  },
-  {
-   "annuaire_id": "89aba858-6a99-59dd-8440-6ce0f6c59c48",
-   "nom_annuaire": "Le Fil de Soi",
-   "commune_annuaire": "Décines-Charpieu",
-   "distance_m": 4.9,
-   "score": 0.0,
-   "uid": "39468800",
-   "nom_openagenda": "Décines-Charpieu - Agence VAULX EN VELIN",
-   "ville_openagenda": "Décines-Charpieu",
-   "cp_openagenda": "69150",
-   "evenements": 2,
-   "canonique": "39468800"
   },
   {
    "annuaire_id": "89f76ac6-cbe0-5610-bf98-5805e6de8738",
@@ -1510,19 +1057,6 @@
    "canonique": "12074320"
   },
   {
-   "annuaire_id": "8d42bff6-0953-5600-b793-49662d898520",
-   "nom_annuaire": "U Metafornu",
-   "commune_annuaire": "L'Île-Rousse",
-   "distance_m": 6.6,
-   "score": 0.0,
-   "uid": "72652814",
-   "nom_openagenda": "L'Île-Rousse - Agence ILE ROUSSE",
-   "ville_openagenda": "Aregno",
-   "cp_openagenda": "20220",
-   "evenements": 32,
-   "canonique": "72652814"
-  },
-  {
    "annuaire_id": "8e5d1cab-e5ac-5c40-ade0-606ffc5dc6c7",
    "nom_annuaire": "Les Petites Cantines Croix",
    "commune_annuaire": "Croix",
@@ -1547,19 +1081,6 @@
    "cp_openagenda": "59170",
    "evenements": 1,
    "canonique": "48241545"
-  },
-  {
-   "annuaire_id": "90d516d2-a15e-5bd6-a0d2-0eec374315b9",
-   "nom_annuaire": "le SARCUS",
-   "commune_annuaire": "Nogent-sur-Oise",
-   "distance_m": 3.8,
-   "score": 0.0,
-   "uid": "37090820",
-   "nom_openagenda": "Nogent-sur-Oise - Agence BEAUVAIS MYKONOS",
-   "ville_openagenda": "Nogent-sur-Oise",
-   "cp_openagenda": "60180",
-   "evenements": 1,
-   "canonique": "37090820"
   },
   {
    "annuaire_id": "92c052b1-46f3-57ad-a0e6-34d88f4e40c2",
@@ -1599,19 +1120,6 @@
    "cp_openagenda": "44200",
    "evenements": 3,
    "canonique": "72085728"
-  },
-  {
-   "annuaire_id": "94f38349-e2d7-5643-aefd-1adc12d4d458",
-   "nom_annuaire": "En Terre Connectée",
-   "commune_annuaire": "Bohain-en-Vermandois",
-   "distance_m": 5.1,
-   "score": 0.222,
-   "uid": "50035589",
-   "nom_openagenda": "Bohain-en-Vermandois - Agence SAINT QUENTIN",
-   "ville_openagenda": "Bohain-en-Vermandois",
-   "cp_openagenda": "02110",
-   "evenements": 3,
-   "canonique": "50035589"
   },
   {
    "annuaire_id": "94fddcc9-bf71-528b-9778-32012b8e52a4",
@@ -1705,19 +1213,6 @@
    "canonique": "29436873"
   },
   {
-   "annuaire_id": "99d92d5f-e377-5a9d-9579-7ad96fb621a5",
-   "nom_annuaire": "L'Ouvre-Boîtes",
-   "commune_annuaire": "Valence-en-Poitou",
-   "distance_m": 5.8,
-   "score": 0.0,
-   "uid": "14319170",
-   "nom_openagenda": "Valence-en-Poitou - Agence MONTMORILLON",
-   "ville_openagenda": "Valence-en-Poitou",
-   "cp_openagenda": "86700",
-   "evenements": 3,
-   "canonique": "14319170"
-  },
-  {
    "annuaire_id": "99f79547-74bb-58ec-a0c3-a9b49f2d4cb5",
    "nom_annuaire": "Bistrot coopératif Les Sarrazins",
    "commune_annuaire": "Lille",
@@ -1731,19 +1226,6 @@
    "canonique": "5757343"
   },
   {
-   "annuaire_id": "9a1ba3c3-65d8-5b3d-a875-d04b02f331bc",
-   "nom_annuaire": "Lan Eko",
-   "commune_annuaire": "Hendaye",
-   "distance_m": 2.5,
-   "score": 0.0,
-   "uid": "5938583",
-   "nom_openagenda": "Hendaye - Agence SAINT JEAN DE LUZ",
-   "ville_openagenda": "Hendaye",
-   "cp_openagenda": "64700",
-   "evenements": 1,
-   "canonique": "5938583"
-  },
-  {
    "annuaire_id": "9a50a3cd-fa81-5c6c-b09c-4941ca554d10",
    "nom_annuaire": "FabLab d'Alsace-Nord",
    "commune_annuaire": "Haguenau",
@@ -1755,19 +1237,6 @@
    "cp_openagenda": "67500",
    "evenements": 1,
    "canonique": "88201148"
-  },
-  {
-   "annuaire_id": "9a8425e2-36ee-5778-99d3-86449ba177da",
-   "nom_annuaire": "Hérilab",
-   "commune_annuaire": "Héricourt",
-   "distance_m": 2.4,
-   "score": 0.0,
-   "uid": "40548889",
-   "nom_openagenda": "Médiathèque François Mitterrand d'Héricourt",
-   "ville_openagenda": "Héricourt",
-   "cp_openagenda": "70400",
-   "evenements": 1,
-   "canonique": "40548889"
   },
   {
    "annuaire_id": "9b0eefa3-e078-5d8f-943d-648dbb7a9a2a",
@@ -1809,32 +1278,6 @@
    "canonique": "26794021"
   },
   {
-   "annuaire_id": "a0dc2848-dab8-5146-bc24-b6d2bb858659",
-   "nom_annuaire": "Pôle accueil et animation de la vie sociale \"Ô9, Tous acteurs du territoire\"",
-   "commune_annuaire": "Sévérac d'Aveyron",
-   "distance_m": 3.2,
-   "score": 0.0,
-   "uid": "25326209",
-   "nom_openagenda": "Sévérac d'Aveyron - Agence MILLAU",
-   "ville_openagenda": "Sévérac d'Aveyron",
-   "cp_openagenda": "12150",
-   "evenements": 2,
-   "canonique": "25326209"
-  },
-  {
-   "annuaire_id": "a11f59be-6eb0-50d0-b065-ae148dc73ae8",
-   "nom_annuaire": "Médiathèque du Luc en Provence",
-   "commune_annuaire": "Le Luc",
-   "distance_m": 15.6,
-   "score": 1.0,
-   "uid": "69934607",
-   "nom_openagenda": "Médiathèque du Luc en Provence",
-   "ville_openagenda": "Le Luc",
-   "cp_openagenda": "83340",
-   "evenements": 1,
-   "canonique": "69934607"
-  },
-  {
    "annuaire_id": "a36c0f2c-9919-5ac4-8ca9-dba127214fed",
    "nom_annuaire": "AVANT SCENE LAB",
    "commune_annuaire": "Cognac",
@@ -1861,19 +1304,6 @@
    "canonique": "62293113"
   },
   {
-   "annuaire_id": "a5855c8e-059f-5c90-b6fd-679f46a68a69",
-   "nom_annuaire": "Gueules de Bois",
-   "commune_annuaire": "Nantes",
-   "distance_m": 3.8,
-   "score": 0.0,
-   "uid": "23637917",
-   "nom_openagenda": "Agence NANTES HALUCHERE",
-   "ville_openagenda": "Nantes",
-   "cp_openagenda": "44276",
-   "evenements": 1,
-   "canonique": "23637917"
-  },
-  {
    "annuaire_id": "a73c9d0e-7642-5aae-adc1-e6e7a2a62330",
    "nom_annuaire": "Le Labo - Cambrai",
    "commune_annuaire": "Cambrai",
@@ -1885,32 +1315,6 @@
    "cp_openagenda": "59400",
    "evenements": 2,
    "canonique": "63914398"
-  },
-  {
-   "annuaire_id": "ac061335-edd2-58e3-a52e-cf4f4623eac9",
-   "nom_annuaire": "Le Bêta-Lab",
-   "commune_annuaire": "Melle",
-   "distance_m": 5.3,
-   "score": 0.0,
-   "uid": "48559475",
-   "nom_openagenda": "Agence MELLE",
-   "ville_openagenda": "Melle",
-   "cp_openagenda": "79500",
-   "evenements": 11,
-   "canonique": "48559475"
-  },
-  {
-   "annuaire_id": "ac7030ba-5c1a-5a2b-a9e4-d9c6228d0a55",
-   "nom_annuaire": "Stereolux",
-   "commune_annuaire": "Nantes",
-   "distance_m": 12.2,
-   "score": 0.0,
-   "uid": "12064426",
-   "nom_openagenda": "Nantes - Agence ST HERBLAIN",
-   "ville_openagenda": "Nantes",
-   "cp_openagenda": "44200",
-   "evenements": 1,
-   "canonique": "21547859"
   },
   {
    "annuaire_id": "ac7030ba-5c1a-5a2b-a9e4-d9c6228d0a55",
@@ -2030,19 +1434,6 @@
    "canonique": "90512786"
   },
   {
-   "annuaire_id": "aef9de9b-e5a6-54fa-b357-546455a7d7b4",
-   "nom_annuaire": "Maison de l'Etudiant",
-   "commune_annuaire": "Marseille",
-   "distance_m": 2.8,
-   "score": 0.0,
-   "uid": "81463711",
-   "nom_openagenda": "Info Jeunes Sud Provence-Alpes-Côte d'Azur",
-   "ville_openagenda": "Marseille",
-   "cp_openagenda": "13001",
-   "evenements": 1,
-   "canonique": "81463711"
-  },
-  {
    "annuaire_id": "b0940266-cd74-5489-96d5-f85a92614836",
    "nom_annuaire": "La Cantine Quimper",
    "commune_annuaire": "Quimper",
@@ -2095,19 +1486,6 @@
    "canonique": "75949803"
   },
   {
-   "annuaire_id": "b3b76bb6-3ad1-5d5b-8f9a-20c88f4b3c5e",
-   "nom_annuaire": "La Tabatière",
-   "commune_annuaire": "La Réole",
-   "distance_m": 11.4,
-   "score": 0.0,
-   "uid": "99994642",
-   "nom_openagenda": "Office du tourisme de La Réole",
-   "ville_openagenda": "La Réole",
-   "cp_openagenda": "33190",
-   "evenements": 1,
-   "canonique": "99994642"
-  },
-  {
    "annuaire_id": "b412976a-a82c-5d4d-ad71-bcadf4b9636f",
    "nom_annuaire": "Puzzle",
    "commune_annuaire": "Thionville",
@@ -2132,19 +1510,6 @@
    "cp_openagenda": "59000",
    "evenements": 1,
    "canonique": "77189097"
-  },
-  {
-   "annuaire_id": "b75af20b-6a46-54ac-a369-23209e2b3b01",
-   "nom_annuaire": "La Station",
-   "commune_annuaire": "Saint-Omer",
-   "distance_m": 27.5,
-   "score": 0.0,
-   "uid": "55704549",
-   "nom_openagenda": "Saint-Omer - Agence LONGUENESSE",
-   "ville_openagenda": "Saint-Omer",
-   "cp_openagenda": "62500",
-   "evenements": 12,
-   "canonique": "55704549"
   },
   {
    "annuaire_id": "b9e7586e-f7d3-5186-8f15-aca9d7341a77",
@@ -2173,32 +1538,6 @@
    "canonique": "24248273"
   },
   {
-   "annuaire_id": "ba1d739c-e959-538f-9449-864137cafe5f",
-   "nom_annuaire": "TL Moule",
-   "commune_annuaire": "Le Moule",
-   "distance_m": 3.5,
-   "score": 0.5,
-   "uid": "36118374",
-   "nom_openagenda": "Médiathèque Le Moule",
-   "ville_openagenda": "Le Moule",
-   "cp_openagenda": "97160",
-   "evenements": 1,
-   "canonique": "36118374"
-  },
-  {
-   "annuaire_id": "bb7781e0-6418-5f00-88bf-b1e0e858e035",
-   "nom_annuaire": "La Ruche Rennes",
-   "commune_annuaire": "Rennes",
-   "distance_m": 1.0,
-   "score": 0.4,
-   "uid": "632113",
-   "nom_openagenda": "Agence RENNES EST",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35571",
-   "evenements": 24,
-   "canonique": "632113"
-  },
-  {
    "annuaire_id": "bc7f09ae-a0a3-56cf-bda9-171af52b3f56",
    "nom_annuaire": "les Ateliers de Bitche",
    "commune_annuaire": "Nantes",
@@ -2212,32 +1551,6 @@
    "canonique": "13773559"
   },
   {
-   "annuaire_id": "c0f0b059-465a-5f81-badd-af48b1ade223",
-   "nom_annuaire": "Tiers-lieu L'Atelier",
-   "commune_annuaire": "Vic-en-Bigorre",
-   "distance_m": 23.5,
-   "score": 0.0,
-   "uid": "90236144",
-   "nom_openagenda": "Vic-en-Bigorre - Agence TARBES ARSENAL",
-   "ville_openagenda": "Vic-en-Bigorre",
-   "cp_openagenda": "65500",
-   "evenements": 1,
-   "canonique": "90236144"
-  },
-  {
-   "annuaire_id": "c12c0686-040d-5179-8286-7e37b60f7430",
-   "nom_annuaire": "Espaces Mimont",
-   "commune_annuaire": "Cannes",
-   "distance_m": 3.2,
-   "score": 0.0,
-   "uid": "12020944",
-   "nom_openagenda": "Agence CANNES",
-   "ville_openagenda": "Cannes",
-   "cp_openagenda": "06407",
-   "evenements": 1,
-   "canonique": "12020944"
-  },
-  {
    "annuaire_id": "c154aff9-0feb-52cc-9bfd-cb47a63cd980",
    "nom_annuaire": "Espace Les Granges - Saint Jean- FALAB CREATECH",
    "commune_annuaire": "Saint-Jean",
@@ -2249,32 +1562,6 @@
    "cp_openagenda": "31240",
    "evenements": 2,
    "canonique": "59046960"
-  },
-  {
-   "annuaire_id": "c165c2e1-1519-5bde-8a07-61b7b0451604",
-   "nom_annuaire": "Lekolozik - K-Pab6T",
-   "commune_annuaire": "Saint-Benoît",
-   "distance_m": 24.6,
-   "score": 0.0,
-   "uid": "68862176",
-   "nom_openagenda": "Médiathèque de Bras-Fusil",
-   "ville_openagenda": "Saint-Benoît",
-   "cp_openagenda": "97470",
-   "evenements": 6,
-   "canonique": "68862176"
-  },
-  {
-   "annuaire_id": "c241af38-1954-5ddb-90d8-ddbfce33bc58",
-   "nom_annuaire": "La Galerie Du Zéro Déchet",
-   "commune_annuaire": "Nantes",
-   "distance_m": 4.2,
-   "score": 0.0,
-   "uid": "15622210",
-   "nom_openagenda": "Ateliers Dulcie september",
-   "ville_openagenda": "Nantes",
-   "cp_openagenda": "44000",
-   "evenements": 1,
-   "canonique": "15622210"
   },
   {
    "annuaire_id": "c245158c-e513-5aba-8970-43206a5fad0a",
@@ -2303,19 +1590,6 @@
    "canonique": "17141263"
   },
   {
-   "annuaire_id": "c494c4de-364a-5f89-87ee-6773113c9942",
-   "nom_annuaire": "L'Etiquette",
-   "commune_annuaire": "Lille",
-   "distance_m": 17.0,
-   "score": 0.0,
-   "uid": "54531591",
-   "nom_openagenda": "La Loco",
-   "ville_openagenda": "Lille",
-   "cp_openagenda": "59000",
-   "evenements": 1,
-   "canonique": "54531591"
-  },
-  {
    "annuaire_id": "c78fab16-2d8f-5990-bfdb-bef2ce0674e6",
    "nom_annuaire": "Popote et Papote",
    "commune_annuaire": "Saint-Thurial",
@@ -2342,84 +1616,6 @@
    "canonique": "67192688"
   },
   {
-   "annuaire_id": "cd574662-3275-5fa9-bcff-1118417fbb19",
-   "nom_annuaire": "MJC Puylaurens",
-   "commune_annuaire": "Puylaurens",
-   "distance_m": 59.6,
-   "score": 0.5,
-   "uid": "13337001",
-   "nom_openagenda": "Médiathèque de Puylaurens",
-   "ville_openagenda": "Puylaurens",
-   "cp_openagenda": "81700",
-   "evenements": 1,
-   "canonique": "13337001"
-  },
-  {
-   "annuaire_id": "cdd5f21d-8314-5782-898c-a41793c0d5b2",
-   "nom_annuaire": "Maison des Associations de Rennes",
-   "commune_annuaire": "Rennes",
-   "distance_m": 29.2,
-   "score": 0.0,
-   "uid": "13275514",
-   "nom_openagenda": "Chambre de métiers et de l’artisanat de Bretagne",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35000",
-   "evenements": 1,
-   "canonique": "13275514"
-  },
-  {
-   "annuaire_id": "cdd5f21d-8314-5782-898c-a41793c0d5b2",
-   "nom_annuaire": "Maison des Associations de Rennes",
-   "commune_annuaire": "Rennes",
-   "distance_m": 10.1,
-   "score": 0.0,
-   "uid": "64038723",
-   "nom_openagenda": "360",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35000",
-   "evenements": 1,
-   "canonique": "13275514"
-  },
-  {
-   "annuaire_id": "cdd5f21d-8314-5782-898c-a41793c0d5b2",
-   "nom_annuaire": "Maison des Associations de Rennes",
-   "commune_annuaire": "Rennes",
-   "distance_m": 10.1,
-   "score": 0.0,
-   "uid": "78017217",
-   "nom_openagenda": "360",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35000",
-   "evenements": 1,
-   "canonique": "13275514"
-  },
-  {
-   "annuaire_id": "ce8557c2-88ee-5d1b-b7cb-c473802cbcde",
-   "nom_annuaire": "Sparklab",
-   "commune_annuaire": "Dunkerque",
-   "distance_m": 20.4,
-   "score": 0.0,
-   "uid": "58870727",
-   "nom_openagenda": "Agence DUNKERQUE",
-   "ville_openagenda": "Dunkirk",
-   "cp_openagenda": "59140",
-   "evenements": 60,
-   "canonique": "58870727"
-  },
-  {
-   "annuaire_id": "d0c68d4c-2666-520e-9d21-abd67b4d9d65",
-   "nom_annuaire": "Relais Familles d'Illiers Combray",
-   "commune_annuaire": "Illiers-Combray",
-   "distance_m": 6.0,
-   "score": 0.5,
-   "uid": "45018551",
-   "nom_openagenda": "Illiers-Combray - Agence LUCE",
-   "ville_openagenda": "Illiers-Combray",
-   "cp_openagenda": "28120",
-   "evenements": 2,
-   "canonique": "45018551"
-  },
-  {
    "annuaire_id": "d1f6cf3c-5252-57c9-893a-6e50cde5bbd6",
    "nom_annuaire": "La Manuco",
    "commune_annuaire": "Bordeaux",
@@ -2444,19 +1640,6 @@
    "cp_openagenda": "61100",
    "evenements": 3,
    "canonique": "92497671"
-  },
-  {
-   "annuaire_id": "d5a5a987-72ee-5c50-b026-8e1b250c9a68",
-   "nom_annuaire": "FougèresLab",
-   "commune_annuaire": "Fougères",
-   "distance_m": 11.2,
-   "score": 0.0,
-   "uid": "88919703",
-   "nom_openagenda": "Médiathèque de Fougères",
-   "ville_openagenda": "Fougères",
-   "cp_openagenda": "35300",
-   "evenements": 1,
-   "canonique": "88919703"
   },
   {
    "annuaire_id": "d5fefaac-f4ce-5e2f-9562-d3ff3fa0edee",
@@ -2527,19 +1710,6 @@
    "annuaire_id": "d7a51b3c-ebcc-5345-8143-249945a00d86",
    "nom_annuaire": "Café des images - Café du ciné",
    "commune_annuaire": "Hérouville-Saint-Clair",
-   "distance_m": 19.4,
-   "score": 0.0,
-   "uid": "29393549",
-   "nom_openagenda": "Bibliothèque municipale",
-   "ville_openagenda": "Hérouville-Saint-Clair",
-   "cp_openagenda": "14200",
-   "evenements": 4,
-   "canonique": "58116243"
-  },
-  {
-   "annuaire_id": "d7a51b3c-ebcc-5345-8143-249945a00d86",
-   "nom_annuaire": "Café des images - Café du ciné",
-   "commune_annuaire": "Hérouville-Saint-Clair",
    "distance_m": 15.2,
    "score": 0.8,
    "uid": "58116243",
@@ -2548,19 +1718,6 @@
    "cp_openagenda": "14200",
    "evenements": 30,
    "canonique": "58116243"
-  },
-  {
-   "annuaire_id": "d7b50dda-9b82-5239-83aa-c93833ae7802",
-   "nom_annuaire": "Lun’probable",
-   "commune_annuaire": "Lunéville",
-   "distance_m": 5.6,
-   "score": 0.0,
-   "uid": "87279640",
-   "nom_openagenda": "Lunéville - Agence LUNEVILLE",
-   "ville_openagenda": "Lunéville",
-   "cp_openagenda": "54300",
-   "evenements": 39,
-   "canonique": "87279640"
   },
   {
    "annuaire_id": "d8d0876e-e94f-563f-98af-00d4850867a3",
@@ -2574,19 +1731,6 @@
    "cp_openagenda": "43000",
    "evenements": 1,
    "canonique": "99342996"
-  },
-  {
-   "annuaire_id": "d9c85f44-7700-5cbf-b6a7-d8e04121db7d",
-   "nom_annuaire": "eMode",
-   "commune_annuaire": "Cholet",
-   "distance_m": 26.1,
-   "score": 0.0,
-   "uid": "37669249",
-   "nom_openagenda": "Agence CHOLET",
-   "ville_openagenda": "Cholet",
-   "cp_openagenda": "49300",
-   "evenements": 22,
-   "canonique": "37669249"
   },
   {
    "annuaire_id": "da3da745-a122-57c5-8e11-3431a9baa0b8",
@@ -2641,32 +1785,6 @@
    "canonique": "59432018"
   },
   {
-   "annuaire_id": "dd5c2406-7f19-5409-bcde-7eb02d561fbe",
-   "nom_annuaire": "Eclipse Coworking",
-   "commune_annuaire": "Saint-Médard-en-Jalles",
-   "distance_m": 5.8,
-   "score": 0.0,
-   "uid": "10317089",
-   "nom_openagenda": "FabLab Copernic",
-   "ville_openagenda": "Saint-Médard-en-Jalles",
-   "cp_openagenda": "33160",
-   "evenements": 1,
-   "canonique": "74189458"
-  },
-  {
-   "annuaire_id": "dd5c2406-7f19-5409-bcde-7eb02d561fbe",
-   "nom_annuaire": "Eclipse Coworking",
-   "commune_annuaire": "Saint-Médard-en-Jalles",
-   "distance_m": 5.8,
-   "score": 0.0,
-   "uid": "74189458",
-   "nom_openagenda": "Espace Copernic",
-   "ville_openagenda": "Saint-Médard-en-Jalles",
-   "cp_openagenda": "33160",
-   "evenements": 2,
-   "canonique": "74189458"
-  },
-  {
    "annuaire_id": "e02f49e7-8342-597e-9d5b-5642a4e3b5a5",
    "nom_annuaire": "Explora",
    "commune_annuaire": "Saint-Étienne",
@@ -2706,45 +1824,6 @@
    "canonique": "66371726"
   },
   {
-   "annuaire_id": "e29e63ed-1867-5e95-be41-d9bd6cb55da0",
-   "nom_annuaire": "Kawa Nhan (Le)",
-   "commune_annuaire": "Léognan",
-   "distance_m": 14.6,
-   "score": 0.0,
-   "uid": "36266919",
-   "nom_openagenda": "Léognan - Agence BEGLES",
-   "ville_openagenda": "Léognan",
-   "cp_openagenda": "33850",
-   "evenements": 1,
-   "canonique": "36266919"
-  },
-  {
-   "annuaire_id": "e37d9642-3469-5558-abe2-1458ac713d65",
-   "nom_annuaire": "Pôle associatif de la Marbaudais",
-   "commune_annuaire": "Rennes",
-   "distance_m": 19.6,
-   "score": 0.0,
-   "uid": "51176647",
-   "nom_openagenda": "Bibliothèque Maurepas",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35700",
-   "evenements": 26,
-   "canonique": "51176647"
-  },
-  {
-   "annuaire_id": "e37d9642-3469-5558-abe2-1458ac713d65",
-   "nom_annuaire": "Pôle associatif de la Marbaudais",
-   "commune_annuaire": "Rennes",
-   "distance_m": 28.9,
-   "score": 0.0,
-   "uid": "6420849",
-   "nom_openagenda": "Bibliothèque Maurepas",
-   "ville_openagenda": "Rennes",
-   "cp_openagenda": "35700",
-   "evenements": 2,
-   "canonique": "51176647"
-  },
-  {
    "annuaire_id": "e39ee049-4391-5452-a8af-45b2a5d8e0f7",
    "nom_annuaire": "la malterie",
    "commune_annuaire": "Lille",
@@ -2756,19 +1835,6 @@
    "cp_openagenda": "59024",
    "evenements": 13,
    "canonique": "28265631"
-  },
-  {
-   "annuaire_id": "e41defce-98e7-534b-910c-76476959ffff",
-   "nom_annuaire": "Aldatu",
-   "commune_annuaire": "Hasparren",
-   "distance_m": 11.4,
-   "score": 0.0,
-   "uid": "21805051",
-   "nom_openagenda": "Hasparren - Agence BOUCAU",
-   "ville_openagenda": "Hasparren",
-   "cp_openagenda": "64240",
-   "evenements": 1,
-   "canonique": "21805051"
   },
   {
    "annuaire_id": "e6bf51aa-e321-5975-8d21-312f2dac8ba9",
@@ -2823,19 +1889,6 @@
    "canonique": "75504521"
   },
   {
-   "annuaire_id": "ea3f2a13-10c9-5ede-b9c3-e8208e64c2b6",
-   "nom_annuaire": "Fablab Sud31",
-   "commune_annuaire": "Cintegabelle",
-   "distance_m": 25.1,
-   "score": 0.0,
-   "uid": "12014314",
-   "nom_openagenda": "salle coluche",
-   "ville_openagenda": "Cintegabelle",
-   "cp_openagenda": "31550",
-   "evenements": 1,
-   "canonique": "12014314"
-  },
-  {
    "annuaire_id": "eac0b5be-4dbd-5daa-be60-33010c4001e3",
    "nom_annuaire": "Bazaar St So",
    "commune_annuaire": "Lille",
@@ -2860,45 +1913,6 @@
    "cp_openagenda": "07100",
    "evenements": 3,
    "canonique": "91378218"
-  },
-  {
-   "annuaire_id": "ec0f72f5-b2f9-5452-bbc3-0b5162946946",
-   "nom_annuaire": "MCPE",
-   "commune_annuaire": "Barbezieux-Saint-Hilaire",
-   "distance_m": 2.0,
-   "score": 0.0,
-   "uid": "43064924",
-   "nom_openagenda": "Barbezieux-Saint-Hilaire - 16-ML ARC CHARENTE",
-   "ville_openagenda": "Barbezieux-Saint-Hilaire",
-   "cp_openagenda": "16300",
-   "evenements": 1,
-   "canonique": "59242443"
-  },
-  {
-   "annuaire_id": "ec0f72f5-b2f9-5452-bbc3-0b5162946946",
-   "nom_annuaire": "MCPE",
-   "commune_annuaire": "Barbezieux-Saint-Hilaire",
-   "distance_m": 2.0,
-   "score": 0.0,
-   "uid": "59242443",
-   "nom_openagenda": "Barbezieux-Saint-Hilaire - Agence COGNAC",
-   "ville_openagenda": "Barbezieux-Saint-Hilaire",
-   "cp_openagenda": "16300",
-   "evenements": 2,
-   "canonique": "59242443"
-  },
-  {
-   "annuaire_id": "eeb25c15-6310-5f7e-af9a-45e847303a27",
-   "nom_annuaire": "Autre Brique (L')",
-   "commune_annuaire": "Tours",
-   "distance_m": 0.9,
-   "score": 0.0,
-   "uid": "73246623",
-   "nom_openagenda": "MAME",
-   "ville_openagenda": "Tours",
-   "cp_openagenda": "37000",
-   "evenements": 1,
-   "canonique": "73246623"
   },
   {
    "annuaire_id": "f07d7fcf-300d-5ae1-8651-7b6eded045d7",
@@ -2966,19 +1980,6 @@
    "canonique": "87500774"
   },
   {
-   "annuaire_id": "f6a3694d-8062-5347-9e09-030de48b7d64",
-   "nom_annuaire": "Les Courants d'arts",
-   "commune_annuaire": "Beaulieu-lès-Loches",
-   "distance_m": 4.1,
-   "score": 0.0,
-   "uid": "69187381",
-   "nom_openagenda": "Beaulieu-lès-Loches - Agence LOCHES",
-   "ville_openagenda": "Beaulieu-lès-Loches",
-   "cp_openagenda": "37600",
-   "evenements": 9,
-   "canonique": "69187381"
-  },
-  {
    "annuaire_id": "f73ba210-77bd-5bd9-8ebb-6c20d949c398",
    "nom_annuaire": "Le Dôme",
    "commune_annuaire": "Caen",
@@ -2990,19 +1991,6 @@
    "cp_openagenda": "14000",
    "evenements": 1,
    "canonique": "50132552"
-  },
-  {
-   "annuaire_id": "f7544346-a024-5993-9e61-897f7f39d8c4",
-   "nom_annuaire": "Fablab d'Argentan",
-   "commune_annuaire": "Argentan",
-   "distance_m": 2.6,
-   "score": 0.0,
-   "uid": "7324467",
-   "nom_openagenda": "Médiathèque François Mitterrand",
-   "ville_openagenda": "Argentan",
-   "cp_openagenda": "61200",
-   "evenements": 1,
-   "canonique": "7324467"
   },
   {
    "annuaire_id": "f82dc40b-792c-50a1-8598-300afdc5f8d6",
@@ -3044,19 +2032,6 @@
    "canonique": "53876141"
   },
   {
-   "annuaire_id": "f9acc71f-2792-59ef-89c7-8cf5803a204a",
-   "nom_annuaire": "QJ - Quartier Jeunes",
-   "commune_annuaire": "Paris",
-   "distance_m": 3.1,
-   "score": 0.0,
-   "uid": "97643418",
-   "nom_openagenda": "Agence Paris 1 2 3 4eme Paul Lelong",
-   "ville_openagenda": "Paris",
-   "cp_openagenda": "75001",
-   "evenements": 3,
-   "canonique": "53876141"
-  },
-  {
    "annuaire_id": "f9ee9b61-e5f4-5d9b-be1b-a21bd2c2128a",
    "nom_annuaire": "Anticafé Bordeaux",
    "commune_annuaire": "Bordeaux",
@@ -3081,58 +2056,6 @@
    "cp_openagenda": "69001",
    "evenements": 3,
    "canonique": "33066385"
-  },
-  {
-   "annuaire_id": "fbbc17f5-8691-514a-b79b-2aab9ad4b26a",
-   "nom_annuaire": "Relais d'entreprises Save &amp. Garonne",
-   "commune_annuaire": "Grenade",
-   "distance_m": 4.1,
-   "score": 0.0,
-   "uid": "65514497",
-   "nom_openagenda": "Médiathèque de Grenade",
-   "ville_openagenda": "Grenade",
-   "cp_openagenda": "31330",
-   "evenements": 1,
-   "canonique": "65514497"
-  },
-  {
-   "annuaire_id": "fc2f1d9d-849e-5096-a1c2-2cfe748ff0c3",
-   "nom_annuaire": "La Fabrique Entrepreneuriale de Montereau",
-   "commune_annuaire": "Montereau-Fault-Yonne",
-   "distance_m": 26.9,
-   "score": 0.286,
-   "uid": "96696883",
-   "nom_openagenda": "Agence Montereau-Fault-Yonne",
-   "ville_openagenda": "Montereau-Fault-Yonne",
-   "cp_openagenda": "77130",
-   "evenements": 15,
-   "canonique": "96696883"
-  },
-  {
-   "annuaire_id": "fc6f3020-7c21-51e4-8a66-3a81bf8188a4",
-   "nom_annuaire": "Caf' Tiers",
-   "commune_annuaire": "Cadalen",
-   "distance_m": 2.3,
-   "score": 0.0,
-   "uid": "99780002",
-   "nom_openagenda": "Cadalen - Agence GRAULHET",
-   "ville_openagenda": "Cadalen",
-   "cp_openagenda": "81600",
-   "evenements": 1,
-   "canonique": "99780002"
-  },
-  {
-   "annuaire_id": "fe24cb61-ca29-5724-828b-49aec99bbbd3",
-   "nom_annuaire": "Apprendre & Devenir",
-   "commune_annuaire": "Lyon",
-   "distance_m": 3.8,
-   "score": 0.0,
-   "uid": "53193239",
-   "nom_openagenda": "Bibliothèque Du 9e La Duchère",
-   "ville_openagenda": "Lyon",
-   "cp_openagenda": "69009",
-   "evenements": 2,
-   "canonique": "53193239"
   }
  ]
 }

@@ -75,8 +75,16 @@ FIELDS = ",".join([
     "conditions_fr", "keywords_fr", "image", "firstdate_begin", "firstdate_end",
     "registration", "location_uid", "location_name", "location_address",
     "location_city", "location_postalcode", "location_coordinates",
-    "location_phone", "location_website",
+    "location_phone", "location_website", "originagenda_title",
 ])
+
+# Agences France Travail : filtre defensif applique quel que soit le mode
+# (--departement ou --lieux), en plus de --exclure. Resserrement du 2.3 : le
+# rapprochement annuaire x OpenAgenda exclut deja les lieux nommes « agence »
+# ou « France Travail », mais un tiers-lieu retenu peut malgre tout publier un
+# evenement sur un agenda France Travail (agenda partage). Sous-chaine, sans
+# casse ni accents, plus large qu'un --exclure exact.
+FRANCE_TRAVAIL = re.compile(r"france\s*travail", re.I)
 
 # Espace de noms des identifiants d'import. NE PAS CHANGER : c'est lui qui
 # permet de reconnaître un lieu ou un événement déjà importé.
@@ -561,6 +569,13 @@ def main():
     source = (lire_lieux(args.lieux, args.depuis, args.jusqua) if args.lieux
               else lire_source(args.departement, args.exclure, args.depuis, args.jusqua))
 
+    # Filtre defensif France Travail (voir FRANCE_TRAVAIL ci-dessus), applique
+    # dans les deux modes : --exclure ne fonctionne qu'en --departement (clause
+    # serveur), --lieux ne le lit pas encore cote requete.
+    avant_ft = len(source)
+    source = [r for r in source if not FRANCE_TRAVAIL.search(r.get("originagenda_title") or "")]
+    ecarte_ft = avant_ft - len(source)
+
     if args.reparer:
         reparer(db, source, args.essai)
         print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
@@ -671,9 +686,14 @@ def main():
 
     # Rattachement annuaire_lieux.organization_id (uniquement si --lieux vient
     # du rapprochement avec l'annuaire, càd si le fichier porte "annuaire_id").
+    # Calcul ici (ne lit que l'existant), écriture reportée après l'insertion
+    # des organisations : sinon la contrainte de clé étrangère
+    # annuaire_lieux_organization_id_fkey échoue en écriture réelle (corrigé
+    # le 2026-09-28, prompt 2.3 : une organisation créée dans ce même lot
+    # n'existe pas encore en base tant que db.inserer("organizations", ...)
+    # n'a pas tourné).
     mapping_annuaire = lire_mapping_annuaire(args.lieux) if args.lieux else {}
     existants = set(org_slug) | {o["id"] for o in orgs}
-    ecrits_annuaire, candidats_annuaire = rattacher_annuaire(db, mapping_annuaire, existants, args.essai)
 
     evenements, provenance = [], []
     for r in lot:
@@ -708,9 +728,13 @@ def main():
         db.inserer("evenements", evenements, "id")
         db.inserer("evenements_import", provenance, "event_id")
 
+    # Rattachement annuaire, après que les organisations existent réellement.
+    ecrits_annuaire, candidats_annuaire = rattacher_annuaire(db, mapping_annuaire, existants, args.essai)
+
     mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
     portee = args.departement or Path(args.lieux).name
-    print(f"Source   : {len(source)} événements ({portee}), {ecartes} écartés faute de lieu ou de dates")
+    print(f"Source   : {len(source)} événements ({portee}), {ecartes} écartés faute de lieu ou de dates, "
+          f"{ecarte_ft} écartés (agenda France Travail)")
     print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
     print(f"Lot      : {len(lot)} événements, {len(orgs)} lieux créés, {len(sites)} vitrines techniques, {len(etabs)} établissements ({mode})")
     print(f"Reste    : {len(nouveaux) - len(lot)} événements après ce lot")
