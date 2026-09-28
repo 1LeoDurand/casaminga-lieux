@@ -688,6 +688,11 @@ export type EvenementType =
   | "exposition"
   | "conference"
   | "marche"
+  // Formats added 2026-09-28 (Leo's decision), for OpenAgenda import and the public agenda
+  | "formation"
+  | "stage"
+  | "retraite"
+  | "sejour"
   | "autre";
 
 export type EvenementStatus = "brouillon" | "publie" | "annule";

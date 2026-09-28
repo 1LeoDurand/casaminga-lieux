@@ -6,6 +6,10 @@ export const EVENT_TYPES: { value: EvenementType; label: string; badge: string }
   { value: "exposition", label: "Exposition",   badge: "mc-badge-orange" },
   { value: "conference", label: "Conférence",   badge: "mc-badge-green" },
   { value: "marche",     label: "Marché",       badge: "mc-badge-lime" },
+  { value: "formation",  label: "Formation",    badge: "mc-badge-green" },
+  { value: "stage",      label: "Stage",        badge: "mc-badge-green" },
+  { value: "retraite",   label: "Retraite",     badge: "mc-badge-orange" },
+  { value: "sejour",     label: "Séjour",       badge: "mc-badge-orange" },
   { value: "autre",      label: "Autre",        badge: "mc-badge-gray" },
 ];
 

@@ -38,6 +38,11 @@ Usage
   python scripts/import-openagenda.py --lieux scripts/lieux-tiers-lieux.json \
       --depuis 2026-10-01 --jusqu-a 2027-01-01 --max 50
 
+  ... --retyper --essai   recalcule le type des fiches autre/atelier déjà
+                           importées (formation, stage, retraite, séjour),
+                           compte par nouveau type, n'écrit rien
+  ... --retyper            même chose, écrit en base
+
 Deux façons de choisir la source, exclusives l'une de l'autre. Par département,
 on prend tout ce qui s'y publie, bibliothèques et cinémas compris. Par liste de
 lieux, on ne prend que les lieux nommés dans le fichier : c'est le seul moyen
@@ -57,6 +62,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from datetime import date
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -76,16 +82,34 @@ FIELDS = ",".join([
 # permet de reconnaître un lieu ou un événement déjà importé.
 NS = uuid.UUID("6f1b7d9e-0000-4000-8000-000000000000")
 
-# Types Casaminga, repris de l'import de Montpellier. On ne mappe que ce qu'on
-# peut justifier ; le reste tombe dans « autre », qui est honnête.
+# Types Casaminga, repris de l'import de Montpellier, complétés le 2026-09-28
+# (décision de Léo) par formation, stage, retraite, séjour. On ne mappe que ce
+# qu'on peut justifier ; le reste tombe dans « autre », qui est honnête.
+# Formation, stage, retraite et séjour passent AVANT atelier : un « stage »
+# n'est plus reconnu comme atelier (retiré de sa règle), et « initiation »
+# reste en atelier (une initiation courte n'est pas un stage long).
 TYPE_RULES = [
-    ("atelier", r"\batelier|stage\b|initiation|fabriqu"),
+    ("retraite", r"retraite|ressourcement"),
+    ("sejour", r"s[eé]jour|immersion|r[eé]sidence|week-?end"),
+    ("formation", r"formation|cursus|certifiant|dipl[oô]mant|mooc"),
+    ("stage", r"\bstages?\b"),
+    ("atelier", r"\batelier|initiation|fabriqu"),
     ("exposition", r"exposition|expo\b|vernissage"),
     ("concert", r"concert|musique|live\b|dj set|festival"),
     ("spectacle", r"spectacle|th[eé][aâ]tre|danse|cin[eé]ma|projection|film|conte"),
     ("rencontre", r"rencontre|conf[eé]rence|d[eé]bat|table ronde|caf[eé]|lecture|visite"),
     ("marche", r"march[eé]|troc|brocante|vide-grenier|bourse"),
 ]
+
+# « résidence » seule est ambiguë : une résidence d'artiste se montre parfois
+# en une exposition ou une rencontre d'un soir (vernissage), parfois en un vrai
+# séjour sur place. On ne la fait basculer en séjour que si la fiche dure au
+# moins deux jours ; sinon les règles suivantes (exposition, rencontre) jugent
+# comme avant, sans le mot « résidence ». Limite connue : sans dates lisibles,
+# la fiche retombe dans les règles suivantes plutôt que dans une fausse
+# certitude de séjour.
+SEJOUR_FORT = re.compile(r"s[eé]jour|immersion|week-?end", re.I)
+RESIDENCE = re.compile(r"r[eé]sidence", re.I)
 
 # Gratuité : affirmée seulement sur une formule sans ambiguïté. « Gratuit pour
 # les moins de 16 ans » n'est pas un événement gratuit.
@@ -169,9 +193,26 @@ def slugify(text, maxlen=48):
     return s[:maxlen].rstrip("-") or "lieu"
 
 
-def guess_type(title, keywords):
+def duree_jours(debut, fin):
+    """Durée en jours pleins entre deux horodatages ISO (date seule comparée :
+    l'heure ne change rien à « deux jours ou plus »). 0 si une date manque ou
+    est illisible : mieux vaut sous-estimer la durée que la deviner."""
+    if not debut or not fin:
+        return 0
+    try:
+        d, f = date.fromisoformat(debut[:10]), date.fromisoformat(fin[:10])
+    except ValueError:
+        return 0
+    return (f - d).days
+
+
+def guess_type(title, keywords, start_at=None, end_at=None):
     hay = f"{title} {keywords or ''}".lower()
     for code, pattern in TYPE_RULES:
+        if code == "sejour" and not SEJOUR_FORT.search(hay) and RESIDENCE.search(hay):
+            if duree_jours(start_at, end_at) >= 2:
+                return "sejour"
+            continue  # « résidence » seule et fiche courte : on laisse juger la suite
         if re.search(pattern, hay):
             return code
     return "autre"
@@ -391,6 +432,51 @@ def reparer(db, source, essai):
         print(f"  adresse -> {valeur}")
 
 
+def retyper(db, source, essai):
+    """
+    Recalcule le type des événements déjà importés dont le type vaut « autre »
+    ou « atelier », avec les règles de typage actuelles (formation, stage,
+    retraite, séjour ajoutés le 2026-09-28). Ne touche jamais une fiche
+    retouchée à la main : `evenements_import.checked_at` non nul dit qu'un
+    humain est déjà passé, y compris peut-être sur le type.
+
+    Le nouveau type se calcule sur la fiche source (titre, mots-clés, dates),
+    pas sur ce qui est en base : `source` doit donc couvrir le même périmètre
+    (département ou liste de lieux) que l'import initial pour retrouver les
+    fiches. Un événement importé hors de ce périmètre n'est pas recalculé et
+    compte à part, plutôt que d'être silencieusement ignoré.
+    """
+    par_evt = {str(uuid.uuid5(NS, "evt:" + r["uid"])): r for r in source}
+    actuels = db.lire_tout("evenements_import?select=event_id,checked_at,evenements(type)")
+
+    changements, hors_source, compte = [], 0, {}
+    for row in actuels:
+        e = row.get("evenements") or {}
+        if row.get("checked_at") is not None or e.get("type") not in ("autre", "atelier"):
+            continue
+        r = par_evt.get(row["event_id"])
+        if not r:
+            hors_source += 1
+            continue
+        nouveau = guess_type(r.get("title_fr"), r.get("keywords_fr"),
+                             r.get("firstdate_begin"), r.get("firstdate_end"))
+        compte[nouveau] = compte.get(nouveau, 0) + 1
+        if nouveau != e.get("type"):
+            changements.append((row["event_id"], nouveau))
+
+    if not essai:
+        for eid, nouveau in changements:
+            db._call("PATCH", f"evenements?id=eq.{eid}", {"type": nouveau},
+                     headers={"Prefer": "return=minimal"})
+
+    mode = "ESSAI, rien n'est écrit" if essai else "retypé en base"
+    candidats = sum(compte.values())
+    print(f"Retypage ({mode}) : {candidats} candidats (autre/atelier, non retouchés à la main), "
+          f"{len(changements)} changent de type, {hors_source} hors de la source lue (non traités)")
+    for code, n in sorted(compte.items(), key=lambda x: -x[1]):
+        print(f"  {code} : {n}")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Import OpenAgenda -> Casa Minga")
     ap.add_argument("--departement", help="import par departement (exclusif de --lieux)")
@@ -403,6 +489,8 @@ def main():
     ap.add_argument("--essai", action="store_true", help="n'écrit rien")
     ap.add_argument("--reparer", action="store_true",
                     help="corrige les fiches déjà importées selon les règles actuelles, sans rien importer")
+    ap.add_argument("--retyper", action="store_true",
+                    help="recalcule le type des fiches autre/atelier déjà importées, sans rien importer")
     args = ap.parse_args()
     if bool(args.departement) == bool(args.lieux):
         ap.error("choisir soit --departement, soit --lieux")
@@ -416,6 +504,11 @@ def main():
 
     if args.reparer:
         reparer(db, source, args.essai)
+        print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+        return
+
+    if args.retyper:
+        retyper(db, source, args.essai)
         print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
         return
 
@@ -526,7 +619,8 @@ def main():
             "organization_id": str(uuid.uuid5(NS, "org:" + r["location_uid"])),
             "establishment_id": etab_de.get(r["location_uid"]),
             "title": (texte(r.get("title_fr")) or "Événement")[:200],
-            "type": guess_type(r.get("title_fr"), r.get("keywords_fr")),
+            "type": guess_type(r.get("title_fr"), r.get("keywords_fr"),
+                              r.get("firstdate_begin"), r.get("firstdate_end")),
             "status": "publie",
             "start_at": r["firstdate_begin"], "end_at": r["firstdate_end"],
             "description": corps_evenement(r),
