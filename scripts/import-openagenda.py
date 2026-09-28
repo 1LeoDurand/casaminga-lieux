@@ -54,6 +54,7 @@ La clé de service est lue dans .env.local et n'est jamais affichée.
 import argparse
 import html
 import json
+import os
 import re
 import sys
 import time
@@ -137,14 +138,15 @@ DESCRIPTION_MAX = 1400
 # ── Environnement ───────────────────────────────────────────────────────────
 
 def load_env():
+    # .env.local en local (comportement inchangé) ; à défaut (CI GitHub
+    # Actions par exemple), repli sur les variables d'environnement déjà
+    # présentes dans le processus, sans jamais les afficher.
     path = Path(__file__).resolve().parent.parent / ".env.local"
-    if not path.exists():
-        raise SystemExit(f"Fichier introuvable : {path}")
-    env = dict(re.findall(r"^([A-Z_]+)=(.*)$", path.read_text(encoding="utf-8"), re.M))
-    url = env.get("NEXT_PUBLIC_SUPABASE_URL", "").strip().rstrip("/")
-    key = env.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    env = dict(re.findall(r"^([A-Z_]+)=(.*)$", path.read_text(encoding="utf-8"), re.M)) if path.exists() else {}
+    url = (env.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "")).strip().rstrip("/")
+    key = (env.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")).strip()
     if not url or not key:
-        raise SystemExit("NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY absente de .env.local.")
+        raise SystemExit("NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY absente (.env.local ou variables d'environnement).")
     return url, key
 
 

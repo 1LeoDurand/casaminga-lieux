@@ -1,0 +1,205 @@
+name: Import hebdomadaire — sources d'événements
+
+# Relance automatique des imports d'événements (ANALYSE-SOURCES-EVENEMENTS.md
+# § 4.F, prompt 2.5) : régénère la liste blanche annuaire × OpenAgenda, puis
+# rejoue les deux imports (OpenAgenda national, moissonneur de sites) en
+# lecture d'abord, écriture ensuite si demandé.
+#
+# Ce workflow N'ÉCRIT JAMAIS dans git : il ne fait ni commit ni push, ni ici
+# ni ailleurs. Le fichier scripts/data/lieux-annuaire-openagenda.json que
+# rapprocher-annuaire-openagenda.py régénère est réécrit dans la copie de
+# travail éphémère créée par actions/checkout pour ce run (jamais le dépôt
+# réel) ; comme aucune étape ne lance `git add`/`git commit`, cette
+# régénération disparaît avec le runner. Ne JAMAIS ajouter une étape de
+# commit ici sans revoir cette phrase.
+#
+# Ce workflow n'appelle jamais deploy.yml et ne pousse rien sur `main` :
+# aucun risque de déclencher le build de production Infomaniak.
+
+on:
+  schedule:
+    # 04:00 UTC tous les lundis. Un seul cron ne suit pas le changement
+    # d'heure : 04:00 UTC = 05:00 Paris en heure d'hiver (CET, UTC+1), mais
+    # 06:00 Paris en heure d'été (CEST, UTC+2, fin mars à fin octobre). Dérive
+    # acceptée plutôt que deux cron à activer/désactiver à la main deux fois
+    # par an ; à corriger seulement si l'heure réelle du run gêne Léo.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      essai:
+        description: "Essai (aucune écriture) — décocher pour un import réel plafonné"
+        type: boolean
+        required: true
+        default: true
+
+# Un seul run à la fois : un import réel qui se chevaucherait avec un essai
+# (ou un autre import réel) écrirait sur un état de base que l'autre lit.
+concurrency:
+  group: import-hebdo
+  cancel-in-progress: false
+
+jobs:
+  import:
+    name: Rapprochement + imports
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Déterminer le mode (essai ou réel)
+        id: mode
+        run: |
+          # Déclenchement manuel : suit l'entrée `essai` (défaut true, donc
+          # essai par défaut même à la main). Déclenchement par le cron
+          # hebdomadaire : pas d'entrée disponible, mode réel par défaut,
+          # c'est tout l'intérêt de la relance automatique.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "essai=${{ inputs.essai }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "essai=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Résumé du déclenchement
+        run: |
+          if [ "${{ steps.mode.outputs.essai }}" = "true" ]; then
+            mode_lisible="ESSAI (rien n'est écrit)"
+          else
+            mode_lisible="REEL (plafonné a 300 par source)"
+          fi
+          {
+            echo "## Import hebdomadaire — $(date -u +'%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "- Déclenchement : \`${{ github.event_name }}\`"
+            echo "- Mode : $mode_lisible"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Vérifier les secrets requis
+        run: |
+          # Noms exacts lus par load_env() dans scripts/import_commun.py,
+          # scripts/import-openagenda.py et scripts/rapprocher-annuaire-openagenda.py.
+          # À créer par Léo dans Settings → Secrets and variables → Actions de ce
+          # dépôt (jamais dans un fichier versionné). Tant qu'ils n'existent pas,
+          # cette étape échoue ici, avant tout appel réseau ou tentative
+          # d'écriture, avec un message qui dit quoi créer.
+          manquants=""
+          [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] && manquants="$manquants NEXT_PUBLIC_SUPABASE_URL"
+          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && manquants="$manquants SUPABASE_SERVICE_ROLE_KEY"
+          if [ -n "$manquants" ]; then
+            echo "::error::Secret(s) manquant(s) dans Settings → Secrets and variables → Actions :$manquants — voir docs/IMPORT-HEBDO.md"
+            {
+              echo ""
+              echo "**Échec : secret(s) manquant(s) :**$manquants"
+              echo ""
+              echo "À créer dans Settings du dépôt GitHub (jamais dans un fichier versionné). Détail : docs/IMPORT-HEBDO.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Secrets présents (valeurs non affichées)."
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer certifi
+        run: |
+          # Seule dépendance des trois scripts (voir scripts/import-sites.py,
+          # § magasin de certificats) : le reste est Python standard, sans
+          # requirements.txt dans ce dépôt.
+          pip install --disable-pip-version-check --quiet certifi
+
+      - name: "(a) Rapprocher l'annuaire et OpenAgenda (liste blanche)"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          t0=$(date +%s)
+          python scripts/rapprocher-annuaire-openagenda.py | tee /tmp/sortie-a.txt
+          duree=$(( $(date +%s) - t0 ))
+          {
+            echo ""
+            echo "### (a) Rapprochement annuaire × OpenAgenda (${duree}s)"
+            echo ""
+            echo '```'
+            cat /tmp/sortie-a.txt
+            echo '```'
+            echo ""
+            echo "_Fichier régénéré dans la copie de travail du runner, jamais commité (voir en-tête de ce workflow)._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "(b) Import OpenAgenda national — essai"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          t0=$(date +%s)
+          python scripts/import-openagenda.py --lieux scripts/data/lieux-annuaire-openagenda.json --essai | tee /tmp/sortie-b-essai.txt
+          duree=$(( $(date +%s) - t0 ))
+          {
+            echo ""
+            echo "### (b) Import OpenAgenda national — essai (${duree}s)"
+            echo ""
+            echo '```'
+            cat /tmp/sortie-b-essai.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "(b) Import OpenAgenda national — réel (plafonné à 300)"
+        if: steps.mode.outputs.essai == 'false'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          t0=$(date +%s)
+          python scripts/import-openagenda.py --lieux scripts/data/lieux-annuaire-openagenda.json --max 300 | tee /tmp/sortie-b-reel.txt
+          duree=$(( $(date +%s) - t0 ))
+          {
+            echo ""
+            echo "### (b) Import OpenAgenda national — réel, plafonné à 300 (${duree}s)"
+            echo ""
+            echo '```'
+            cat /tmp/sortie-b-reel.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "(c) Moissonneur de sites — essai"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          t0=$(date +%s)
+          python scripts/import-sites.py --essai | tee /tmp/sortie-c-essai.txt
+          duree=$(( $(date +%s) - t0 ))
+          {
+            echo ""
+            echo "### (c) Moissonneur de sites — essai (${duree}s)"
+            echo ""
+            echo '```'
+            cat /tmp/sortie-c-essai.txt
+            echo '```'
+            echo ""
+            echo "_Sites sondés il y a moins de 90 jours sans signal : sautés (voir annuaire_sites_sondes)._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "(c) Moissonneur de sites — réel (plafonné à 300)"
+        if: steps.mode.outputs.essai == 'false'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          t0=$(date +%s)
+          python scripts/import-sites.py --max 300 | tee /tmp/sortie-c-reel.txt
+          duree=$(( $(date +%s) - t0 ))
+          {
+            echo ""
+            echo "### (c) Moissonneur de sites — réel, plafonné à 300 (${duree}s)"
+            echo ""
+            echo '```'
+            cat /tmp/sortie-c-reel.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
