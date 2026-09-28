@@ -49,9 +49,10 @@ const TIER_ORDER: OrgTier[] = ["free", "complete", "multilieu"];
 interface SectionItem { m: ModuleDef; locked: boolean; }
 
 /** Items visibles d'une section : actifs (socle ou activés) + gatés (cadenas). */
-function itemsForSection(section: ModuleSection, enabled: Set<string>, tier: OrgTier): SectionItem[] {
+function itemsForSection(section: ModuleSection, enabled: Set<string>, tier: OrgTier, hidden: Set<string>): SectionItem[] {
   const out: SectionItem[] = [];
   for (const m of section.modules) {
+    if (hidden.has(m.key)) continue;
     const isEnabled = m.layer === 0 || enabled.has(m.key);
     if (isEnabled) { out.push({ m, locked: false }); continue; }
     const gated = !!m.minTier && TIER_ORDER.indexOf(tier) < TIER_ORDER.indexOf(m.minTier);
@@ -243,6 +244,7 @@ export function DashboardSidebar({
   isDemo = false,
   enabledModules = new Set<string>(),
   orgTier = "free",
+  canUseCash = true,
 }: {
   orgSlug: string;
   orgName: string;
@@ -252,6 +254,8 @@ export function DashboardSidebar({
   isDemo?: boolean;
   enabledModules?: Set<string>;
   orgTier?: OrgTier;
+  /** Computed server-side (admin or perm_caisse, active). Hides the Caisse entry when false. */
+  canUseCash?: boolean;
 }) {
   const { collapsed, mobileOpen, toggleCollapsed, closeMobile } = useSidebar();
   const pathname = usePathname();
@@ -259,12 +263,11 @@ export function DashboardSidebar({
   const initials = userName.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   // Sections non vides + leurs items (mémoïsé)
-  const sections = useMemo(
-    () =>
-      MODULE_SECTIONS.map((s) => ({ section: s, items: itemsForSection(s, enabledModules, orgTier) }))
-        .filter((x) => x.items.length > 0),
-    [enabledModules, orgTier],
-  );
+  const sections = useMemo(() => {
+    const hidden = new Set<string>(canUseCash ? [] : ["caisse"]);
+    return MODULE_SECTIONS.map((s) => ({ section: s, items: itemsForSection(s, enabledModules, orgTier, hidden) }))
+      .filter((x) => x.items.length > 0);
+  }, [enabledModules, orgTier, canUseCash]);
   const itemsByKey = useMemo(() => {
     const m = new Map<string, SectionItem[]>();
     for (const x of sections) m.set(x.section.key, x.items);

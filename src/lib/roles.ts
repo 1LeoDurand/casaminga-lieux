@@ -14,6 +14,8 @@ export interface PermissionSet {
   perm_structure: boolean;
   perm_publication: boolean;
   perm_systeme: boolean;
+  /** Certified cash register (NF525). Admins have it regardless of this flag. */
+  perm_caisse: boolean;
 }
 
 // ── Liste ordonnée des rôles ──────────────────────────────────────────────────
@@ -41,18 +43,32 @@ export const ROLE_META: Record<OrgRole, { label: string; color: string; desc: st
 };
 
 // ── Permissions par défaut selon le rôle ─────────────────────────────────────
+// perm_caisse: admins get cash access by role, not by this flag. Keeping it
+// false for them means a demoted admin does not silently keep cash access.
 
 export const ROLE_PERMS: Record<OrgRole, PermissionSet> = {
-  admin:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: true,  perm_publication: true,  perm_systeme: true  },
-  coord:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-  finance:     { perm_pilotage: true,  perm_gestion_lieu: false, perm_structure: true,  perm_publication: false, perm_systeme: true  },
-  comm:        { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false },
-  benevole:    { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-  intervenant: { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false },
-  readonly:    { perm_pilotage: false, perm_gestion_lieu: false, perm_structure: false, perm_publication: false, perm_systeme: false },
+  admin:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: true,  perm_publication: true,  perm_systeme: true,  perm_caisse: false },
+  coord:       { perm_pilotage: true,  perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false, perm_caisse: false },
+  finance:     { perm_pilotage: true,  perm_gestion_lieu: false, perm_structure: true,  perm_publication: false, perm_systeme: true,  perm_caisse: true  },
+  comm:        { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: true,  perm_systeme: false, perm_caisse: false },
+  benevole:    { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false, perm_caisse: false },
+  intervenant: { perm_pilotage: false, perm_gestion_lieu: true,  perm_structure: false, perm_publication: false, perm_systeme: false, perm_caisse: false },
+  readonly:    { perm_pilotage: false, perm_gestion_lieu: false, perm_structure: false, perm_publication: false, perm_systeme: false, perm_caisse: false },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Cash register access, mirroring public.cash_has_access in the database:
+ * active member AND (admin OR perm_caisse). The database is the authority;
+ * this is only used to shape the UI.
+ */
+export function canUseCashRegister(
+  m: { role: OrgRole | string; status: string; perm_caisse?: boolean | null } | null | undefined
+): boolean {
+  if (!m || m.status !== "actif") return false;
+  return m.role === "admin" || m.perm_caisse === true;
+}
 
 export function roleLabel(role: OrgRole): string {
   return ROLE_META[role]?.label ?? role;

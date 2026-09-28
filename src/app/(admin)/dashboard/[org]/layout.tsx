@@ -5,7 +5,7 @@ import { DashboardTopbar } from "@/components/mc/dashboard-topbar";
 import { DashboardShell } from "@/components/mc/dashboard-shell";
 import { FeedbackWidget } from "@/components/mc/feedback-widget";
 import { HelpWidget } from "@/components/mc/help-widget";
-import { getOrganizationBySlug, getRequestsForOrg } from "@/lib/data";
+import { getOrganizationBySlug, getRequestsForOrg, hasCashAccess } from "@/lib/data";
 import { getActiveEstablishments } from "@/lib/establishments";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -80,11 +80,12 @@ export default async function DashboardLayout({
     }
   }
 
-  const [requests, enabledModules, subscription, establishments] = await Promise.all([
+  const [requests, enabledModules, subscription, establishments, canUseCash] = await Promise.all([
     getRequestsForOrg(organization.id),
     getEnabledModules(organization.id),
     getOrgSubscription(organization.id),
     getActiveEstablishments(organization.id),
+    hasCashAccess(organization.id),
   ]);
   const openRequests = requests.filter(
     (r) => !OPEN_STATUSES_EXCLUDED.includes(r.status)
@@ -109,6 +110,7 @@ export default async function DashboardLayout({
             isDemo={!isSupabaseConfigured()}
             enabledModules={enabledModules}
             orgTier={orgTier}
+            canUseCash={canUseCash}
           />
         }
         topbar={

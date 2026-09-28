@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/admin/guard";
+import { assertOrgAdmin, createAdminClient } from "@/lib/admin/guard";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { humanError } from "@/lib/errors";
 import type { PermissionSet } from "@/lib/roles";
@@ -18,10 +18,36 @@ export async function updatePermissionsAction(
   perms: PermissionSet
 ): Promise<AR> {
   if (!isSupabaseConfigured()) return { ok: false, error: "Non configuré." };
+  const guard = await assertOrgAdmin(orgId);
+  if (!guard.ok) return guard;
   const supabase = await createClient();
+
+  // Only the permission booleans reach the database, never a client-supplied
+  // role or status.
+  const patch: Partial<PermissionSet> = {
+    perm_pilotage:     perms.perm_pilotage === true,
+    perm_gestion_lieu: perms.perm_gestion_lieu === true,
+    perm_structure:    perms.perm_structure === true,
+    perm_publication:  perms.perm_publication === true,
+    perm_systeme:      perms.perm_systeme === true,
+    perm_caisse:       perms.perm_caisse === true,
+  };
+
+  // An admin has cash access by role: the box is shown ticked and locked, and
+  // the stored flag is left untouched (false by default, so a later demotion
+  // does not keep cash access).
+  const { data: target } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", orgId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!target) return { ok: false, error: "Membre introuvable." };
+  if (target.role === "admin") delete patch.perm_caisse;
+
   const { error } = await supabase
     .from("organization_members")
-    .update(perms)
+    .update(patch)
     .eq("organization_id", orgId)
     .eq("user_id", userId);
   if (error) return { ok: false, error: humanError(error) };

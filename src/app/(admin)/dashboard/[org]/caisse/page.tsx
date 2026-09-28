@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/mc/page-header";
 import { CashRegisterView } from "@/components/mc/cash-register-view";
-import { getOrganizationBySlug, getCashEntries, getCashClosures, getPostedClosureIds, getPersonsForOrg, getCashShortcuts } from "@/lib/data";
+import { getOrganizationBySlug, hasCashAccess, getCashEntries, getCashClosures, getPostedClosureIds, getPersonsForOrg, getCashShortcuts } from "@/lib/data";
 import { getPolesForOrg } from "@/lib/poles";
 import { getPointedEntryIds } from "@/lib/cash-pointing";
 import { getActiveEstablishments } from "@/lib/establishments";
@@ -11,6 +11,18 @@ export default async function CaissePage({ params }: { params: Promise<{ org: st
   const { org } = await params;
   const organization = await getOrganizationBySlug(org);
   if (!organization) notFound();
+
+  // Same rule as the database (admin or perm_caisse, active member).
+  if (!(await hasCashAccess(organization.id))) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader tag="Structure · Conformité" title="Caisse certifiée" />
+        <div className="rounded-2xl border border-border bg-white px-5 py-10 text-center text-sm text-warmgray">
+          Vous n&apos;avez pas accès à la caisse de cette structure.
+        </div>
+      </div>
+    );
+  }
 
   const [entries, closures, poles, pointedSet, postedClosureIds, persons, savedShortcuts, establishments] = await Promise.all([
     getCashEntries(organization.id),

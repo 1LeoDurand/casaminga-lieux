@@ -429,6 +429,7 @@ export interface TeamMember {
   perm_structure: boolean;
   perm_publication: boolean;
   perm_systeme: boolean;
+  perm_caisse: boolean;
 }
 
 export type GrantTrancheStatus = "en_attente" | "recu" | "en_retard";

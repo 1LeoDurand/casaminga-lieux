@@ -1459,6 +1459,20 @@ export async function deleteGrantTranche(id: string): Promise<boolean> {
 }
 
 // ── Caisse certifiée (NF525) ──────────────────────────────────
+
+/**
+ * Whether the signed-in user may use this org's cash register. Calls the same
+ * database rule as the RLS policies and the RPC guard (public.cash_has_access:
+ * active member AND (admin OR perm_caisse)), so UI and database cannot drift.
+ */
+export async function hasCashAccess(orgId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true; // demo mode, no database
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("cash_has_access", { p_org: orgId });
+  if (error) { console.error("hasCashAccess:", error); return false; }
+  return data === true;
+}
+
 export async function getCashEntries(orgId: string, limit = 200): Promise<CashEntry[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createClient();
@@ -1740,13 +1754,13 @@ export async function getTeamMembers(orgId: string): Promise<TeamMember[]> {
       zones: [], status: "actif", created_at: new Date().toISOString(),
       full_name: "Léo Durand", email: "leo@example.org",
       perm_pilotage: true, perm_gestion_lieu: true, perm_structure: true,
-      perm_publication: true, perm_systeme: true,
+      perm_publication: true, perm_systeme: true, perm_caisse: false,
     }];
   }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("organization_members")
-    .select("user_id, organization_id, role, zones, status, created_at, perm_pilotage, perm_gestion_lieu, perm_structure, perm_publication, perm_systeme, profiles(full_name, email)")
+    .select("user_id, organization_id, role, zones, status, created_at, perm_pilotage, perm_gestion_lieu, perm_structure, perm_publication, perm_systeme, perm_caisse, profiles(full_name, email)")
     .eq("organization_id", orgId)
     .order("created_at", { ascending: true });
   if (error) { console.error("getTeamMembers:", error); return []; }
@@ -1766,6 +1780,7 @@ export async function getTeamMembers(orgId: string): Promise<TeamMember[]> {
       perm_structure:    (m.perm_structure as boolean) ?? false,
       perm_publication:  (m.perm_publication as boolean) ?? false,
       perm_systeme:      (m.perm_systeme as boolean) ?? false,
+      perm_caisse:       (m.perm_caisse as boolean) ?? false,
     };
   });
 }
@@ -1775,9 +1790,13 @@ export async function updateTeamMemberRole(
 ): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
   const supabase = await createClient();
+  // Moving someone to 'finance' ticks the cash box by default (Leo, 2026-09-28).
+  // Other role changes keep the stored flag: it stays editable afterwards.
+  const patch: { role: OrgRole; zones: string[]; perm_caisse?: boolean } = { role, zones };
+  if (role === "finance") patch.perm_caisse = true;
   const { error } = await supabase
     .from("organization_members")
-    .update({ role, zones })
+    .update(patch)
     .eq("organization_id", orgId)
     .eq("user_id", userId);
   if (error) console.error("updateTeamMemberRole:", error);

@@ -162,13 +162,13 @@ function NoAccountPanel({
   );
 }
 
-// ── Définition des 5 permissions ─────────────────────────────────────────────
+// ── Définition des 6 permissions ─────────────────────────────────────────────
 
 interface PermDef {
   key: keyof PermissionSet;
   label: string;
   desc: string;
-  icon: string;
+  icon?: string;
 }
 
 const PERMISSIONS: PermDef[] = [
@@ -201,6 +201,12 @@ const PERMISSIONS: PermDef[] = [
     label: "Système",
     desc:  "Paramètres, facturation, équipe, intégrations",
     icon:  "⚙️",
+  },
+  {
+    // Enforced in the database (public.cash_has_access). No icon on purpose.
+    key:   "perm_caisse",
+    label: "Caisse",
+    desc:  "Encaisser, clôturer et vérifier la caisse certifiée",
   },
 ];
 
@@ -266,12 +272,20 @@ function AccessForm({
     perm_structure:    member.perm_structure,
     perm_publication:  member.perm_publication,
     perm_systeme:      member.perm_systeme,
+    perm_caisse:       member.perm_caisse,
   });
   const [dirty, setDirty] = useState(false);
   const [saving, startSave] = useTransition();
   const [resetting, setResetting] = useState(false);
+  const isAdmin = member.role === "admin";
+
+  // Admins have cash access by role: that box is locked.
+  function isLocked(key: keyof PermissionSet) {
+    return isAdmin && key === "perm_caisse";
+  }
 
   function toggle(key: keyof PermissionSet) {
+    if (isLocked(key)) return;
     setPerms((p) => ({ ...p, [key]: !p[key] }));
     setDirty(true);
   }
@@ -332,10 +346,13 @@ function AccessForm({
 
         <ul className="space-y-1.5">
           {PERMISSIONS.map((p) => {
-            const checked = perms[p.key];
+            const locked = isLocked(p.key);
+            const checked = locked || perms[p.key];
             return (
               <li key={p.key}>
-                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${
+                <label className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors ${
+                  locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                } ${
                   checked
                     ? "border-coral/30 bg-peach-pale"
                     : "border-border bg-white hover:border-border"
@@ -343,15 +360,19 @@ function AccessForm({
                   <input
                     type="checkbox"
                     checked={checked}
+                    disabled={locked}
                     onChange={() => toggle(p.key)}
-                    className="size-4 cursor-pointer accent-coral"
+                    className={`size-4 accent-coral ${locked ? "cursor-not-allowed" : "cursor-pointer"}`}
                   />
-                  <span className="text-[13.5px]">{p.icon}</span>
+                  {p.icon && <span className="text-[13.5px]">{p.icon}</span>}
                   <span className="flex-1 min-w-0">
                     <span className={`block text-[13px] font-semibold ${checked ? "text-ink" : "text-warmgray"}`}>
                       {p.label}
                     </span>
                     <span className="block truncate text-[11px] text-warmgray/80">{p.desc}</span>
+                    {locked && (
+                      <span className="block text-[11px] font-medium text-coral-dark">Accès d&apos;office pour un admin</span>
+                    )}
                   </span>
                 </label>
               </li>

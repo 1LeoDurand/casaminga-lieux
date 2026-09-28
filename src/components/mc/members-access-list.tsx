@@ -9,15 +9,17 @@ import {
 } from "@/app/(admin)/dashboard/[org]/personnes/access-actions";
 import type { TeamMember } from "@/lib/types";
 import { ROLE_PERMS, roleLabel } from "@/lib/roles";
-import type { OrgRole, PermissionSet } from "@/lib/roles";
+import type { PermissionSet } from "@/lib/roles";
 import { Avatar } from "@/components/mc/avatar";
 
-const PERM_LABELS: Array<{ key: keyof PermissionSet; label: string; icon: string }> = [
+const PERM_LABELS: Array<{ key: keyof PermissionSet; label: string; icon?: string }> = [
   { key: "perm_pilotage",     label: "Pilotage",         icon: "📊" },
   { key: "perm_gestion_lieu", label: "Gestion du lieu",  icon: "🏛"  },
   { key: "perm_structure",    label: "Structure",         icon: "🏗"  },
   { key: "perm_publication",  label: "Publication",       icon: "📢" },
   { key: "perm_systeme",      label: "Système",           icon: "⚙️" },
+  // Enforced in the database (public.cash_has_access). No icon on purpose.
+  { key: "perm_caisse",       label: "Caisse" },
 ];
 
 
@@ -36,13 +38,25 @@ function MemberRow({
     perm_structure:    member.perm_structure,
     perm_publication:  member.perm_publication,
     perm_systeme:      member.perm_systeme,
+    perm_caisse:       member.perm_caisse,
   });
   const [dirty, setDirty] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [saving, startSave] = useTransition();
   const [resetting, setResetting] = useState(false);
+  const isAdmin = member.role === "admin";
+
+  // Admins have cash access by role: that box is locked.
+  function isLocked(key: keyof PermissionSet) {
+    return isAdmin && key === "perm_caisse";
+  }
+
+  function isOn(key: keyof PermissionSet) {
+    return isLocked(key) || perms[key];
+  }
 
   function toggle(key: keyof PermissionSet) {
+    if (isLocked(key)) return;
     setPerms((p) => ({ ...p, [key]: !p[key] }));
     setDirty(true);
   }
@@ -69,7 +83,7 @@ function MemberRow({
     else toast.error(res.error ?? "Erreur");
   }
 
-  const activePerms = PERM_LABELS.filter((p) => perms[p.key]);
+  const activePerms = PERM_LABELS.filter((p) => isOn(p.key));
 
   return (
     <li className="rounded-2xl border border-border bg-white">
@@ -101,7 +115,7 @@ function MemberRow({
                 key={p.key}
                 className="rounded-full border border-coral/20 bg-peach-pale px-2 py-0.5 text-[10px] font-semibold text-coral-dark"
               >
-                {p.icon} {p.label}
+                {p.icon ? `${p.icon} ${p.label}` : p.label}
               </span>
             ))
           )}
@@ -130,23 +144,33 @@ function MemberRow({
             </div>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
               {PERM_LABELS.map((p) => {
-                const checked = perms[p.key];
+                const locked = isLocked(p.key);
+                const checked = isOn(p.key);
                 return (
                   <label
                     key={p.key}
-                    className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors ${
+                    title={locked ? "Accès d'office pour un admin" : undefined}
+                    className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors ${
+                      locked ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                    } ${
                       checked ? "border-coral/30 bg-peach-pale" : "border-border bg-[#FAFAF7]"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={locked}
                       onChange={() => toggle(p.key)}
-                      className="size-4 cursor-pointer accent-coral"
+                      className={`size-4 accent-coral ${locked ? "cursor-not-allowed" : "cursor-pointer"}`}
                     />
-                    <span className="text-[13px]">{p.icon}</span>
-                    <span className={`text-[13px] font-semibold ${checked ? "text-ink" : "text-warmgray"}`}>
-                      {p.label}
+                    {p.icon && <span className="text-[13px]">{p.icon}</span>}
+                    <span className="min-w-0">
+                      <span className={`block text-[13px] font-semibold ${checked ? "text-ink" : "text-warmgray"}`}>
+                        {p.label}
+                      </span>
+                      {locked && (
+                        <span className="block text-[11px] font-medium text-coral-dark">Accès d&apos;office pour un admin</span>
+                      )}
                     </span>
                   </label>
                 );
