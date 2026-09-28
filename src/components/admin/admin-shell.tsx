@@ -6,6 +6,7 @@ import { Menu } from "lucide-react";
 import { AdminSidebar } from "./admin-sidebar";
 import { setAdminPlatform } from "@/app/admin/platform-actions";
 import { getAdminPlatformMeta, isAdminPlatform, type AdminPlatform } from "@/lib/admin/platforms";
+import type { RoadmapPlatform } from "@/lib/admin/roadmap-meta";
 
 // Pages qui lisent le contexte de plateforme dans l'URL (prompt 6) : changer
 // de plateforme dessus met `?plateforme=` à jour plutôt que de l'ajouter à
@@ -29,14 +30,14 @@ const PLATFORM_AWARE_PATHS = ["/admin/feedback", "/admin/roadmap", "/admin/aide"
  */
 export function AdminShell({
   email,
-  feedbackOpen = 0,
+  feedbackByPlatform,
   moderationPending = 0,
   claimsPending = 0,
   initialPlatform,
   children,
 }: {
   email: string;
-  feedbackOpen?: number;
+  feedbackByPlatform: Record<RoadmapPlatform, number>;
   moderationPending?: number;
   claimsPending?: number;
   initialPlatform: AdminPlatform;
@@ -107,7 +108,7 @@ export function AdminShell({
       >
         <AdminSidebar
           email={email}
-          feedbackOpen={feedbackOpen}
+          feedbackByPlatform={feedbackByPlatform}
           moderationPending={moderationPending}
           claimsPending={claimsPending}
           platform={platform}

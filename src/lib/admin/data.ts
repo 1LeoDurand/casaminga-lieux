@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "./guard";
+import type { RoadmapPlatform } from "./roadmap-meta";
 
 export interface PlatformStats {
   orgs: number;
@@ -128,23 +129,32 @@ export interface HelpCategoryAdmin {
   audience: string;
 }
 
-export async function getAllHelpArticles(): Promise<HelpArticleAdmin[]> {
+/**
+ * Articles d'aide, filtrés par audience (`admin` ou `public`) quand elle est
+ * fournie. Sans argument (ou `undefined`), toutes les audiences : c'est le cas
+ * "Toutes les plateformes" du contexte de travail (`/admin/aide`, prompt 6).
+ */
+export async function getAllHelpArticles(audience?: "admin" | "public"): Promise<HelpArticleAdmin[]> {
   const admin = createAdminClient();
   if (!admin) return [];
-  const { data } = await admin
+  let query = admin
     .from("help_articles")
     .select("slug, category_slug, title, excerpt, keywords, body, published, view_count, helpful_yes, helpful_no, sort_order, audience")
     .order("sort_order", { ascending: true });
+  if (audience) query = query.eq("audience", audience);
+  const { data } = await query;
   return (data as HelpArticleAdmin[]) ?? [];
 }
 
-export async function getAllHelpCategories(): Promise<HelpCategoryAdmin[]> {
+export async function getAllHelpCategories(audience?: "admin" | "public"): Promise<HelpCategoryAdmin[]> {
   const admin = createAdminClient();
   if (!admin) return [];
-  const { data } = await admin
+  let query = admin
     .from("help_categories")
     .select("slug, label, icon, description, sort_order, audience")
     .order("sort_order", { ascending: true });
+  if (audience) query = query.eq("audience", audience);
+  const { data } = await query;
   return (data as HelpCategoryAdmin[]) ?? [];
 }
 
@@ -549,17 +559,42 @@ export async function getUserLoginHistory(userId: string, limit = 100): Promise<
   return (data as LoginEventRow[]) ?? [];
 }
 
-/** Tous les tickets feedback, plus récents en premier. */
-export async function getAllFeedback(): Promise<FeedbackRow[]> {
+/**
+ * Tous les tickets feedback, plus récents en premier. `platform` filtre côté
+ * requête (pas côté client) quand il vaut `admin`/`public`/`sejour` ; omis
+ * (ou "all") il renvoie tout, c'est le cas "Toutes les plateformes".
+ */
+export async function getAllFeedback(platform?: RoadmapPlatform): Promise<FeedbackRow[]> {
   const admin = createAdminClient();
   if (!admin) return [];
 
-  const { data } = await admin
+  let query = admin
     .from("feedback")
     .select("id, type, priority, description, url, page_title, org_slug, status, screenshot_url, created_at, admin_note, user_agent, device_type, screen_width, screen_height, os_hint, user_id, user_email, platform, reporter_email")
     .order("created_at", { ascending: false });
+  if (platform) query = query.eq("platform", platform);
 
+  const { data } = await query;
   return data ?? [];
+}
+
+/**
+ * Compte des signalements ouverts, groupé par plateforme, en une seule
+ * requête (pas trois) : le badge de la barre latérale affiche le compte de
+ * la plateforme courante et signale le reste ("+N ailleurs") sans relancer
+ * de requête par plateforme.
+ */
+export async function getFeedbackCountsByPlatform(): Promise<Record<RoadmapPlatform, number>> {
+  const counts: Record<RoadmapPlatform, number> = { admin: 0, public: 0, sejour: 0 };
+  const admin = createAdminClient();
+  if (!admin) return counts;
+
+  const { data } = await admin.from("feedback").select("platform").eq("status", "open");
+  for (const row of data ?? []) {
+    const p = row.platform as RoadmapPlatform;
+    if (p in counts) counts[p] += 1;
+  }
+  return counts;
 }
 
 // ── Revendications de fiches moissonnées ──────────────────────────────────────

@@ -31,6 +31,9 @@ export async function seedDefaultHelp(): Promise<Result> {
   return { ok: true, summary: `${cats.length} catégories et ${arts.length} articles importés.` };
 }
 
+export type HelpAudience = "admin" | "public";
+const HELP_AUDIENCES: HelpAudience[] = ["admin", "public"];
+
 export interface ArticleInput {
   slug: string;
   category_slug: string;
@@ -39,6 +42,7 @@ export interface ArticleInput {
   keywords: string[];
   body: string;
   published: boolean;
+  audience: HelpAudience;
 }
 
 export async function saveHelpArticle(input: ArticleInput, originalSlug?: string): Promise<Result> {
@@ -46,6 +50,7 @@ export async function saveHelpArticle(input: ArticleInput, originalSlug?: string
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "service role manquant" };
   if (!input.slug.trim() || !input.title.trim()) return { ok: false, error: "Slug et titre requis." };
+  if (!HELP_AUDIENCES.includes(input.audience)) return { ok: false, error: "Audience invalide." };
 
   const payload = { ...input, slug: input.slug.trim(), updated_at: new Date().toISOString() };
 
@@ -67,6 +72,52 @@ export async function deleteHelpArticle(slug: string): Promise<Result> {
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "service role manquant" };
   const { error } = await admin.from("help_articles").delete().eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/aide");
+  revalidatePath("/aide");
+  return { ok: true };
+}
+
+export interface CategoryInput {
+  slug: string;
+  label: string;
+  icon: string;
+  description: string;
+  audience: HelpAudience;
+}
+
+export async function saveHelpCategory(input: CategoryInput, originalSlug?: string): Promise<Result> {
+  await requireSuperAdmin();
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "service role manquant" };
+  if (!input.slug.trim() || !input.label.trim()) return { ok: false, error: "Slug et libellé requis." };
+  if (!HELP_AUDIENCES.includes(input.audience)) return { ok: false, error: "Audience invalide." };
+
+  const payload = {
+    slug: input.slug.trim(),
+    label: input.label.trim(),
+    icon: input.icon.trim() || "circle",
+    description: input.description.trim() || null,
+    audience: input.audience,
+  };
+
+  // Renommage de slug : suppression de l'ancienne entrée
+  if (originalSlug && originalSlug !== payload.slug) {
+    await admin.from("help_categories").delete().eq("slug", originalSlug);
+  }
+  const { error } = await admin.from("help_categories").upsert(payload, { onConflict: "slug" });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/admin/aide");
+  revalidatePath("/aide");
+  return { ok: true };
+}
+
+export async function deleteHelpCategory(slug: string): Promise<Result> {
+  await requireSuperAdmin();
+  const admin = createAdminClient();
+  if (!admin) return { ok: false, error: "service role manquant" };
+  const { error } = await admin.from("help_categories").delete().eq("slug", slug);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/aide");
   revalidatePath("/aide");

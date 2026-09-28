@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "./guard";
-import type { RoadmapPriority, RoadmapTask } from "./roadmap-meta";
+import type { RoadmapPlatform, RoadmapPriority, RoadmapTask } from "./roadmap-meta";
 
 /**
  * Lecture de la feuille de route. La table a la RLS activée SANS aucune
@@ -14,11 +14,18 @@ const SELECT = "id, title, description, status, priority, effort, roadmap_ref, d
 /** Priorité haute d'abord, puis échéance la plus proche, puis les plus récentes. */
 const PRIORITY_RANK: Record<RoadmapPriority, number> = { haute: 0, normale: 1, basse: 2 };
 
-export async function getRoadmapTasks(): Promise<RoadmapTask[]> {
+/**
+ * Cartes de la feuille de route, filtrées par plateforme quand `platform` est
+ * fourni (contexte de travail, prompt 6). Omis, renvoie tout : c'est le cas
+ * "Toutes les plateformes".
+ */
+export async function getRoadmapTasks(platform?: RoadmapPlatform): Promise<RoadmapTask[]> {
   const admin = createAdminClient();
   if (!admin) return [];
 
-  const { data, error } = await admin.from("platform_tasks").select(SELECT);
+  let query = admin.from("platform_tasks").select(SELECT);
+  if (platform) query = query.eq("platform", platform);
+  const { data, error } = await query;
   if (error || !data) return [];
 
   return (data as RoadmapTask[]).sort((a, b) => {

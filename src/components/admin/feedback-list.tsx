@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { toast } from "sonner";
-import { Check, X, Archive, ZoomIn, StickyNote, Save } from "lucide-react";
-import { updateFeedbackStatus, saveAdminNote, type FeedbackStatus } from "@/app/admin/feedback/actions";
+import { Check, X, Archive, ZoomIn, StickyNote, Save, KanbanSquare } from "lucide-react";
+import { updateFeedbackStatus, saveAdminNote, createFeedbackCard, type FeedbackStatus } from "@/app/admin/feedback/actions";
 import type { FeedbackRow } from "@/lib/admin/data";
+import { getAdminPlatformMeta, isAdminPlatform } from "@/lib/admin/platforms";
 
 const PRIORITY_CLS: Record<string, string> = {
   low:      "bg-slate-100 text-slate-600",
@@ -45,6 +46,11 @@ export function FeedbackList({ items: initialItems }: { items: FeedbackRow[] }) 
   );
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  // Signalements pour lesquels une carte a déjà été créée dans cette session
+  // (ou en base, via roadmap_ref) : le bouton se désactive plutôt que de
+  // permettre un doublon.
+  const [cardedIds, setCardedIds] = useState<Set<string>>(new Set());
+  const [cardingId, setCardingId] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (filter === "all" ? items : items.filter((f) => f.status === filter)),
@@ -74,6 +80,21 @@ export function FeedbackList({ items: initialItems }: { items: FeedbackRow[] }) 
         toast.error(res.error ?? "Erreur");
       }
     });
+  }
+
+  async function handleCreateCard(id: string) {
+    setCardingId(id);
+    const res = await createFeedbackCard(id);
+    setCardingId(null);
+    if (res.ok) {
+      toast.success(res.alreadyExists ? "Carte déjà existante pour ce signalement." : "Carte créée dans la feuille de route ✓");
+      setCardedIds((prev) => new Set(prev).add(id));
+      if (!res.alreadyExists) {
+        setItems((prev) => prev.map((f) => f.id === id ? { ...f, status: "accepted" } : f));
+      }
+    } else {
+      toast.error(res.error ?? "Erreur");
+    }
   }
 
   async function handleSaveNote(id: string) {
@@ -145,6 +166,15 @@ export function FeedbackList({ items: initialItems }: { items: FeedbackRow[] }) 
                   <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${PRIORITY_CLS[f.priority] ?? PRIORITY_CLS.medium}`}>
                     {f.priority}
                   </span>
+                  {(() => {
+                    const pm = getAdminPlatformMeta(isAdminPlatform(f.platform) ? f.platform : "admin");
+                    return (
+                      <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-[11px] font-semibold text-ink">
+                        <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: pm.color }} />
+                        {pm.label}
+                      </span>
+                    );
+                  })()}
                   <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sm.cls}`}>{sm.label}</span>
                 </div>
 
@@ -208,6 +238,11 @@ export function FeedbackList({ items: initialItems }: { items: FeedbackRow[] }) 
                       👤 {f.user_email}
                     </span>
                   )}
+                  {f.reporter_email && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
+                      ✉ {f.reporter_email}
+                    </span>
+                  )}
                   {f.org_slug && <span>🏛 {f.org_slug}</span>}
                   {f.url && (
                     <a href={f.url} target="_blank" rel="noreferrer" className="truncate text-coral-dark hover:underline">
@@ -266,6 +301,18 @@ export function FeedbackList({ items: initialItems }: { items: FeedbackRow[] }) 
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-[12.5px] font-semibold text-warmgray transition-colors hover:border-coral/40 disabled:opacity-40"
                     >
                       ↩ Rouvrir
+                    </button>
+                  )}
+
+                  {/* Créer une carte roadmap (tout signalement non archivé) */}
+                  {f.status !== "archived" && (
+                    <button
+                      disabled={cardingId === f.id || cardedIds.has(f.id)}
+                      onClick={() => handleCreateCard(f.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[12.5px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-40"
+                    >
+                      <KanbanSquare className="size-3.5" />
+                      {cardingId === f.id ? "…" : cardedIds.has(f.id) ? "Carte créée" : "Créer une carte"}
                     </button>
                   )}
 

@@ -34,7 +34,12 @@ function formatDue(iso: string | null): string | null {
   return Number.isNaN(d.getTime()) ? iso : dateFmt.format(d);
 }
 
-function Card({ t }: { t: RoadmapTask }) {
+const PLATFORM_LABEL: Record<RoadmapPlatform, string> = ROADMAP_PLATFORMS.reduce(
+  (acc, p) => ({ ...acc, [p.value]: p.label }),
+  {} as Record<RoadmapPlatform, string>,
+);
+
+function Card({ t, showPlatform }: { t: RoadmapTask; showPlatform?: boolean }) {
   const due = formatDue(t.due_date);
   return (
     <div className={`mc-resa-card ${t.status === "fait" ? "is-annulee" : ""}`}>
@@ -43,6 +48,9 @@ function Card({ t }: { t: RoadmapTask }) {
         <span className={`mc-badge ${PRIO_BADGE[t.priority]}`}>{PRIO_LABEL[t.priority]}</span>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
+        {showPlatform ? (
+          <span className="mc-badge mc-badge-gray">{PLATFORM_LABEL[t.platform]}</span>
+        ) : null}
         {t.roadmap_ref ? (
           <span className="mc-tag inline-flex items-center gap-1">
             <Hash className="size-3" />{t.roadmap_ref}
@@ -55,7 +63,15 @@ function Card({ t }: { t: RoadmapTask }) {
   );
 }
 
-export function RoadmapBoard({ tasks }: { tasks: RoadmapTask[] }) {
+export function RoadmapBoard({
+  tasks,
+  defaultPlatform = "admin",
+  showPlatform = false,
+}: {
+  tasks: RoadmapTask[];
+  defaultPlatform?: RoadmapPlatform;
+  showPlatform?: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -133,7 +149,7 @@ export function RoadmapBoard({ tasks }: { tasks: RoadmapTask[] }) {
         onMove={move}
         onCardClick={setSelectedId}
         disabled={pending}
-        renderCard={(t) => <Card t={t} />}
+        renderCard={(t) => <Card t={t} showPlatform={showPlatform} />}
       />
 
       {selected ? (
@@ -151,6 +167,7 @@ export function RoadmapBoard({ tasks }: { tasks: RoadmapTask[] }) {
         <Detail
           key="create"
           task={null}
+          defaultPlatform={defaultPlatform}
           busy={pending}
           onClose={() => setCreating(false)}
           onSave={(patch) => {
@@ -166,8 +183,9 @@ export function RoadmapBoard({ tasks }: { tasks: RoadmapTask[] }) {
   );
 }
 
-function Detail({ task, busy, onClose, onSave, onDelete }: {
+function Detail({ task, defaultPlatform = "admin", busy, onClose, onSave, onDelete }: {
   task: RoadmapTask | null;
+  defaultPlatform?: RoadmapPlatform;
   busy: boolean;
   onClose: () => void;
   onSave: (patch: {
@@ -185,7 +203,7 @@ function Detail({ task, busy, onClose, onSave, onDelete }: {
   const [effort, setEffort] = useState<string>(task?.effort ?? "");
   const [ref, setRef] = useState(task?.roadmap_ref ?? "");
   const [due, setDue] = useState(task?.due_date ?? "");
-  const [platform, setPlatform] = useState<RoadmapPlatform>(task?.platform ?? "admin");
+  const [platform, setPlatform] = useState<RoadmapPlatform>(task?.platform ?? defaultPlatform);
   const [kind, setKind] = useState<string>(task?.kind ?? "");
 
   function submit() {

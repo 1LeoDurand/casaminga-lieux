@@ -13,24 +13,29 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   return { title: `${getAdminPlatformMeta(platform).label} · Feuille de route` };
 }
 
-// Le contexte de plateforme n'est encore que lu (titre d'onglet, ci-dessus) :
-// le filtre des cartes par plateforme est le prompt 6, pas celui-ci.
-export default async function AdminRoadmapPage() {
-  const tasks = await getRoadmapTasks();
+export default async function AdminRoadmapPage({ searchParams }: PageProps) {
+  const platform = await getAdminPlatform(await searchParams);
+  const tasks = await getRoadmapTasks(platform === "all" ? undefined : platform);
+  // "Toutes les plateformes" n'a pas de plateforme naturelle à préremplir :
+  // "admin" par défaut, comme demandé.
+  const defaultPlatform = platform === "all" ? "admin" : platform;
 
   return (
     <div className="mx-auto max-w-[1400px]">
       <header className="mb-6">
         <h1 className="font-heading text-2xl font-extrabold text-ink">Feuille de route</h1>
         <p className="mt-1 text-sm text-warmgray">
-          Vue d&apos;ensemble du chantier Casa Minga. Une carte déposée dans
+          {platform === "all"
+            ? "Vue d'ensemble, toutes plateformes confondues."
+            : `Vue d'ensemble pour ${getAdminPlatformMeta(platform).label}.`}
+          {" "}Une carte déposée dans
           <span className="font-medium text-amber-700"> Validé</span> vaut feu vert ;
           <span className="font-medium text-violet-700"> À déployer</span> signale ce qui est
           codé mais pas encore en production.
         </p>
       </header>
 
-      <RoadmapBoard tasks={tasks} />
+      <RoadmapBoard tasks={tasks} defaultPlatform={defaultPlatform} showPlatform={platform === "all"} />
     </div>
   );
 }

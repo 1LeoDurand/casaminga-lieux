@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare, KeyRound, Globe2 } from "lucide-react";
 import { getAdminPlatformMeta, type AdminPlatform } from "@/lib/admin/platforms";
+import type { RoadmapPlatform } from "@/lib/admin/roadmap-meta";
 import { PlatformSelector } from "./platform-selector";
 
 const NAV = [
@@ -31,14 +32,14 @@ const PLATFORM_AWARE_HREFS = new Set(["/admin/feedback", "/admin/roadmap", "/adm
 
 export function AdminSidebar({
   email,
-  feedbackOpen = 0,
+  feedbackByPlatform,
   moderationPending = 0,
   claimsPending = 0,
   platform,
   onChangePlatform,
 }: {
   email: string;
-  feedbackOpen?: number;
+  feedbackByPlatform: Record<RoadmapPlatform, number>;
   moderationPending?: number;
   claimsPending?: number;
   platform: AdminPlatform;
@@ -46,6 +47,14 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname();
   const platformColor = getAdminPlatformMeta(platform).color;
+
+  // Badge "Feedback & bugs" : le compte de la plateforme courante ("all" =
+  // le total, il n'y a alors rien "ailleurs") + un petit compte gris pour le
+  // reste, sans relancer de requête (une seule, groupée, dans le layout).
+  const feedbackEntries = Object.entries(feedbackByPlatform) as [RoadmapPlatform, number][];
+  const feedbackTotal = feedbackEntries.reduce((sum, [, n]) => sum + n, 0);
+  const feedbackHere = platform === "all" ? feedbackTotal : feedbackByPlatform[platform] ?? 0;
+  const feedbackElsewhere = platform === "all" ? 0 : feedbackTotal - feedbackHere;
 
   return (
     <aside
@@ -69,8 +78,9 @@ export function AdminSidebar({
         {NAV.map((item) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
+          const isFeedback = item.href === "/admin/feedback";
           const badge =
-            item.href === "/admin/feedback" && feedbackOpen > 0 ? feedbackOpen
+            isFeedback && feedbackHere > 0 ? feedbackHere
             : item.href === "/admin/moderation" && moderationPending > 0 ? moderationPending
             : item.href === "/admin/revendications" && claimsPending > 0 ? claimsPending
             : 0;
@@ -90,6 +100,11 @@ export function AdminSidebar({
               {badge > 0 && (
                 <span className="shrink-0 rounded-full bg-coral px-1.5 py-px text-[10px] font-bold text-white">
                   {badge}
+                </span>
+              )}
+              {isFeedback && feedbackElsewhere > 0 && (
+                <span className="shrink-0 rounded-full bg-white/15 px-1.5 py-px text-[10px] font-semibold text-white/60">
+                  +{feedbackElsewhere} ailleurs
                 </span>
               )}
             </Link>
