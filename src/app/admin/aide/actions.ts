@@ -101,12 +101,20 @@ export async function saveHelpCategory(input: CategoryInput, originalSlug?: stri
     audience: input.audience,
   };
 
-  // Renommage de slug : suppression de l'ancienne entrée
-  if (originalSlug && originalSlug !== payload.slug) {
-    await admin.from("help_categories").delete().eq("slug", originalSlug);
-  }
   const { error } = await admin.from("help_categories").upsert(payload, { onConflict: "slug" });
   if (error) return { ok: false, error: error.message };
+
+  // Slug rename: the FK is ON DELETE SET NULL, so articles must be moved to the
+  // new slug before the old row goes, or they silently lose their category.
+  if (originalSlug && originalSlug !== payload.slug) {
+    const { error: moveErr } = await admin
+      .from("help_articles")
+      .update({ category_slug: payload.slug })
+      .eq("category_slug", originalSlug);
+    if (moveErr) return { ok: false, error: moveErr.message };
+    const { error: delErr } = await admin.from("help_categories").delete().eq("slug", originalSlug);
+    if (delErr) return { ok: false, error: delErr.message };
+  }
 
   revalidatePath("/admin/aide");
   revalidatePath("/aide");
@@ -117,6 +125,18 @@ export async function deleteHelpCategory(slug: string): Promise<Result> {
   await requireSuperAdmin();
   const admin = createAdminClient();
   if (!admin) return { ok: false, error: "service role manquant" };
+  // Deleting a non-empty category would orphan its articles (FK is ON DELETE SET NULL).
+  const { count, error: countErr } = await admin
+    .from("help_articles")
+    .select("slug", { count: "exact", head: true })
+    .eq("category_slug", slug);
+  if (countErr) return { ok: false, error: countErr.message };
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error: `Cette catégorie contient ${count} article(s) : déplacez-les ou supprimez-les d'abord.`,
+    };
+  }
   const { error } = await admin.from("help_categories").delete().eq("slug", slug);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/aide");

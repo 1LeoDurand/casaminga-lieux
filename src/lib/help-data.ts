@@ -20,6 +20,8 @@ async function dbCategories(): Promise<HelpCategory[] | null> {
   const { data } = await supabase
     .from("help_categories")
     .select("slug, label, icon, description, sort_order")
+    // This help center is for organisations; public-audience rows belong to casaminga.com.
+    .eq("audience", "admin")
     .order("sort_order", { ascending: true });
   if (!data || data.length === 0) return null;
   return data.map((c) => ({
@@ -34,6 +36,7 @@ async function dbArticles(): Promise<HelpArticle[] | null> {
     .from("help_articles")
     .select("slug, category_slug, title, excerpt, keywords, body, updated_at, published, sort_order")
     .eq("published", true)
+    .eq("audience", "admin")
     .order("sort_order", { ascending: true });
   if (!data || data.length === 0) return null;
   return data.map((a) => ({
