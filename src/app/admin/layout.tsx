@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { requireSuperAdmin } from "@/lib/admin/guard";
 import { getModerationPendingCount, getClaimsPendingCount, getFeedbackCountsByPlatform } from "@/lib/admin/data";
 import { getAdminPlatform } from "@/lib/admin/platform-context";
+import { getOutreachPendingCount } from "@/lib/outreach/data";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const metadata: Metadata = {
@@ -12,9 +13,11 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { email } = await requireSuperAdmin();
-  const [moderationPending, claimsPending, initialPlatform, feedbackByPlatform] = await Promise.all([
+  const [moderationPending, claimsPending, outreachPending, initialPlatform, feedbackByPlatform] = await Promise.all([
     getModerationPendingCount(),
     getClaimsPendingCount(),
+    // Threads "à toi" of the contacts module (0 if the module is unreachable).
+    getOutreachPendingCount(),
     // Un layout App Router ne reçoit pas les searchParams : seul le cookie
     // est lisible ici. La query `?plateforme=` (si présente) est lue et prime
     // côté client, dans AdminShell.
@@ -32,6 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         feedbackByPlatform={feedbackByPlatform}
         moderationPending={moderationPending}
         claimsPending={claimsPending}
+        outreachPending={outreachPending}
         initialPlatform={initialPlatform}
       >
         {children}

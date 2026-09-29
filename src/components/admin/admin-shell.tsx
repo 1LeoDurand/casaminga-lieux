@@ -33,6 +33,7 @@ export function AdminShell({
   feedbackByPlatform,
   moderationPending = 0,
   claimsPending = 0,
+  outreachPending = 0,
   initialPlatform,
   children,
 }: {
@@ -40,6 +41,7 @@ export function AdminShell({
   feedbackByPlatform: Record<RoadmapPlatform, number>;
   moderationPending?: number;
   claimsPending?: number;
+  outreachPending?: number;
   initialPlatform: AdminPlatform;
   children: React.ReactNode;
 }) {
@@ -111,6 +113,7 @@ export function AdminShell({
           feedbackByPlatform={feedbackByPlatform}
           moderationPending={moderationPending}
           claimsPending={claimsPending}
+          outreachPending={outreachPending}
           platform={platform}
           onChangePlatform={handleChangePlatform}
         />

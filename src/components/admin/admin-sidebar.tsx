@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare, KeyRound, Globe2 } from "lucide-react";
+import { LayoutDashboard, Building2, MessageSquareWarning, BookOpen, Mail, Landmark, ArrowLeft, FlaskConical, Activity, HeartPulse, ShieldCheck, Receipt, LogIn, KanbanSquare, KeyRound, Globe2, Send } from "lucide-react";
 import { getAdminPlatformMeta, type AdminPlatform } from "@/lib/admin/platforms";
 import type { RoadmapPlatform } from "@/lib/admin/roadmap-meta";
 import { PlatformSelector } from "./platform-selector";
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/portail", label: "Portail public", icon: Globe2, exact: false },
   { href: "/admin/moderation", label: "Modération", icon: ShieldCheck, exact: false },
   { href: "/admin/revendications", label: "Revendications", icon: KeyRound, exact: false },
+  { href: "/admin/contacts", label: "Contacts", icon: Send, exact: false },
   { href: "/admin/engagement", label: "Engagement", icon: Activity, exact: false },
   { href: "/admin/connexions", label: "Connexions", icon: LogIn, exact: false },
   { href: "/admin/sante", label: "Santé technique", icon: HeartPulse, exact: false },
@@ -35,6 +36,7 @@ export function AdminSidebar({
   feedbackByPlatform,
   moderationPending = 0,
   claimsPending = 0,
+  outreachPending = 0,
   platform,
   onChangePlatform,
 }: {
@@ -42,6 +44,8 @@ export function AdminSidebar({
   feedbackByPlatform: Record<RoadmapPlatform, number>;
   moderationPending?: number;
   claimsPending?: number;
+  /** Threads flagged "à toi" in the contacts module, all programs. */
+  outreachPending?: number;
   platform: AdminPlatform;
   onChangePlatform: (id: AdminPlatform) => void;
 }) {
@@ -83,6 +87,7 @@ export function AdminSidebar({
             isFeedback && feedbackHere > 0 ? feedbackHere
             : item.href === "/admin/moderation" && moderationPending > 0 ? moderationPending
             : item.href === "/admin/revendications" && claimsPending > 0 ? claimsPending
+            : item.href === "/admin/contacts" && outreachPending > 0 ? outreachPending
             : 0;
           const href = PLATFORM_AWARE_HREFS.has(item.href)
             ? `${item.href}?plateforme=${encodeURIComponent(platform)}`
