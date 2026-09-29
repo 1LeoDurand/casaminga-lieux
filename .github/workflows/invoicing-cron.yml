@@ -56,3 +56,11 @@ jobs:
             -H "Content-Type: application/json" \
             "https://admin.casaminga.com/api/cron/aides-territoires" \
             -w "\nHTTP %{http_code}\n"
+
+      - name: RGPD — purge des données périmées (journal, demandes, inscriptions, contacts)
+        run: |
+          curl -s -X POST \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          -H "Content-Type: application/json" \
+          "https://admin.casaminga.com/api/cron/rgpd-purge" \
+          -w "\nHTTP %{http_code}\n"

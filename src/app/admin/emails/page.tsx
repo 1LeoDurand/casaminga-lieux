@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 const CAT_LABEL: Record<string, string> = {
   facture: "Facture", rappel: "Rappel", bienvenue: "Bienvenue", recu: "Reçu",
   reservation: "Réservation", adhesion: "Adhésion", autre: "Autre",
+  prospection: "Contacts : prospection", support: "Contacts : support", contacts: "Contacts",
 };
 
 function fmt(iso: string) {

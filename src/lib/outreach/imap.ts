@@ -71,6 +71,14 @@ export class ImapSession {
   }
 
   /**
+   * Files a copy of a sent mail in a folder (IMAP APPEND), flagged \Seen and
+   * dated with the sending time. Used by the send queue for "Envoyés".
+   */
+  async append(folder: string, raw: Buffer, date: Date): Promise<void> {
+    await this.client.append(folder, raw, ["\\Seen"], date);
+  }
+
+  /**
    * Reads UIDs above the cursor, oldest first, at most `batch` per call, and
    * hands each to `onMessage`. If it throws, reading stops and the cursor stays
    * on the last message that succeeded (the error is rethrown by the caller

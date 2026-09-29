@@ -14,6 +14,13 @@ export const maxDuration = 60;
  *  - event_registrations  > 24 mois (événement passé)    → anonymisation
  *    (+ holder_name des billets correspondants)
  *
+ * Module Contacts (outreach_*) — spec 12.4, voir src/lib/outreach/purge.ts :
+ *  - fils sans échange depuis `retention_months` du programme (36 par défaut) :
+ *    fils, messages, événements et fichiers supprimés ; un contact sans plus
+ *    aucun fil est supprimé sauf rattachement à une organisation membre ;
+ *  - accords photo en cours et liste de suppression conservés ;
+ *  - justificatifs d'identité supprimés 30 jours après la clôture du fil.
+ *
  * Jamais touchés : factures, écritures de caisse, transactions (conservation
  * légale comptable), adhésions actives, fiches persons (anonymisation à la
  * demande uniquement — c'est une décision humaine).
@@ -84,13 +91,23 @@ export async function POST(req: Request) {
     }
   }
 
+  // 4. Module Contacts (best effort : une panne ici ne doit pas défaire les purges ci-dessus)
+  let outreach = { threads: 0, contacts: 0, files: 0, proofs: 0, total: 0 };
+  try {
+    const { purgeOutreach } = await import("@/lib/outreach/purge");
+    outreach = await purgeOutreach(admin, now);
+  } catch {
+    console.error("[rgpd-purge] purge des contacts en échec");
+  }
+
   const total = (helloassoPurged ?? 0) + (emailLogPurged ?? 0) + (requestsAnonymized ?? 0) + regsAnonymized;
-  await logCronRun("rgpd-purge", "ok", { rowsAffected: total });
+  await logCronRun("rgpd-purge", "ok", { rowsAffected: total + outreach.total });
   return NextResponse.json({
     ok: true,
     helloassoLogPurged: helloassoPurged ?? 0,
     emailLogPurged: emailLogPurged ?? 0,
     requestsAnonymized: requestsAnonymized ?? 0,
     eventRegistrationsAnonymized: regsAnonymized,
+    outreach,
   });
 }

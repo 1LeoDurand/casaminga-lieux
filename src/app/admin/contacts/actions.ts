@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSuperAdmin, createAdminClient } from "@/lib/admin/guard";
 import { getProgramConfig } from "@/lib/outreach/programs";
+import { nextSendSlot, spreadSlots } from "@/lib/outreach/schedule";
 import { canTransition, stageByRole, stageBySlug, MANUAL_CLOSED_REASONS } from "@/lib/outreach/status";
 import type {
   ActionResult, ClosedReason, Message, ProgramConfig, Subject, SubjectQualityRow, Thread,
@@ -24,8 +25,8 @@ const INITIAL_MAX = 2500;
 const FOLLOW_UP_MAX = 1200;
 const REPLY_MAX = 8000;
 const LOT_MAX = 20;
-/** Provisional spacing between the messages of a batch; step 3 (schedule.ts) replaces it with real slots. */
-const LOT_SPACING_MIN = 10;
+/** The cron takes at most 30 min / per_run_cap ... a batch is spread so that each run finds messages due. */
+const CRON_PERIOD_MIN = 30;
 
 type Admin = SupabaseClient;
 interface Ctx { email: string; admin: Admin }
@@ -153,14 +154,19 @@ async function validateOne(ctx: Ctx, threadId: string, scheduledFor: Date, lotId
 export async function validateDraft(threadId: string): Promise<ActionResult> {
   const ctx = await context();
   if (!ctx) return NO_CONFIG;
-  const res = await validateOne(ctx, threadId, new Date(), null);
+  const loaded = await loadThread(ctx.admin, threadId);
+  const settings = loaded?.program.settings ?? null;
+  // First free slot of the program's sending window (hours, days, time zone).
+  const slot = settings ? nextSendSlot(new Date(), settings) : new Date();
+  const res = await validateOne(ctx, threadId, slot, null);
   if (res.ok) refresh();
   return res;
 }
 
 /**
  * Validates a batch: 20 threads at most, same program, same template, same
- * article, none of them custom. Sends are spread by LOT_SPACING_MIN minutes.
+ * article, none of them custom. Sends are spread over the program's sending
+ * slots (schedule.ts): one slot per cron pass for each `per_run_cap` messages.
  */
 export async function validateLot(threadIds: string[]): Promise<ActionResult<{ validated: number; failed: number }>> {
   const ctx = await context();
@@ -178,12 +184,15 @@ export async function validateLot(threadIds: string[]): Promise<ActionResult<{ v
   if (threads.some((t) => t.is_custom)) return { ok: false, error: "Un brouillon personnalisé se valide seul." };
 
   const lotId = randomUUID();
-  const start = Date.now();
+  const program = await getProgramConfig(first.program_id);
+  const settings = program?.settings ?? null;
+  const step = settings ? Math.max(1, Math.floor(CRON_PERIOD_MIN / settings.per_run_cap)) : 10;
+  const slots = settings ? spreadSlots(new Date(), ids.length, step, settings) : ids.map((_, i) => new Date(Date.now() + i * step * 60_000));
   let validated = 0;
   let failed = 0;
   let firstError: string | undefined;
   for (const [i, id] of ids.entries()) {
-    const res = await validateOne(ctx, id, new Date(start + i * LOT_SPACING_MIN * 60_000), lotId);
+    const res = await validateOne(ctx, id, slots[i], lotId);
     if (res.ok) validated++;
     else { failed++; firstError ??= res.error; }
   }

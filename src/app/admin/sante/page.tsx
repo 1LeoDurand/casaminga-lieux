@@ -9,6 +9,8 @@ const CRON_LABEL: Record<string, string> = {
   "reminders":           "Rappels J-1 / J-30",
   "newsletters":         "Newsletters auto",
   "outreach-inbox":      "Contacts : lecture des boîtes",
+  "outreach-send":       "Contacts : envoi des messages",
+  "rgpd-purge":          "RGPD : purge des données périmées",
 };
 
 function fmtRelative(iso: string | null): string {
