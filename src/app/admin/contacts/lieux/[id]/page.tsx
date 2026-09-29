@@ -8,7 +8,7 @@ import { stageByRole } from "@/lib/outreach/status";
 import { ADDRESS_SOURCE_LABELS, CLOSED_REASON_LABELS } from "@/lib/outreach/types";
 import { AToiQueue } from "@/components/outreach/a-toi-queue";
 import { DraftCard, type DraftMessage } from "@/components/outreach/draft-card";
-import { EmptyLine, ReasonBadge, Section, StageBadge, ThreadLink, fmtDate, fmtDateTime } from "@/components/outreach/ui";
+import { EmptyLine, ReasonBadge, Section, StageBadge, ThreadLink, fmtDate, fmtDateTime, safeHref } from "@/components/outreach/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +40,8 @@ export default async function ContactPage({ params }: PageProps) {
         <p className="text-[13px] text-warmgray">
           {[contact.city, contact.region].filter(Boolean).join(", ") || "Lieu non renseigné"}
           {contact.kind ? ` · ${contact.kind.replace(/_/g, " ")}` : ""}
-          {contact.website ? (
-            <> · <a className="inline-flex items-center gap-0.5 underline" href={contact.website} target="_blank" rel="noopener noreferrer">site<ExternalLink className="size-3" /></a></>
+          {safeHref(contact.website) ? (
+            <> · <a className="inline-flex items-center gap-0.5 underline" href={safeHref(contact.website) ?? undefined} target="_blank" rel="noopener noreferrer">site<ExternalLink className="size-3" /></a></>
           ) : null}
         </p>
       </div>
@@ -162,7 +162,7 @@ export default async function ContactPage({ params }: PageProps) {
                   <td>{[a.person_first_name, a.person_name].filter(Boolean).join(" ") || (a.is_role_address ? "Adresse générique" : "—")}{a.person_role ? <span className="text-[11px] text-warmgray"> · {a.person_role}</span> : null}</td>
                   <td>
                     {ADDRESS_SOURCE_LABELS[a.source] ?? a.source}
-                    {a.source_url ? <> · <a className="underline" href={a.source_url} target="_blank" rel="noopener noreferrer">lien</a></> : null}
+                    {safeHref(a.source_url) ? <> · <a className="underline" href={safeHref(a.source_url) ?? undefined} target="_blank" rel="noopener noreferrer">lien</a></> : null}
                     {a.source_note ? <div className="text-[11px] text-warmgray">{a.source_note}</div> : null}
                   </td>
                   <td>{a.status.replace(/_/g, " ")}</td>

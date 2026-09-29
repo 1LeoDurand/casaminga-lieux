@@ -80,7 +80,8 @@ try {
   check("forme : quatre segments o1.<hex32>.<émission>.<signature>",
     parts.length === 4 && parts[0] === "o1" && parts[1] === hex && /^[0-9a-z]+$/.test(parts[2]));
   check("caractères sûrs pour une URL", /^[A-Za-z0-9_.-]+$/.test(tok));
-  check("aucune donnée personnelle : ni tiret d'uuid, ni arobase", !tok.includes("@") && !tok.includes("-"));
+  check("aucune donnée personnelle : ni tiret d'uuid, ni arobase", // The base64url signature may contain "-": only the readable segments are checked.
+    !tok.includes("@") && !parts.slice(0, 3).join(".").includes("-"));
   const ok = T.verifyScopedToken("o1", tok, now, "photos");
   check("valide : sujet restitué avec ses tirets", ok?.subject === thread);
   check("valide : date d'émission restituée à la seconde", ok?.issuedAtMs === Math.floor(now / 1000) * 1000);

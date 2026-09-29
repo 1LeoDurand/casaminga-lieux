@@ -312,8 +312,11 @@ export async function updateDraftText(messageId: string, text: string): Promise<
   const max = msg.kind === "relance" ? FOLLOW_UP_MAX : INITIAL_MAX;
   if (body.length > max) return { ok: false, error: `Ce texte dépasse ${max} caractères.` };
 
-  const { error } = await ctx.admin.from("outreach_messages").update({ body_text: body, draft_text: body, modified_by_leo: true }).eq("id", messageId);
+  const { data: edited, error } = await ctx.admin.from("outreach_messages").update({ body_text: body, draft_text: body, modified_by_leo: true })
+    .eq("id", messageId).eq("send_status", "a_valider").select("id");
   if (error) return { ok: false, error: friendlyError(error) };
+  // Approved between the read and the write: an approved text is never rewritten.
+  if (!edited || edited.length === 0) return { ok: false, error: "Ce message n'est plus un brouillon : retire-le de la file avant de le modifier." };
   const t = await loadThread(ctx.admin, msg.thread_id);
   await logEvent(ctx.admin, { program_id: t?.program.id, thread_id: msg.thread_id, contact_id: t?.thread.contact_id, message_id: messageId, type: "draft.edited", data: { kind: msg.kind, field: "texte" } });
   refresh();
@@ -420,11 +423,19 @@ export async function sendReply(threadId: string, text: string, addToKnowledge =
     thread.address_id ? admin.from("outreach_addresses").select("email").eq("id", thread.address_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const inbound = (inboundRows ?? []) as Message[];
-  const lastHuman = inbound.find((m) => m.kind === "entrant" || m.kind === "formulaire") ?? inbound[0] ?? null;
+  // A bounce or a complaint is not someone writing to us: never answered.
+  const lastHuman = inbound.find((m) => m.kind === "entrant" || m.kind === "formulaire")
+    ?? inbound.find((m) => m.kind !== "rebond" && m.kind !== "plainte") ?? null;
+  // A 'reponse' skips the opt-out rules of the send guard (only cold mail and automatic mail are
+  // checked): it must answer something the person wrote, never open a conversation.
+  if (!lastHuman) return { ok: false, error: "Aucun message reçu dans ce fil : il n'y a rien à quoi répondre." };
   const to = ((addrR.data as { email: string } | null)?.email) ?? lastHuman?.from_email ?? null;
   if (!to) return { ok: false, error: "Aucune adresse destinataire pour ce fil." };
 
-  const baseSubject = (lastHuman?.subject ?? thread.email_subject).replace(/^(re|réf|ref)\s*:\s*/i, "").trim();
+  // The subject comes from an inbound mail: no control character may reach a header (CR/LF injection).
+  // eslint-disable-next-line no-control-regex
+  const baseSubject = (lastHuman.subject ?? thread.email_subject ?? "").replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ")
+    .replace(/^(re|réf|ref)\s*:\s*/i, "").trim();
   const aiDraft = lastHuman?.ai_draft ?? null;
   const ratio = aiDraft ? editRatio(aiDraft, body) : null;
   const scheduled = new Date();

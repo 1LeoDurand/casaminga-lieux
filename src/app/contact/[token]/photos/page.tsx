@@ -17,6 +17,7 @@ const ERRORS: Record<string, string> = {
   too_many: "Dix photos au plus par envoi.",
   too_big: "Chaque photo doit peser 10 Mo au plus.",
   bad_type: "Seules les images JPEG, PNG et WebP sont acceptées.",
+  busy: "Un autre envoi est en cours de traitement. Merci de réessayer dans une minute.",
   rate: "Vous avez déjà fait plusieurs envois aujourd'hui. Réessayez demain, ou répondez au message reçu.",
   server: "Une erreur est survenue. Merci de réessayer, ou de répondre au message reçu.",
 };

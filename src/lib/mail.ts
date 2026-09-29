@@ -185,7 +185,8 @@ export async function sendMail(payload: MailPayload): Promise<boolean> {
     const headers = payload.unsubscribeUrl
       ? {
           "List-Unsubscribe": `<${payload.unsubscribeUrl}>`,
-          "List-Unsubscribe-Post": "List=One-Click",
+          // Exact value required by RFC 8058 section 3.1 ("List=One-Click" is ignored by Gmail/Yahoo).
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         }
       : undefined;
     await transporter.sendMail({

@@ -179,8 +179,10 @@ async function loadLink(
   const contact = contactRes.data;
   if (!program || !settings || !contact) return null;
 
-  // L'action doit figurer dans les actions du programme du fil.
-  if (!program.link_actions.includes(action)) return null;
+  // L'action doit figurer dans les actions du programme du fil. Sauf `stop` : un jeton
+  // « ne plus m'écrire » authentique a été émis par nous, et retirer `stop` des actions
+  // d'un programme ne doit pas rendre muets les liens déjà envoyés (l'opposition vaut toujours).
+  if (action !== "stop" && !program.link_actions.includes(action)) return null;
 
   // Expiration et révocation : toutes les actions sauf `stop`.
   if (action !== "stop") {

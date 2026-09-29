@@ -107,6 +107,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // api/contact/ excluded: the proxy buffers request bodies and cuts them at 10 MB
+    // (photo uploads), logging the URL, hence the signed token. Those routes set their
+    // own no-referrer / noindex / no-store headers.
+    "/((?!_next/static|_next/image|favicon.ico|api/contact/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

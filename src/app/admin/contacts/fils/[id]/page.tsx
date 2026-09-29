@@ -9,7 +9,7 @@ import { CLOSED_REASON_LABELS } from "@/lib/outreach/types";
 import { AiPanel } from "@/components/outreach/ai-panel";
 import { MessageRow } from "@/components/outreach/message-row";
 import { ReplyBox, ThreadControls } from "@/components/outreach/thread-controls";
-import { EmptyLine, ReasonBadge, Section, StageBadge, fmtDateTime } from "@/components/outreach/ui";
+import { EmptyLine, ReasonBadge, Section, StageBadge, fmtDateTime, safeHref } from "@/components/outreach/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,7 @@ export default async function ThreadPage({ params }: PageProps) {
         </div>
         <p className="mt-1 text-[13px] text-warmgray">
           {program.label} · {contact.name}
-          {article ? <> · <a className="inline-flex items-center gap-0.5 underline" href={article.url} target="_blank" rel="noopener noreferrer">{article.title}<ExternalLink className="size-3" /></a></> : null}
+          {article ? <> · {safeHref(article.url) ? <a className="inline-flex items-center gap-0.5 underline" href={safeHref(article.url) ?? undefined} target="_blank" rel="noopener noreferrer">{article.title}<ExternalLink className="size-3" /></a> : article.title}</> : null}
           {thread.external_type === "claim" ? <> · <Link className="underline" href="/admin/revendications">revendication</Link></> : null}
         </p>
         {thread.needs_leo_since ? <p className="text-[12px] text-warmgray">À toi depuis le {fmtDateTime(thread.needs_leo_since)}</p> : null}
