@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { assertOrgAdmin, createAdminClient } from "@/lib/admin/guard";
 import { getOrganizationBySlug, getMembershipCampaignsForOrg, getTiersForCampaign, createMembershipApplication } from "@/lib/data";
 import { getHelloAssoToken, getHelloAssoPayments } from "@/lib/helloasso";
 import { computeMembershipEnd } from "@/lib/adhesions-meta";
@@ -28,10 +29,18 @@ export async function POST(
   const org = await getOrganizationBySlug(slug);
   if (!org) return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
 
+  // The org row is readable by anyone once its public site is published, so
+  // finding it proves nothing: require an admin of this organization.
+  const guard = await assertOrgAdmin(org.id);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: 403 });
+
   const supabase = await createClient();
 
-  // Récupérer les credentials HelloAsso depuis l'org
-  const { data: orgFull } = await supabase
+  // Credentials are not readable by anon/authenticated (migration 0020):
+  // read them with the service role, after the admin check above.
+  const admin = createAdminClient();
+  if (!admin) return NextResponse.json({ error: "Configuration serveur manquante." }, { status: 500 });
+  const { data: orgFull } = await admin
     .from("organizations")
     .select("helloasso_client_id, helloasso_client_secret, helloasso_org_slug")
     .eq("id", org.id)

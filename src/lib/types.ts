@@ -30,8 +30,9 @@ export interface Organization {
   demo_archetype?: string | null;
   /** Archétype choisi à l'inscription — pilote la composition du dashboard. */
   org_type?: string | null;
-  helloasso_client_id?: string | null;
-  helloasso_client_secret?: string | null;
+  // helloasso_client_id / helloasso_client_secret are deliberately absent:
+  // since migration 0020 they are not readable by anon/authenticated and are
+  // only handled server side with the service role client.
   helloasso_org_slug?: string | null;
   helloasso_connected_at?: string | null;
   /** Stripe Connect — encaissement des réservations par le lieu. */

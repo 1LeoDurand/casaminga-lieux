@@ -142,11 +142,21 @@ export async function getOrganizationBySlug(
   const supabase = await createClient();
   const { data } = await supabase
     .from("organizations")
-    .select("*")
+    .select(ORGANIZATION_COLUMNS)
     .eq("slug", slug)
     .maybeSingle();
-  return data;
+  return data as Organization | null;
 }
+
+/**
+ * Columns readable by anon/authenticated on organizations (migration
+ * 0020_organizations_secrets). The HelloAsso credentials are excluded: they
+ * are only read server side with the service role. Never use `select("*")`
+ * on organizations with a session or anon client: since 0020 it fails with
+ * "permission denied" instead of dropping the hidden columns.
+ */
+const ORGANIZATION_COLUMNS =
+  "id, slug, name, structure, siret, address, email, phone, website, description, hours, plan, primary_color, created_at, updated_at, helloasso_org_slug, helloasso_connected_at, org_type, is_demo, demo_archetype, onboarding_j3_sent_at, onboarding_j7_sent_at, stripe_account_id, stripe_connected_at, stripe_charges_enabled, source, claimed_at";
 
 /**
  * Vrai si l'organisation a été moissonnée dans un agenda ouvert et n'a pas
