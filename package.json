@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=1536' next build",
     "start": "NODE_OPTIONS='--max-old-space-size=1536' next start",
+    "build:local": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
+    "build:verif": "node --max-old-space-size=1536 node_modules/next/dist/bin/next build",
     "lint": "eslint",
     "verify:schema": "node --env-file=.env.local scripts/verify-schema.mjs"
   },
