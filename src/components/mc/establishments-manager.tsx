@@ -46,7 +46,11 @@ function Form({ orgId, orgSlug, initial, onDone, onCancel }: {
       const res = initial
         ? await updateEstablishment(orgSlug, initial.id, payload)
         : await createEstablishment(orgId, orgSlug, payload);
-      if (res.ok) { toast.success(initial ? "Établissement mis à jour" : "Établissement créé"); onDone(); }
+      if (res.ok) {
+        toast.success(initial ? "Établissement mis à jour" : "Établissement créé");
+        if (res.warning) toast.warning(res.warning);
+        onDone();
+      }
       else toast.error(res.error ?? "Erreur");
     });
   }
