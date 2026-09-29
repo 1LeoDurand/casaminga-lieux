@@ -129,3 +129,91 @@ export function verifyPortalToken(token: string, nowMs: number = Date.now()): st
     return null;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * Jetons à domaine séparé (liens signés du module Contacts, /contact/<jeton>)
+ *
+ * Forme : <scope>.<sujet sans tirets>.<émission base 36>.<signature>
+ *         signature = HMAC("<scope>|<sujet>|<émission>" [+ "|<action>"])
+ *
+ * Quatre segments, contre trois (v2) ou deux (v1) pour un jeton du portail :
+ * verifyPortalToken() rejette un jeton scopé, et verifyScopedToken() rejette
+ * un jeton du portail. Le préfixe de scope dans la charge signée empêche en
+ * plus de recycler une signature d'un domaine dans l'autre.
+ *
+ * Scope "o1" (outreach) : le sujet est l'identifiant (uuid) d'un fil. Le jeton
+ * peut être lié à une action (paramètre `bind`), signée avec lui : un lien
+ * « ne plus m'écrire » ne permet alors pas de déposer des photos. L'expiration
+ * dépend du programme du fil (link_ttl_days) : elle est jugée par l'appelant
+ * à partir de `issuedAtMs`, ce fichier ne connaît pas la base.
+ * ---------------------------------------------------------------------- */
+
+export type TokenScope = "o1";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const HEX32_RE = /^[0-9a-f]{32}$/;
+const BIND_RE = /^[a-z_]{1,30}$/;
+
+function scopedPayload(scope: TokenScope, subject: string, issuedAt36: string, bind?: string): string {
+  return bind ? `${scope}|${subject}|${issuedAt36}|${bind}` : `${scope}|${subject}|${issuedAt36}`;
+}
+
+/**
+ * Signe un sujet (uuid de fil) pour un scope. `bind` lie le jeton à une action.
+ * Lève une erreur sans PORTAL_LINK_SECRET ou avec un sujet qui n'est pas un uuid.
+ */
+export function signScopedToken(
+  scope: TokenScope,
+  subject: string,
+  issuedAtMs: number = Date.now(),
+  bind?: string
+): string {
+  if (!SECRET) {
+    throw new Error("PORTAL_LINK_SECRET is not set: cannot sign scoped token");
+  }
+  const subj = subject.trim().toLowerCase();
+  if (scope !== "o1" || !UUID_RE.test(subj)) throw new Error("invalid scoped token subject");
+  if (bind !== undefined && !BIND_RE.test(bind)) throw new Error("invalid scoped token binding");
+  const issuedAt36 = Math.floor(issuedAtMs / 1000).toString(36);
+  const sigPart = base64url(hmac(scopedPayload(scope, subj, issuedAt36, bind)));
+  return `${scope}.${subj.replace(/-/g, "")}.${issuedAt36}.${sigPart}`;
+}
+
+/**
+ * Vérifie un jeton scopé : signature (temps constant) d'abord, puis date.
+ * Renvoie le sujet et la date d'émission, ou null sans jamais dire pourquoi.
+ * Un jeton signé avec `bind` ne se vérifie qu'avec le même `bind`.
+ */
+export function verifyScopedToken(
+  scope: TokenScope,
+  token: string,
+  nowMs: number = Date.now(),
+  bind?: string
+): { subject: string; issuedAtMs: number } | null {
+  if (!SECRET || typeof token !== "string" || token.length > 256) return null;
+  if (bind !== undefined && !BIND_RE.test(bind)) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 4) return null;
+    const [tokScope, hex, issuedAt36, sigPart] = parts;
+    if (tokScope !== scope || scope !== "o1") return null;
+    if (!HEX32_RE.test(hex) || !/^[0-9a-z]{1,10}$/.test(issuedAt36)) return null;
+    const subject = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    if (!sameSig(hmac(scopedPayload(scope, subject, issuedAt36, bind)), sigPart)) return null;
+    const issuedAtMs = parseInt(issuedAt36, 36) * 1000;
+    if (!Number.isFinite(issuedAtMs)) return null;
+    if (issuedAtMs > nowMs + CLOCK_SKEW_MS) return null;
+    return { subject, issuedAtMs };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Un jeton scopé est-il trop vieux pour une durée de vie donnée ? La durée
+ * dépend du programme du fil (link_ttl_days), lu en base APRÈS la vérification
+ * de signature : d'où une fonction à part de verifyScopedToken.
+ */
+export function scopedTokenAgeExceeded(issuedAtMs: number, maxAgeMs: number, nowMs: number = Date.now()): boolean {
+  return nowMs - issuedAtMs > maxAgeMs;
+}

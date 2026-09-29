@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Script from "next/script";
+import { usePathname } from "next/navigation";
 import { getStoredConsent, type CookieConsent } from "@/components/mc/cookie-banner";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -12,6 +13,7 @@ const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
  */
 export function GoogleAnalytics() {
   const [consent, setConsent] = useState<CookieConsent | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     // Lecture initiale depuis localStorage
@@ -28,6 +30,9 @@ export function GoogleAnalytics() {
 
   // Pas de GA_ID configuré → rien du tout
   if (!GA_ID) return null;
+
+  // Liens signés (/contact/<jeton>/...) : le jeton est dans l'URL, que GA collecterait.
+  if (pathname?.startsWith("/contact/")) return null;
 
   // Consentement refusé ou pas encore donné → rien du tout
   if (consent !== "accepted") return null;

@@ -19,7 +19,19 @@ const PUBLIC_APEX_HOSTS = ["casaminga.com", "www.casaminga.com"];
 const HOST_PASSTHROUGH = [
   "/site", "/billet", "/scan", "/api",
   "/espace", "/unsubscribe", "/rejoindre", "/tache", "/aide",
+  "/contact/",
 ];
+
+/**
+ * Liens signés du module Contacts (jeton dans le chemin) : pages et POST de
+ * désinscription. Traités avant tout le reste, sur n'importe quel host :
+ * ni réécriture vers /site, ni session Supabase (aucune dépendance à un
+ * compte), et deux en-têtes posés sur chaque réponse pour que le jeton ne
+ * sorte pas dans un Referer et que la page ne soit jamais indexée.
+ */
+function isContactLink(pathname: string): boolean {
+  return pathname.startsWith("/contact/") || pathname.startsWith("/api/contact/");
+}
 
 /** Hosts techniques à ne jamais traiter comme domaine personnalisé. */
 function isInternalHost(host: string): boolean {
@@ -61,6 +73,14 @@ async function resolveCustomDomain(host: string): Promise<string | null> {
 export async function proxy(request: NextRequest) {
   const host = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
   const { pathname } = request.nextUrl;
+
+  if (isContactLink(pathname)) {
+    const res = NextResponse.next();
+    res.headers.set("Referrer-Policy", "no-referrer");
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  }
 
   const isPassthrough = HOST_PASSTHROUGH.some((p) => pathname.startsWith(p));
 
