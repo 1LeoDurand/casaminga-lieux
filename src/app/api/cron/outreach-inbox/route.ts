@@ -10,6 +10,7 @@ export const maxDuration = 300;
  * complaints. Secured by CRON_SECRET. Idempotent: message_id is unique, a replay
  * stores nothing twice. Answers 200 "skipped" when no mailbox has its IMAP
  * variables. The log line carries counts only (no address, no mail body).
+ * After the mailboxes, the AI reads the new human messages (classify.ts).
  */
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -18,7 +19,10 @@ export async function POST(req: Request) {
   }
 
   const started = Date.now();
-  const { runInbox } = await import("@/lib/outreach/inbox");
+  const { runInbox, setTriageHook } = await import("@/lib/outreach/inbox");
+  const { classifyPending, triageInbound } = await import("@/lib/outreach/classify");
+  // Shared mailboxes: the AI picks the program (spec 6.5); any doubt falls back.
+  setTriageHook(triageInbound);
   const { runs, configured } = await runInbox();
 
   if (!configured) {
@@ -26,9 +30,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "service role manquant" }, { status: 500 });
   }
 
+  // Step 7: read what just arrived (and what a previous pass could not read).
+  // Counts and cost only; a reading that fails is retried on the next pass.
+  const ai = await classifyPending();
+
   const active = runs.filter((r) => r.status !== "skipped");
   if (runs.length === 0 || active.length === 0) {
-    return NextResponse.json({ ok: true, skipped: true, mailboxes: runs.length });
+    return NextResponse.json({ ok: true, skipped: true, mailboxes: runs.length, ai });
   }
 
   const stored = active.reduce((n, r) => n + r.stored, 0);
@@ -42,5 +50,5 @@ export async function POST(req: Request) {
   } else {
     await logCronRun("outreach-inbox", "ok", { durationMs: Date.now() - started, rowsAffected: stored });
   }
-  return NextResponse.json({ ok: failed.length === 0, runs }, { status: failed.length === 0 ? 200 : 502 });
+  return NextResponse.json({ ok: failed.length === 0, runs, ai }, { status: failed.length === 0 ? 200 : 502 });
 }

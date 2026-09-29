@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSuperAdmin, createAdminClient } from "@/lib/admin/guard";
 import { getProgramConfig } from "@/lib/outreach/programs";
+import { classifyMessage } from "@/lib/outreach/classify";
+import { rewriteQuestion } from "@/lib/outreach/ai";
+import type { KnowledgeKind } from "@/lib/outreach/knowledge";
 import { nextSendSlot, spreadSlots } from "@/lib/outreach/schedule";
 import { canTransition, stageByRole, stageBySlug, MANUAL_CLOSED_REASONS } from "@/lib/outreach/status";
 import type {
@@ -503,6 +506,174 @@ export async function setThreadSubject(threadId: string, subjectId: string): Pro
   const { error } = await ctx.admin.from("outreach_threads").update({ current_subject_id: subjectId }).eq("id", threadId);
   if (error) return { ok: false, error: friendlyError(error) };
   await logEvent(ctx.admin, { program_id: loaded.program.id, thread_id: threadId, contact_id: loaded.thread.contact_id, type: "thread.subject_changed", data: { slug: (subject as Subject).slug } });
+  refresh();
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// AI: replay of a reading, approved answers, knowledge base (step 7)
+// ---------------------------------------------------------------------------
+
+/** Reads the latest human message of a thread again (button "Rejouer le classement"). */
+export async function replayClassification(threadId: string): Promise<ActionResult> {
+  const ctx = await context();
+  if (!ctx) return NO_CONFIG;
+  const loaded = await loadThread(ctx.admin, threadId);
+  if (!loaded) return { ok: false, error: "Fil introuvable." };
+  const { data } = await ctx.admin.from("outreach_messages").select("id")
+    .eq("thread_id", threadId).eq("direction", "in").in("kind", ["entrant", "formulaire"])
+    .order("created_at", { ascending: false }).limit(1);
+  const last = ((data ?? []) as { id: string }[])[0];
+  if (!last) return { ok: false, error: "Aucun message reçu à relire dans ce fil." };
+  const outcome = await classifyMessage(ctx.admin, last.id, { force: true });
+  await logEvent(ctx.admin, { program_id: loaded.program.id, thread_id: threadId, contact_id: loaded.thread.contact_id, message_id: last.id, type: "ai.replayed", data: { status: outcome.status, decision: outcome.decision ?? null } });
+  refresh();
+  if (outcome.status === "classified") return { ok: true };
+  if (outcome.status === "skipped") return { ok: false, error: "Rien à rejouer : le message est en cours de lecture ou introuvable." };
+  return { ok: false, error: "La lecture a échoué (" + (outcome.reason ?? "erreur") + "). Le message sera relu au prochain passage." };
+}
+
+/**
+ * Question of an approved answer, rewritten without personal data by the AI
+ * (spec 7.6). Shown to Leo before saving; null when the AI is unavailable.
+ */
+export async function suggestKnowledgeQuestion(replyMessageId: string): Promise<ActionResult<{ question: string | null }>> {
+  const ctx = await context();
+  if (!ctx) return NO_CONFIG;
+  const { data: reply } = await ctx.admin.from("outreach_messages").select("reply_to_message_id, thread_id").eq("id", replyMessageId).eq("direction", "out").maybeSingle();
+  const r = reply as { reply_to_message_id: string | null; thread_id: string } | null;
+  if (!r?.reply_to_message_id) return { ok: false, error: "Cette réponse ne répond à aucun message reçu." };
+  const { data: inbound } = await ctx.admin.from("outreach_messages").select("body_reply, body_text").eq("id", r.reply_to_message_id).maybeSingle();
+  const i = inbound as { body_reply: string | null; body_text: string | null } | null;
+  const text = (i?.body_reply || i?.body_text || "").trim();
+  if (!text) return { ok: true, data: { question: null } };
+  return { ok: true, data: { question: await rewriteQuestion(text) } };
+}
+
+export interface ApprovedAnswerInput {
+  /** The outbound 'reponse' written by Leo. */
+  replyMessageId: string;
+  title: string;
+  /** Question rewritten WITHOUT personal data (Leo checked it). */
+  question: string;
+  /** Answer as it will be kept (Leo removed names and details). */
+  answer: string;
+  /** true = shared by every program. */
+  shared: boolean;
+}
+
+const EMAIL_IN_TEXT = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
+
+/** "Approve and add to the approved answers": an 'approuvee' entry of the knowledge base. */
+export async function approveAndAddToKnowledge(input: ApprovedAnswerInput): Promise<ActionResult> {
+  const ctx = await context();
+  if (!ctx) return NO_CONFIG;
+  const title = input.title.trim();
+  const question = input.question.trim();
+  const answer = input.answer.replace(/\r\n/g, "\n").trim();
+  if (title.length < 2 || title.length > 200) return { ok: false, error: "Le titre fait entre 2 et 200 caractères." };
+  if (question.length < 5 || question.length > 500) return { ok: false, error: "La question réécrite fait entre 5 et 500 caractères." };
+  if (answer.length < 1 || answer.length > 8000) return { ok: false, error: "La réponse fait entre 1 et 8000 caractères." };
+  if (EMAIL_IN_TEXT.test(question) || EMAIL_IN_TEXT.test(answer)) {
+    return { ok: false, error: "Retire les adresses électroniques du texte avant de l'enregistrer." };
+  }
+
+  const { data: msg } = await ctx.admin.from("outreach_messages").select("id, thread_id, kind, direction, author").eq("id", input.replyMessageId).maybeSingle();
+  const m = msg as { id: string; thread_id: string; kind: string; direction: string; author: string } | null;
+  if (!m || m.direction !== "out" || m.kind !== "reponse" || m.author !== "leo") return { ok: false, error: "Seule une réponse écrite par toi peut être approuvée." };
+  const loaded = await loadThread(ctx.admin, m.thread_id);
+  if (!loaded) return { ok: false, error: "Fil introuvable." };
+
+  const { data: dup } = await ctx.admin.from("outreach_knowledge").select("id").eq("source_message_id", m.id).limit(1);
+  if ((dup ?? []).length > 0) return { ok: false, error: "Cette réponse est déjà dans les réponses approuvées." };
+
+  const { error } = await ctx.admin.from("outreach_knowledge").insert({
+    program_id: input.shared ? null : loaded.program.id,
+    kind: "approuvee",
+    subject_id: input.shared ? null : loaded.thread.current_subject_id,
+    title,
+    question,
+    body: answer,
+    source_message_id: m.id,
+    active: true,
+    reviewed_at: new Date().toISOString(),
+    created_by: ctx.email,
+  });
+  if (error) return { ok: false, error: friendlyError(error) };
+  await ctx.admin.from("outreach_messages").update({ add_to_knowledge: true }).eq("id", m.id);
+  await logEvent(ctx.admin, { program_id: loaded.program.id, thread_id: m.thread_id, contact_id: loaded.thread.contact_id, message_id: m.id, type: "knowledge.approved", data: { shared: input.shared } });
+  refresh();
+  return { ok: true };
+}
+
+const KNOWLEDGE_KINDS: KnowledgeKind[] = ["page", "corpus", "regle"];
+
+export interface KnowledgeInput {
+  kind: KnowledgeKind;
+  title: string;
+  body: string;
+  sourceUrl: string;
+  shared: boolean;
+  subjectId: string;
+}
+
+/** Adds a page, a corpus text or a rule (approved answers come from a thread, see above). */
+export async function addKnowledgeEntry(slug: string, input: KnowledgeInput): Promise<ActionResult> {
+  const ctx = await context();
+  if (!ctx) return NO_CONFIG;
+  const program = await getProgramConfig(slug);
+  if (!program) return { ok: false, error: "Programme introuvable." };
+  if (!KNOWLEDGE_KINDS.includes(input.kind)) return { ok: false, error: "Type d'entrée inconnu." };
+  const title = input.title.trim();
+  const body = input.body.replace(/\r\n/g, "\n").trim();
+  if (title.length < 2 || title.length > 200) return { ok: false, error: "Le titre fait entre 2 et 200 caractères." };
+  if (body.length < 1 || body.length > 8000) return { ok: false, error: "Le texte fait entre 1 et 8000 caractères." };
+  let sourceUrl: string | null = input.sourceUrl.trim() || null;
+  if (sourceUrl) {
+    try {
+      const u = new URL(sourceUrl);
+      if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error("scheme");
+      sourceUrl = u.toString();
+    } catch {
+      return { ok: false, error: "L'adresse source n'est pas valide." };
+    }
+  }
+  let subjectId: string | null = null;
+  if (input.subjectId) {
+    const { data: subj } = await ctx.admin.from("outreach_subjects").select("id, program_id").eq("id", input.subjectId).maybeSingle();
+    if (!subj || (subj as Subject).program_id !== program.id) return { ok: false, error: "Sujet inconnu pour ce programme." };
+    subjectId = input.subjectId;
+  }
+  // A subject belongs to one program: an entry tied to a subject cannot be shared.
+  if (subjectId && input.shared) return { ok: false, error: "Une entrée liée à un sujet appartient au programme : décoche « partagée »." };
+  const { error } = await ctx.admin.from("outreach_knowledge").insert({
+    program_id: input.shared ? null : program.id,
+    kind: input.kind,
+    subject_id: subjectId,
+    title,
+    body,
+    source_url: sourceUrl,
+    active: true,
+    reviewed_at: new Date().toISOString(),
+    created_by: ctx.email,
+  });
+  if (error) return { ok: false, error: friendlyError(error) };
+  await logEvent(ctx.admin, { program_id: program.id, type: "knowledge.added", data: { kind: input.kind, shared: input.shared } });
+  refresh();
+  return { ok: true };
+}
+
+/** Turns an entry on or off. Turning on marks it as reviewed by Leo. */
+export async function setKnowledgeActive(entryId: string, active: boolean): Promise<ActionResult> {
+  const ctx = await context();
+  if (!ctx) return NO_CONFIG;
+  const patch: Record<string, unknown> = { active, updated_at: new Date().toISOString() };
+  if (active) patch.reviewed_at = new Date().toISOString();
+  const { data, error } = await ctx.admin.from("outreach_knowledge").update(patch).eq("id", entryId).select("id, program_id");
+  if (error) return { ok: false, error: friendlyError(error) };
+  const row = ((data ?? []) as { id: string; program_id: string | null }[])[0];
+  if (!row) return { ok: false, error: "Entrée introuvable." };
+  await logEvent(ctx.admin, { program_id: row.program_id, type: active ? "knowledge.on" : "knowledge.off" });
   refresh();
   return { ok: true };
 }

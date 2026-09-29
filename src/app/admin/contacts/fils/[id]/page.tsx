@@ -8,7 +8,7 @@ import { allowedTargets, stageBySlug } from "@/lib/outreach/status";
 import { CLOSED_REASON_LABELS } from "@/lib/outreach/types";
 import { AiPanel } from "@/components/outreach/ai-panel";
 import { MessageRow } from "@/components/outreach/message-row";
-import { ReplyBox, ThreadControls } from "@/components/outreach/thread-controls";
+import { ApprovedAnswers, ReplyBox, ThreadControls } from "@/components/outreach/thread-controls";
 import { EmptyLine, ReasonBadge, Section, StageBadge, fmtDateTime, safeHref } from "@/components/outreach/ui";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +72,12 @@ export default async function ThreadPage({ params }: PageProps) {
               <ReplyBox key={lastHuman?.id ?? "none"} threadId={thread.id} initial={lastHuman?.ai_draft ?? ""} canReply={canReply} />
             )}
           </Section>
+
+          {d.replies.length > 0 ? (
+            <Section title="Réponses approuvées" hint="Une réponse gardée sert de modèle à l'IA, avec la question réécrite sans donnée personnelle.">
+              <ApprovedAnswers replies={d.replies} />
+            </Section>
+          ) : null}
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">

@@ -290,7 +290,12 @@ export interface Message {
   ai_triage_program_id: string | null;
   ai_triage_confidence: number | null;
   ai_model: string | null;
+  ai_prompt_version: string | null;
+  ai_input_tokens: number | null;
+  ai_output_tokens: number | null;
+  ai_attempts: number;
   ai_error: string | null;
+  edit_ratio: number | null;
   classified_at: string | null;
   created_at: string;
 }

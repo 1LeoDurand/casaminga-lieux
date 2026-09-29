@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Plus, Trash2 } from "lucide-react";
 import {
-  activateContext, addProgramRedZone, createContextVersion, markContextReviewed, removeProgramRedZone,
-  setProgramActive, setSubjectAuto, updateProgramIdentity, updateProgramSettings, updateStage,
+  activateContext, addKnowledgeEntry, addProgramRedZone, createContextVersion, markContextReviewed, removeProgramRedZone,
+  setKnowledgeActive, setProgramActive, setSubjectAuto, updateProgramIdentity, updateProgramSettings, updateStage,
 } from "@/app/admin/contacts/actions";
 import type {
   Mailbox, ProgramConfig, ProgramContext, RedZone, Subject, SubjectQualityRow,
 } from "@/lib/outreach/types";
-import { EmptyLine } from "./ui";
+import { KIND_LABELS, type KnowledgeEntry, type KnowledgeKind } from "@/lib/outreach/knowledge";
+import { EmptyLine, safeHref } from "./ui";
 
 const dFmt = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "short", year: "numeric" });
 const fmt = (iso: string | null) => (iso ? dFmt.format(new Date(iso)) : "—");
@@ -260,6 +261,99 @@ export function RedZonesTab({ program, zones }: { program: ProgramConfig; zones:
           <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" disabled={pending || !code || !label || !description}
             onClick={() => run(() => addProgramRedZone(program.slug, { code, label, description }), "Zone rouge ajoutée", () => { setCode(""); setLabel(""); setDescription(""); })}>
             <Plus className="size-3.5" /> Ajouter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge base (step 7)
+// ---------------------------------------------------------------------------
+
+function KnowledgeRow({ entry, subjects }: { entry: KnowledgeEntry; subjects: Subject[] }) {
+  const { pending, run } = useRun();
+  const href = safeHref(entry.source_url);
+  const subject = subjects.find((s) => s.id === entry.subject_id);
+  return (
+    <li className={`px-4 py-3 ${entry.active ? "" : "bg-cream/60"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mc-badge mc-badge-gray">{KIND_LABELS[entry.kind]}</span>
+            <span className="mc-badge mc-badge-gray">{entry.program_id === null ? "Partagée" : "Ce programme"}</span>
+            {subject ? <span className="mc-badge mc-badge-gray">{subject.label}</span> : null}
+            {!entry.active ? <span className="mc-badge mc-badge-red">Désactivée</span> : null}
+            {entry.active && !entry.reviewed_at ? <span className="mc-badge mc-badge-red">Non relue</span> : null}
+            <span className="font-semibold">{entry.title}</span>
+          </div>
+          {entry.question ? <div className="mt-0.5 text-[12px] text-warmgray">Question : {entry.question}</div> : null}
+          {href ? <a className="text-[12px] underline" href={href} target="_blank" rel="noopener noreferrer">{entry.source_url}</a> : null}
+          <details className="mt-1 text-[12px] text-warmgray">
+            <summary className="cursor-pointer">Texte ({entry.body.length} caractères)</summary>
+            <p className="mt-1 whitespace-pre-wrap text-ink">{entry.body}</p>
+          </details>
+        </div>
+        <button type="button" className="mc-btn mc-btn-outline mc-btn-sm" disabled={pending}
+          onClick={() => run(() => setKnowledgeActive(entry.id, !entry.active), entry.active ? "Entrée désactivée" : "Entrée activée")}>
+          {entry.active ? "Désactiver" : "Activer"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+export function KnowledgeTab({ program, entries, subjects }: { program: ProgramConfig; entries: KnowledgeEntry[]; subjects: Subject[] }) {
+  const { pending, run } = useRun();
+  const [kind, setKind] = useState<Exclude<KnowledgeKind, "approuvee">>("page");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [shared, setShared] = useState(true);
+  const [subjectId, setSubjectId] = useState("");
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-[13px] text-warmgray">
+        Ce que l&apos;IA a le droit de dire. Elle n&apos;utilise que ces entrées, partagées ou propres à {program.label} : ce
+        qui n&apos;y figure pas est une zone rouge « hors base ». Les réponses approuvées s&apos;ajoutent depuis un fil, après ta réponse.
+      </p>
+      {entries.length === 0 ? <EmptyLine>La base est vide : l&apos;IA laissera tout à Léo.</EmptyLine> : (
+        <ul className="divide-y divide-border rounded-xl border border-border bg-white text-[13px]">
+          {entries.map((e) => <KnowledgeRow key={e.id} entry={e} subjects={subjects} />)}
+        </ul>
+      )}
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Type">
+          <select className="mc-input" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+            <option value="page">Page du site</option>
+            <option value="corpus">Corpus (texte de référence)</option>
+            <option value="regle">Règle</option>
+          </select>
+        </Field>
+        <Field label="Titre"><input className="mc-input" value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+        <div className="md:col-span-2">
+          <Field label="Texte" hint="Résumé de 300 à 600 mots pour une page. 8 000 caractères au plus.">
+            <textarea className="mc-textarea" rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Adresse source (facultative)"><input className="mc-input" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://sejour.casaminga.com/…" /></Field>
+        <Field label="Lié à un sujet (facultatif)">
+          <select className="mc-input" value={subjectId} onChange={(e) => { setSubjectId(e.target.value); if (e.target.value) setShared(false); }}>
+            <option value="">Aucun</option>
+            {subjects.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </Field>
+        <label className="flex items-center gap-2 text-[12px] text-warmgray">
+          <input type="checkbox" checked={shared} disabled={!!subjectId} onChange={(e) => setShared(e.target.checked)} />
+          Partagée avec tous les programmes
+        </label>
+        <div className="md:col-span-2">
+          <button type="button" className="mc-btn mc-btn-lime mc-btn-sm" disabled={pending || !title.trim() || !body.trim()}
+            onClick={() => run(() => addKnowledgeEntry(program.slug, { kind, title, body, sourceUrl, shared, subjectId }), "Entrée ajoutée",
+              () => { setTitle(""); setBody(""); setSourceUrl(""); setSubjectId(""); })}>
+            <Plus className="size-3.5" /> Ajouter à la base
           </button>
         </div>
       </div>

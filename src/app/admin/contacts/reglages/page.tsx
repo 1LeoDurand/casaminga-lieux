@@ -3,7 +3,7 @@ import { requireSuperAdmin } from "@/lib/admin/guard";
 import { getProgramAdminData } from "@/lib/outreach/data";
 import { getProgramConfigs } from "@/lib/outreach/programs";
 import {
-  ActivationTab, ContextTab, IdentityTab, RedZonesTab, SettingsTab, StagesTab, SubjectsTab,
+  ActivationTab, ContextTab, IdentityTab, KnowledgeTab, RedZonesTab, SettingsTab, StagesTab, SubjectsTab,
 } from "@/components/outreach/program-settings";
 import { EmptyLine, ProgramSelector, Section } from "@/components/outreach/ui";
 
@@ -16,6 +16,7 @@ const TABS = [
   { id: "contexte", label: "Contexte" },
   { id: "sujets", label: "Sujets" },
   { id: "zones", label: "Zones rouges" },
+  { id: "connaissances", label: "Base de connaissances" },
   { id: "etapes", label: "Étapes" },
   { id: "reglages", label: "Automatisation et rythme" },
   { id: "activation", label: "Activation" },
@@ -58,6 +59,7 @@ export default async function ProgramSettingsPage({ searchParams }: PageProps) {
           />
         ) : null}
         {tab === "zones" ? <RedZonesTab key={program.id + data.redZones.length} program={program} zones={data.redZones} /> : null}
+        {tab === "connaissances" ? <KnowledgeTab key={program.id + data.knowledge.map((k) => k.id + k.active).join()} program={program} entries={data.knowledge} subjects={data.subjects} /> : null}
         {tab === "etapes" ? <StagesTab key={program.id} program={program} missing={data.missing} /> : null}
         {tab === "reglages" ? <SettingsTab key={program.id + (settings?.updated_at ?? "")} program={program} /> : null}
         {tab === "activation" ? <ActivationTab key={program.id + String(program.active)} program={program} missing={data.missing} mailbox={data.mailbox} /> : null}

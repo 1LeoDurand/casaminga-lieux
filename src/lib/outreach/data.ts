@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/admin/guard";
 import { getProgramConfigs } from "./programs";
+import { listKnowledge, type KnowledgeEntry } from "./knowledge";
 import { stageByRole, stageBySlug } from "./status";
 import type {
   Address, Article, ArticleStatsRow, Contact, Mailbox, MailboxHealthRow, Message, OutreachEvent,
@@ -563,6 +564,8 @@ export interface ThreadDetail {
   subjects: Subject[];
   redZones: RedZone[];
   contextVersion: number | null;
+  /** Replies written by Leo, with whether they already are an approved answer. */
+  replies: { id: string; text: string; editRatio: number | null; approved: boolean }[];
 }
 
 export async function getThreadDetail(id: string): Promise<ThreadDetail | null> {
@@ -576,7 +579,7 @@ export async function getThreadDetail(id: string): Promise<ThreadDetail | null> 
   const program = configs.find((p) => p.id === thread.program_id);
   if (!program) return null;
 
-  const [contactR, addressR, articleR, messagesR, eventsR, subjectsR, zonesR, ctxR] = await Promise.all([
+  const [contactR, addressR, articleR, messagesR, eventsR, subjectsR, zonesR, ctxR, knowR] = await Promise.all([
     admin.from("outreach_contacts").select("*").eq("id", thread.contact_id).maybeSingle(),
     thread.address_id ? admin.from("outreach_addresses").select("*").eq("id", thread.address_id).maybeSingle() : Promise.resolve({ data: null }),
     thread.article_id ? admin.from("outreach_articles").select("*").eq("id", thread.article_id).maybeSingle() : Promise.resolve({ data: null }),
@@ -585,8 +588,11 @@ export async function getThreadDetail(id: string): Promise<ThreadDetail | null> 
     admin.from("outreach_subjects").select("*").eq("program_id", program.id).order("position"),
     admin.from("outreach_red_zones").select("*").or(`program_id.is.null,program_id.eq.${program.id}`).order("position"),
     admin.from("outreach_program_contexts").select("version").eq("program_id", program.id).eq("active", true).maybeSingle(),
+    admin.from("outreach_knowledge").select("source_message_id").eq("kind", "approuvee").not("source_message_id", "is", null),
   ]);
   if (!contactR.data) return null;
+  const approvedIds = new Set(((knowR.data ?? []) as { source_message_id: string }[]).map((k) => k.source_message_id));
+  const allMessages = (messagesR.data ?? []) as Message[];
 
   return {
     thread,
@@ -599,6 +605,9 @@ export async function getThreadDetail(id: string): Promise<ThreadDetail | null> 
     subjects: (subjectsR.data ?? []) as Subject[],
     redZones: (zonesR.data ?? []) as RedZone[],
     contextVersion: (ctxR.data as Row | null)?.version as number | null ?? null,
+    replies: allMessages
+      .filter((m) => m.direction === "out" && m.kind === "reponse" && m.author === "leo" && m.send_status !== "annule" && !!m.body_text)
+      .map((m) => ({ id: m.id, text: m.body_text ?? "", editRatio: m.edit_ratio, approved: approvedIds.has(m.id) })),
   };
 }
 
@@ -739,6 +748,7 @@ export interface ProgramAdminData {
   redZones: RedZone[];
   missing: string[];
   threadCount: number;
+  knowledge: KnowledgeEntry[];
 }
 
 export async function getProgramAdminData(slug: string): Promise<ProgramAdminData | null> {
@@ -767,5 +777,6 @@ export async function getProgramAdminData(slug: string): Promise<ProgramAdminDat
     redZones: (zonesR.data ?? []) as RedZone[],
     missing: Array.isArray(readyR.data) ? (readyR.data as string[]) : [],
     threadCount: countR.count ?? 0,
+    knowledge: await listKnowledge(admin, program.id),
   };
 }
