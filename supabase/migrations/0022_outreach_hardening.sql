@@ -1,6 +1,6 @@
 -- 0022_outreach_hardening.sql
--- Security review of the contacts module (step 5), 2026-09-29. NOT APPLIED:
--- Leo applies it after reading.
+-- Security review of the contacts module (step 5), 2026-09-29.
+-- Applied on the remote database on 2026-09-29 with Leo's agreement.
 --
 -- 1. The send guard (outreach_guard_outbound) only ran when send_status,
 --    to_email or author changed. An UPDATE of kind, thread_id, approved_at or
