@@ -1,0 +1,32 @@
+From: abuse@fbl.example.invalid
+To: leo@casaminga.example.invalid
+Subject: FW: Votre lieu dans notre article sur l'habitat partagé
+Message-ID: <arf-015@fbl.example.invalid>
+Date: Fri, 22 Mar 2026 12:00:00 +0100
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=feedback-report; boundary="arfBOUND"
+
+--arfBOUND
+Content-Type: text/plain; charset=UTF-8
+
+This is an email abuse report for an email message received from IP 192.0.2.10.
+
+--arfBOUND
+Content-Type: message/feedback-report
+
+Feedback-Type: abuse
+User-Agent: ExampleFBL/1.0
+Version: 1
+Original-Rcpt-To: <plaintif@lieu-test.example.invalid>
+
+--arfBOUND
+Content-Type: message/rfc822
+
+Message-ID: <out-015@casaminga.example.invalid>
+From: Léo <leo@casaminga.example.invalid>
+To: plaintif@lieu-test.example.invalid
+Subject: Votre lieu dans notre article sur l'habitat partagé
+
+Bonjour, ...
+
+--arfBOUND--

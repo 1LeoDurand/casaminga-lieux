@@ -8,6 +8,7 @@ const CRON_LABEL: Record<string, string> = {
   "payment-reminders":   "Relances paiement",
   "reminders":           "Rappels J-1 / J-30",
   "newsletters":         "Newsletters auto",
+  "outreach-inbox":      "Contacts : lecture des boîtes",
 };
 
 function fmtRelative(iso: string | null): string {

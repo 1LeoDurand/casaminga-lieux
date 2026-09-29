@@ -1,0 +1,33 @@
+From: Mail Delivery Subsystem <mailer-daemon@googlemail.example.invalid>
+To: leo@casaminga.example.invalid
+Subject: Delivery Status Notification (Failure)
+Message-ID: <dsn-009@googlemail.example.invalid>
+Date: Tue, 12 Mar 2026 10:35:00 +0100
+MIME-Version: 1.0
+Content-Type: multipart/report; report-type=delivery-status; boundary="dsn2BOUND"
+
+--dsn2BOUND
+Content-Type: text/plain; charset=UTF-8
+
+Your message wasn't delivered to boite-pleine@lieu-test.example.invalid because
+the recipient's inbox is out of storage space. Please try again later.
+
+--dsn2BOUND
+Content-Type: message/delivery-status
+
+Reporting-MTA: dns; googlemail.example.invalid
+
+Final-Recipient: rfc822; boite-pleine@lieu-test.example.invalid
+Action: failed
+Status: 4.2.2
+Diagnostic-Code: smtp; 452 4.2.2 The email account that you tried to reach is over quota.
+
+--dsn2BOUND
+Content-Type: text/rfc822-headers
+
+Message-ID: <out-009@casaminga.example.invalid>
+From: Léo <leo@casaminga.example.invalid>
+To: boite-pleine@lieu-test.example.invalid
+Subject: Votre lieu dans notre article sur l'habitat partagé
+
+--dsn2BOUND--

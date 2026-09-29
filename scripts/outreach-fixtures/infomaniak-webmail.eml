@@ -1,0 +1,34 @@
+From: Claire Test <claire@ferme-test.example.invalid>
+To: leo@casaminga.example.invalid
+Subject: Re: Votre lieu dans notre article sur l'habitat partagé
+Message-ID: <a1b2c3d4-infomaniak-004@ferme-test.example.invalid>
+In-Reply-To: <out-004@casaminga.example.invalid>
+References: <out-004@casaminga.example.invalid>
+Date: Fri, 15 Mar 2026 08:02:11 +0100
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="ikBOUND"
+
+--ikBOUND
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Bonjour,
+
+C'est noté, vous pouvez utiliser la photo de la façade.
+
+Claire
+
+Le 12-03-2026 10:32, Léo a écrit :
+> Bonjour,
+>
+> Nous avons publié un article sur l'habitat partagé où votre lieu est cité.
+> Pourrions-nous utiliser une photo de votre façade ?
+>
+> Léo
+--ikBOUND
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<div>Bonjour,<br><br>C'est noté, vous pouvez utiliser la photo de la façade.<br><br>Claire</div>
+<blockquote>Le 12-03-2026 10:32, Léo a écrit :<br>Bonjour, ...</blockquote>
+--ikBOUND--

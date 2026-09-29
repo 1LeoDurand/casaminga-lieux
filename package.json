@@ -22,7 +22,9 @@
     "clsx": "^2.1.1",
     "docx": "^9.7.1",
     "html5-qrcode": "^2.3.8",
+    "imapflow": "^2.1.2",
     "lucide-react": "^1.17.0",
+    "mailparser": "^3.9.31",
     "next": "16.2.6",
     "nodemailer": "^8.0.10",
     "qrcode": "^1.5.4",
@@ -37,6 +39,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/mailparser": "^3.9.0",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",
     "@types/qrcode": "^1.5.6",

@@ -1,0 +1,21 @@
+name: Contacts — lecture des boîtes
+
+on:
+  # À décommenter à l'allumage du module (boîtes actives, variables IMAP posées sur le serveur).
+  # schedule:
+  #   - cron: "*/30 * * * *" # toutes les 30 minutes
+  workflow_dispatch: {} # déclenchable manuellement
+
+jobs:
+  run-crons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lecture des boîtes (INBOX et Envoyés), rattachement des réponses
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --max-time 290 \
+            "https://admin.casaminga.com/api/cron/outreach-inbox" \
+            -w "\nHTTP %{http_code}\n"
+      # L'envoi (outreach-send) sera ajouté ici par l'étape 3.
