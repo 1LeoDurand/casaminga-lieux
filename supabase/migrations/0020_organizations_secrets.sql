@@ -29,7 +29,7 @@
 -- read it with the anon or session client to decide whether online payment
 -- is available. It is a connected account identifier, not a secret.
 --
--- Not applied by the author. To be applied when the admin is pushed.
+-- Applied on the remote database (version 20260929141054), verified 2026-09-29.
 
 begin;
 

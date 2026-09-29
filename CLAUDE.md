@@ -9,7 +9,7 @@ Développeur : **Léo** (solo, équipe à venir).
 - Supabase : `gzijdwrzcuokvfkpcczr` (org "Maison commune", eu-west-1)
 - Dossier : `D:\0 - Sync cloud Kdrive\01 Casaminga\01 Dev\casa-minga-lieux`
 - Repo GitHub : https://github.com/1LeoDurand/casaminga-lieux
-- Branche principale : `main` / audit en cours : `audit/debug-session-01`
+- Branche principale : `main` (la branche locale `audit/debug-session-01` est ancienne : ne pas y travailler sans l'accord de Léo)
 
 ## Déploiement cible
 **Infomaniak Node.js** (slot mutualisé). Build : `npm run build` → `.next/`
@@ -46,10 +46,10 @@ le bouton plutôt que d'échouer.
 
 ## Conventions
 - Commits : **anglais** (ex: `feat: add export CSV`, `fix: null address on public site`)
-- **Tags** : créer un tag git annoté après chaque module livré → `git tag vX.Y-nom-module <hash> -m "description"` + `git push origin <tag>`
+- **Tags** : créer un tag git annoté après chaque module livré → `git tag vX.Y-nom-module <hash> -m "description"` (en local ; le tag ne part qu'avec un push autorisé par Léo, comme le reste)
 - Commentaires de code : anglais
 - Réponses Claude : **français**, court et direct, sans récapitulatif superflu
-- Migrations Supabase : nommées `vX_Y_description` (ex: `v2_6_adhesions_payment_fields`)
+- Migrations Supabase : fichiers `supabase/migrations/00NN_description.sql` (numéro à 4 chiffres, ex : `0021_outreach.sql`) ; l'ancienne convention `vX_Y_description` ne s'applique plus depuis 0001
 - Status campagne adhésion : `"publie"` (pas `"public"`)
 
 ## Ecosystème Casa Minga
