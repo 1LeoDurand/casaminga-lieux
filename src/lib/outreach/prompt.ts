@@ -15,7 +15,7 @@
  */
 import type Anthropic from "@anthropic-ai/sdk";
 
-export const OUTREACH_PROMPT_VERSION = "v1-2026-09-29";
+export const OUTREACH_PROMPT_VERSION = "v1-2026-09-30";
 
 export const SOCLE = `<socle>
 Tu lis les mails reçus par Casa Minga dans le cadre d'un programme d'échange
@@ -74,6 +74,8 @@ LE BROUILLON
   demande en appelle une, écris que l'équipe revient vers la personne.
 - Aucun chiffre, aucun nom, aucun fait absent de la base ou du fil.
 - Un lien au plus, pris dans la base, seulement s'il sert la réponse.
+- Une entrée marquée « article d'aide publié » se cite par son lien : donne
+  l'adresse indiquée et résume en une phrase, ne recopie pas l'article.
 - Pas de signature ni de formule finale : elles sont ajoutées.
 - Ne parle pas de toi, de l'outil ni de la façon dont le mail a été écrit.
 - Réponse automatique d'absence : intention "reponse_absence", brouillon = null.
@@ -112,7 +114,8 @@ export interface PromptProgram {
   redZones: PromptRedZone[];
 }
 
-export interface PromptKnowledge { id: string; title: string; body: string }
+/** url: public address of a published help article; the reply gives the link instead of copying the article. */
+export interface PromptKnowledge { id: string; title: string; body: string; url?: string | null }
 export interface PromptThreadMessage { direction: "envoye" | "recu"; date: string; text: string }
 
 export interface AiInput {
@@ -186,7 +189,8 @@ export function buildSystemBlocks(p: PromptProgram): Anthropic.TextBlockParam[] 
 
 export function buildUserContent(input: AiInput): string {
   const kb = input.knowledge.length > 0
-    ? input.knowledge.map((k) => `[${k.id}] ${k.title} : ${k.body}`).join("\n\n")
+    ? input.knowledge.map((k) =>
+        k.url ? `[${k.id}] ${k.title} (article d'aide publié, lien : ${k.url}) : ${k.body}` : `[${k.id}] ${k.title} : ${k.body}`).join("\n\n")
     : "(la base ne contient aucune entrée utile pour ce programme)";
   const f = input.facts;
   const actions = f.actions.length > 0 ? f.actions.join(", ") : "aucune";

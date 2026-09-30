@@ -8,6 +8,7 @@
  * client is INJECTED and there is no server-only import, so
  * scripts/outreach-ai-check.mjs can load the pure helpers as they are.
  */
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type KnowledgeKind = "page" | "corpus" | "approuvee" | "regle";
@@ -27,6 +28,118 @@ export interface KnowledgeEntry {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+// ---- Published help articles as a source (centre d'aide, step 6) -----------
+// Read straight from help_articles at every classification, never copied into
+// outreach_knowledge: an article that is unpublished leaves the prompt at once.
+
+/** Program slug -> help audience it reads. A program that is not here reads no help. */
+export const HELP_AUDIENCE_BY_PROGRAM: Record<string, string> = {
+  "sav-sejour": "sejour",
+};
+
+/** Public site of each help audience (article url = base + slug). */
+export const HELP_BASE_URL_BY_AUDIENCE: Record<string, string> = {
+  sejour: "https://sejour.casaminga.com/aide/",
+};
+
+/**
+ * Help category slug -> subject slug of the program (outreach_subjects.slug).
+ * A category that is not here gives no subject: the article is "general".
+ * Red-zone subjects (remboursement, signalement) are deliberately not fed.
+ */
+export const HELP_SUBJECT_BY_CATEGORY: Record<string, Record<string, string>> = {
+  "sav-sejour": {
+    "sejour-sejourner": "sejour",
+    "sejour-accueillir": "sejour",
+    "sejour-points": "points_hospitalite",
+    "sejour-confiance": "compte",
+    "sejour-compte": "compte",
+  },
+};
+
+/** Articles kept per group (thread subject, full-text matches, general). */
+export const HELP_ARTICLES_PER_GROUP = 5;
+const HELP_BODY_MAX = 2500;
+
+export interface HelpArticleRow {
+  slug: string;
+  category_slug: string | null;
+  title: string;
+  excerpt: string | null;
+  keywords: string[] | null;
+  body: string | null;
+}
+
+/** Stable uuid derived from the slug: ai_sources is a uuid[] and these articles are not in outreach_knowledge. */
+export function helpArticleId(audience: string, slug: string): string {
+  const h = createHash("sha1").update(`help:${audience}:${slug}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+
+/** An article as a "page" entry (text = title + excerpt + body, public url). */
+export function helpArticleToEntry(
+  a: HelpArticleRow,
+  o: { programId: string; programSlug: string; audience: string; subjects: { id: string; slug: string }[] },
+): KnowledgeEntry {
+  const subjectSlug = a.category_slug ? HELP_SUBJECT_BY_CATEGORY[o.programSlug]?.[a.category_slug] : undefined;
+  const subject = subjectSlug ? o.subjects.find((s) => s.slug === subjectSlug) : undefined;
+  const text = [a.title, a.excerpt ?? "", (a.body ?? "").trim()].filter((x) => x.trim() !== "").join("\n\n");
+  const base = HELP_BASE_URL_BY_AUDIENCE[o.audience] ?? "";
+  return {
+    id: helpArticleId(o.audience, a.slug),
+    program_id: o.programId,
+    kind: "page",
+    subject_id: subject?.id ?? null,
+    title: a.title,
+    question: null,
+    body: text.length > HELP_BODY_MAX ? `${text.slice(0, HELP_BODY_MAX)} […]` : text,
+    source_url: `${base}${a.slug}`,
+    source_message_id: null,
+    active: true,
+    reviewed_at: null,
+    created_by: "aide",
+    created_at: "",
+    updated_at: "",
+  };
+}
+
+/**
+ * The help entries worth a place in the prompt: the N best of the thread's
+ * subject, the N best matches of the incoming text (any subject), the N first
+ * general ones. Relevance = number of the message's words found in the entry.
+ */
+export function pickHelpEntries(
+  entries: KnowledgeEntry[],
+  text: string,
+  subjectId: string | null,
+  n = HELP_ARTICLES_PER_GROUP,
+): { subject: KnowledgeEntry[]; matches: KnowledgeEntry[]; general: KnowledgeEntry[] } {
+  const q = ftsQueryFromText(text);
+  const words = q ? q.split(" | ") : [];
+  const score = (e: KnowledgeEntry) => {
+    const hay = `${e.title} ${e.body}`.toLowerCase();
+    return words.reduce((acc, w) => acc + (hay.includes(w) ? 1 : 0), 0);
+  };
+  const ranked = (list: KnowledgeEntry[]) =>
+    list.map((e) => ({ e, s: score(e) })).sort((a, b) => b.s - a.s).map((x) => x.e);
+  const limit = Math.max(0, Math.floor(n));
+  const subject = subjectId ? ranked(entries.filter((e) => e.subject_id === subjectId)).slice(0, limit) : [];
+  const matches = ranked(entries.filter((e) => score(e) > 0)).slice(0, limit);
+  const general = ranked(entries.filter((e) => e.subject_id === null)).slice(0, limit);
+  return { subject, matches, general };
+}
+
+async function readHelpArticles(admin: SupabaseClient, audience: string): Promise<HelpArticleRow[]> {
+  const { data, error } = await admin
+    .from("help_articles")
+    .select("slug, category_slug, title, excerpt, keywords, body")
+    .eq("published", true)
+    .eq("audience", audience)
+    .limit(300);
+  if (error) return [];
+  return (data ?? []) as HelpArticleRow[];
 }
 
 export const KIND_LABELS: Record<KnowledgeKind, string> = {
@@ -103,6 +216,11 @@ export interface KnowledgeQuery {
   /** The incoming message, for the full-text matches. */
   text: string;
   maxTokens?: number;
+  /** Slug of the program and its subjects: needed to add the published help articles. */
+  programSlug?: string;
+  subjects?: { id: string; slug: string }[];
+  /** Help articles kept per group, default HELP_ARTICLES_PER_GROUP. */
+  helpPerGroup?: number;
 }
 
 /** Entries for the prompt of one incoming message. Never throws: an error gives what was read so far. */
@@ -135,13 +253,28 @@ export async function loadKnowledgeForPrompt(admin: SupabaseClient, q: Knowledge
       .limit(FTS_LIMIT);
     matches = ((m.data ?? []) as KnowledgeEntry[]);
   }
+  const audience = q.programSlug ? HELP_AUDIENCE_BY_PROGRAM[q.programSlug] : undefined;
+  if (audience && q.programSlug) {
+    const rows = await readHelpArticles(admin, audience);
+    const help = rows.map((a) =>
+      helpArticleToEntry(a, { programId: q.programId, programSlug: q.programSlug!, audience, subjects: q.subjects ?? [] }),
+    );
+    const picked = pickHelpEntries(help, q.text, q.subjectId, q.helpPerGroup);
+    subject.push(...picked.subject);
+    matches.push(...picked.matches);
+    generalRest.push(...picked.general);
+  }
   return fitBudget({ rules, subject, matches, general: generalRest }, q.maxTokens ?? PROMPT_TOKEN_BUDGET);
 }
 
-/** The entries an AI reading named, whatever their state, to check them (decide.ts rule 7). */
+/**
+ * The entries an AI reading named, whatever their state, to check them (decide.ts rule 7).
+ * With `program`, the ids of that program's published help articles resolve too.
+ */
 export async function knowledgeByIds(
   admin: SupabaseClient,
   ids: string[],
+  program?: { id: string; slug: string },
 ): Promise<Record<string, { active: boolean; program_id: string | null }>> {
   const valid = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
   if (valid.length === 0) return {};
@@ -149,6 +282,13 @@ export async function knowledgeByIds(
   const map: Record<string, { active: boolean; program_id: string | null }> = {};
   for (const r of (data ?? []) as { id: string; active: boolean; program_id: string | null }[]) {
     map[r.id] = { active: r.active, program_id: r.program_id };
+  }
+  const audience = program ? HELP_AUDIENCE_BY_PROGRAM[program.slug] : undefined;
+  if (program && audience && valid.some((id) => !map[id])) {
+    for (const a of await readHelpArticles(admin, audience)) {
+      const id = helpArticleId(audience, a.slug);
+      if (valid.includes(id) && !map[id]) map[id] = { active: true, program_id: program.id };
+    }
   }
   return map;
 }

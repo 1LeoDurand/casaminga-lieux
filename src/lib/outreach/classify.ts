@@ -335,14 +335,19 @@ export async function classifyMessage(admin: Admin, messageId: string, opts: { f
 
   const currentSubject = l.subjects.find((s) => s.id === l.thread.current_subject_id) ?? null;
   const [knowledge, history, sent] = await Promise.all([
-    loadKnowledgeForPrompt(admin, { programId: l.program.id, subjectId: currentSubject?.id ?? null, text }),
+    loadKnowledgeForPrompt(admin, {
+      programId: l.program.id, subjectId: currentSubject?.id ?? null, text,
+      programSlug: l.program.slug, subjects: l.subjects.map((s) => ({ id: s.id, slug: s.slug })),
+    }),
     threadHistory(admin, l.thread.id, m.id),
     admin.from("outreach_messages").select("id", { count: "exact", head: true })
       .eq("thread_id", l.thread.id).eq("direction", "out").eq("send_status", "envoye"),
   ]);
   const stage = stageBySlug(l.program, l.thread.status);
   const input: AiInput = {
-    knowledge: knowledge.map((k) => ({ id: k.id, title: k.title, body: k.body })),
+    knowledge: knowledge.map((k) => ({
+      id: k.id, title: k.title, body: k.body, url: k.created_by === "aide" ? k.source_url : null,
+    })),
     facts: {
       stageSlug: l.thread.status,
       stageRole: stage?.role ?? "inconnu",
@@ -372,7 +377,7 @@ export async function classifyMessage(admin: Admin, messageId: string, opts: { f
   }
 
   const reading = res.reading;
-  const known = await knowledgeByIds(admin, reading.sources);
+  const known = await knowledgeByIds(admin, reading.sources, { id: l.program.id, slug: l.program.slug });
   const dctx = buildDecisionContext(l, reading, known, false, (sent.count ?? 0) > 0);
   const real = decide(reading, dctx);
   const theoretical = decideTheoretical(reading, dctx);

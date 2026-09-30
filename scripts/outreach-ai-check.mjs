@@ -258,6 +258,50 @@ section("4. Knowledge helpers");
 }
 
 // ---------------------------------------------------------------------------
+section("4b. Published help articles as a source (fixed data, no database)");
+{
+  const subjects = [
+    { id: "S-points", slug: "points_hospitalite" }, { id: "S-sejour", slug: "sejour" }, { id: "S-compte", slug: "compte" },
+  ];
+  const opt = { programId: "P-sav", programSlug: "sav-sejour", audience: "sejour", subjects };
+  const art = (slug, cat, extra = {}) => ({ slug, category_slug: cat, title: `Titre ${slug}`, excerpt: "Résumé.", keywords: [], body: "Corps de l'article.", ...extra });
+  const conv = (a) => knowledge.helpArticleToEntry(a, opt);
+
+  const e = conv(art("points-valeur", "sejour-points"));
+  check("help: url = sejour.casaminga.com/aide/<slug>", e.source_url === "https://sejour.casaminga.com/aide/points-valeur", e.source_url);
+  check("help: kind page, active, of the program", e.kind === "page" && e.active && e.program_id === "P-sav");
+  check("help: text = title + excerpt + body", e.body === "Titre points-valeur\n\nRésumé.\n\nCorps de l'article.", JSON.stringify(e.body));
+  check("help: title kept", e.title === "Titre points-valeur");
+  check("help: id is a uuid and is stable", /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(e.id) && e.id === conv(art("points-valeur", "x")).id);
+  check("help: two slugs, two ids", e.id !== conv(art("autre-slug", "sejour-points")).id);
+
+  const map = { "sejour-sejourner": "S-sejour", "sejour-accueillir": "S-sejour", "sejour-points": "S-points", "sejour-confiance": "S-compte", "sejour-compte": "S-compte" };
+  for (const [cat, id] of Object.entries(map)) check(`help: category ${cat} -> subject`, conv(art("a", cat)).subject_id === id);
+  for (const cat of ["sejour-demarrer", "sejour-problemes", "inconnue", null]) {
+    check(`help: category ${cat} -> general (no subject)`, conv(art("a", cat)).subject_id === null);
+  }
+  check("help: only sav-sejour reads the sejour help", knowledge.HELP_AUDIENCE_BY_PROGRAM["sav-sejour"] === "sejour"
+    && knowledge.HELP_AUDIENCE_BY_PROGRAM["articles-sejour"] === undefined && knowledge.HELP_AUDIENCE_BY_PROGRAM["revendication-fiche"] === undefined);
+  check("help: no red-zone subject is fed", !Object.values(knowledge.HELP_SUBJECT_BY_CATEGORY["sav-sejour"]).some((s) => ["remboursement", "signalement", "autre"].includes(s)));
+  check("help: long body clipped", conv(art("long", "sejour-points", { body: "y".repeat(9000) })).body.length < 2700);
+
+  const many = Array.from({ length: 9 }, (_, i) => conv(art(`p${i}`, "sejour-points", { body: i === 7 ? "annulation du séjour" : "texte" })));
+  many.push(...Array.from({ length: 8 }, (_, i) => conv(art(`g${i}`, "sejour-demarrer"))));
+  const pick = knowledge.pickHelpEntries(many, "Comment fonctionne l'annulation ?", "S-points");
+  check("help: N = 5 by default per group", knowledge.HELP_ARTICLES_PER_GROUP === 5 && pick.subject.length === 5 && pick.general.length === 5);
+  check("help: the most relevant of the subject comes first", pick.subject[0].title === "Titre p7", pick.subject[0].title);
+  check("help: full-text match found outside the subject", pick.matches.some((x) => x.title === "Titre p7"));
+  check("help: N adjustable", knowledge.pickHelpEntries(many, "x", "S-points", 2).subject.length === 2 && knowledge.pickHelpEntries(many, "x", "S-points", 0).general.length === 0);
+  check("help: no thread subject -> empty subject group", knowledge.pickHelpEntries(many, "x", null).subject.length === 0);
+  const fitted = knowledge.fitBudget({ rules: [], ...pick, general: pick.general });
+  check("help: fits the prompt budget", fitted.length > 0 && fitted.reduce((n, x) => n + knowledge.entryTokens(x), 0) <= knowledge.PROMPT_TOKEN_BUDGET);
+
+  const withUrl = prompt.buildUserContent({ ...mkInput("bonjour"), knowledge: [{ id: e.id, title: e.title, body: "b", url: e.source_url }] });
+  check("prompt: a help article is cited with its public url", withUrl.includes(`[${e.id}] ${e.title} (article d'aide publié, lien : ${e.source_url}) : b`));
+  check("prompt: the rule asks for the link, not a copy", /article d'aide publié/.test(prompt.buildSystemBlocks({ slug: "x", direction: "entrant", sender_name: "n", address_form: "vous", contextVersion: 1, contextBody: "c", subjects: [], redZones: [] })[0].text));
+}
+
+// ---------------------------------------------------------------------------
 section("5. readInbound() against a fake client");
 function fakeClient(answer) {
   const calls = [];
