@@ -1,0 +1,226 @@
+{
+  "date": "2026-09-30",
+  "mode": "ecrire",
+  "evenements_a_venir_visibles": 2185,
+  "urls_ignorees": {
+    "openagenda": 618
+  },
+  "urls_testees": 597,
+  "ok": 521,
+  "refus": 76,
+  "refus_par_code": {
+    "reseau": 28,
+    "404": 24,
+    "403": 22,
+    "type": 2
+  },
+  "refus_par_hote": {
+    "ledome.info": {
+      "testees": 29,
+      "refus": 29,
+      "par_code": {
+        "404": 23,
+        "403": 6
+      }
+    },
+    "kiwiramonville-arto.fr": {
+      "testees": 36,
+      "refus": 21,
+      "par_code": {
+        "reseau": 21
+      }
+    },
+    "www.lautre-lieu.fr": {
+      "testees": 9,
+      "refus": 9,
+      "par_code": {
+        "403": 9
+      }
+    },
+    "cibul.s3.amazonaws.com": {
+      "testees": 4,
+      "refus": 4,
+      "par_code": {
+        "403": 4
+      }
+    },
+    "cafe-lastronef.fr": {
+      "testees": 30,
+      "refus": 3,
+      "par_code": {
+        "reseau": 3
+      }
+    },
+    "www.lemoulin-roques.com": {
+      "testees": 28,
+      "refus": 2,
+      "par_code": {
+        "reseau": 2
+      }
+    },
+    "linter-actif.fr": {
+      "testees": 2,
+      "refus": 2,
+      "par_code": {
+        "403": 2
+      }
+    },
+    "runarpuns.com": {
+      "testees": 2,
+      "refus": 2,
+      "par_code": {
+        "type": 2
+      }
+    },
+    "www.lamaisonsauvage.org": {
+      "testees": 28,
+      "refus": 1,
+      "par_code": {
+        "404": 1
+      }
+    },
+    "www.kikafekoi.fr": {
+      "testees": 22,
+      "refus": 1,
+      "par_code": {
+        "reseau": 1
+      }
+    },
+    "www.labasechambery.fr": {
+      "testees": 3,
+      "refus": 1,
+      "par_code": {
+        "reseau": 1
+      }
+    },
+    "train-inc-cafe.com": {
+      "testees": 1,
+      "refus": 1,
+      "par_code": {
+        "403": 1
+      }
+    }
+  },
+  "evenements_touches": 95,
+  "evenements_sans_aucune_affiche_apres_retrait": 95,
+  "exemples_refus": [
+    {
+      "url": "https://ledome.info/wp-content/uploads/2024/07/290196945_1773774696304926_6417299579878766872_n-scaled.jpg",
+      "hote": "ledome.info",
+      "statut": "REFUS",
+      "categorie": "404",
+      "detail": "HTTP 404"
+    },
+    {
+      "url": "https://kiwiramonville-arto.fr/wp-content/uploads/2026/07/ADULTE_Chachadu34-©-Nico-Deumille.jpg",
+      "hote": "kiwiramonville-arto.fr",
+      "statut": "REFUS",
+      "categorie": "reseau",
+      "detail": "UnicodeEncodeError: ordinal not in range(128)"
+    },
+    {
+      "url": "https://www.lautre-lieu.fr/wp-content/uploads/2026/07/Capture-decran-2026-09-15-a-09.50.19.png",
+      "hote": "www.lautre-lieu.fr",
+      "statut": "REFUS",
+      "categorie": "403",
+      "detail": "HTTP 403"
+    },
+    {
+      "url": "https://cibul.s3.amazonaws.com/4dfddc6c724143bcaf37d855d8af0640.base.image.jpg",
+      "hote": "cibul.s3.amazonaws.com",
+      "statut": "REFUS",
+      "categorie": "403",
+      "detail": "HTTP 403"
+    },
+    {
+      "url": "https://cafe-lastronef.fr/wp-content/uploads/2022/01/Café-bricol-scaled-e1647446717565.jpg",
+      "hote": "cafe-lastronef.fr",
+      "statut": "REFUS",
+      "categorie": "reseau",
+      "detail": "UnicodeEncodeError: ordinal not in range(128)"
+    },
+    {
+      "url": "https://www.lemoulin-roques.com/wp-content/uploads/2026/08/Gaspard-Chauvelot_©Pascal-FAYETON-2.png",
+      "hote": "www.lemoulin-roques.com",
+      "statut": "REFUS",
+      "categorie": "reseau",
+      "detail": "UnicodeEncodeError: ordinal not in range(128)"
+    },
+    {
+      "url": "https://linter-actif.fr/wp-content/uploads/2026/03/Conference-alimentation-Inter-Actif.png",
+      "hote": "linter-actif.fr",
+      "statut": "REFUS",
+      "categorie": "403",
+      "detail": "HTTP 403"
+    },
+    {
+      "url": "https://runarpuns.com/wp-content/uploads/2026/07/KO-SHIN-MOON-1.avif",
+      "hote": "runarpuns.com",
+      "statut": "REFUS",
+      "categorie": "type",
+      "detail": "200 sans type"
+    },
+    {
+      "url": "https://www.lamaisonsauvage.org/wp-content/uploads/2026/07/gabarit-animations-A4.png",
+      "hote": "www.lamaisonsauvage.org",
+      "statut": "REFUS",
+      "categorie": "404",
+      "detail": "HTTP 404"
+    },
+    {
+      "url": "https://www.kikafekoi.fr/wp-content/uploads/2019/04/Theatre-Forum-Kikafékoi1.jpg",
+      "hote": "www.kikafekoi.fr",
+      "statut": "REFUS",
+      "categorie": "reseau",
+      "detail": "UnicodeEncodeError: ordinal not in range(128)"
+    },
+    {
+      "url": "https://www.labasechambery.fr/wp-content/uploads/2026/08/WELGRYN-©Hamza-Djenat-2026-2-scaled.jpg",
+      "hote": "www.labasechambery.fr",
+      "statut": "REFUS",
+      "categorie": "reseau",
+      "detail": "UnicodeEncodeError: ordinal not in range(128)"
+    },
+    {
+      "url": "https://train-inc-cafe.com/wp-content/uploads/2026/09/dej-aines-smuc-octobre-2026.jpg",
+      "hote": "train-inc-cafe.com",
+      "statut": "REFUS",
+      "categorie": "403",
+      "detail": "HTTP 403"
+    },
+    {
+      "url": "https://ledome.info/wp-content/uploads/2024/07/IMGP3685-scaled.jpg",
+      "hote": "ledome.info",
+      "statut": "REFUS",
+      "categorie": "404",
+      "detail": "HTTP 404"
+    },
+    {
+      "url": "https://kiwiramonville-arto.fr/wp-content/uploads/2026/07/AU-PINCEAU-TORDU-©-Adeline-Zaepffel.jpg",
+      "hote": "kiwiramonville-arto.fr",
+      "statut": "REFUS",
+      "categorie": "reseau",
+      "detail": "UnicodeEncodeError: ordinal not in range(128)"
+    },
+    {
+      "url": "https://www.lautre-lieu.fr/wp-content/uploads/2026/08/AFFICHES-Expo-Doodle-Art_Habitat-et-Humanisme.png",
+      "hote": "www.lautre-lieu.fr",
+      "statut": "REFUS",
+      "categorie": "403",
+      "detail": "HTTP 403"
+    }
+  ],
+  "duree_secondes": 80.5,
+  "ce_que_ferait_ecrire": {
+    "colonne_evenements": "evenements.photos est un text[] (pas du JSON) : --ecrire reconstruirait le tableau SANS les URL refusees (PATCH evenements?id=eq.<id>, photos=[...restantes]). Ni NULL (la colonne est not null par defaut '{}' cote import) ni suppression de ligne : un tableau vide fait prendre l'image de categorie a la fiche, et un tableau partiel garde les affiches qui marchent.",
+    "trace": "evenements_import.source_url est l'URL de la PAGE de l'evenement, pas celle de l'affiche : elle ne permet pas de retrouver l'image. Aucune autre colonne (event_id, source, source_uid, source_url, conditions, registration, imported_at, checked_at) ne la porte. Proposition : colonne additive evenements_import.photos_retirees text[] not null default '{}' (migration non appliquee, voir migration_proposee).",
+    "retour_arriere": "Retour arriere : PATCH evenements photos = photos || photos_retirees pour les evenements concernes, puis photos_retirees = '{}'.",
+    "ordre": "Ordre des ecritures : 1) ecrire photos_retirees dans evenements_import, 2) seulement ensuite retirer l'entree de evenements.photos. Si l'etape 1 echoue, rien n'est retire.",
+    "migration_proposee": "-- 00NN_evenements_import_photos_retirees.sql (NON APPLIQUEE)\nalter table public.evenements_import\n  add column if not exists photos_retirees text[] not null default '{}';\ncomment on column public.evenements_import.photos_retirees is\n  'Affiches retirees de evenements.photos car leur hote refuse l''affichage hors de son site (verifier-affiches.py).';\n-- GRANT explicite si necessaire (cf. 0018) : la table existe deja, les droits ne changent pas."
+  },
+  "ecrit": {
+    "evenements": 66,
+    "affiches_retirees": 66,
+    "refus_reseau_laisses": 29
+  }
+}
