@@ -16,7 +16,7 @@ import {
   type HelpAudience,
 } from "@/app/admin/aide/actions";
 
-const AUDIENCE_LABEL: Record<HelpAudience, string> = { admin: "Admin", public: "Portail" };
+const AUDIENCE_LABEL: Record<HelpAudience, string> = { admin: "Admin", public: "Portail", sejour: "Séjours" };
 
 const input =
   "w-full rounded-xl border border-border bg-[#FAFAF7] px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-coral focus:ring-2 focus:ring-coral/15";
@@ -236,6 +236,7 @@ function ArticleModal({
             <select className={input} value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value as HelpAudience })}>
               <option value="admin">Admin</option>
               <option value="public">Portail</option>
+              <option value="sejour">Séjours</option>
             </select>
           </div>
           <div className="sm:col-span-2"><label className={labelCls}>Résumé</label><input className={input} value={f.excerpt} onChange={(e) => setF({ ...f, excerpt: e.target.value })} /></div>
@@ -302,6 +303,7 @@ function CategoryModal({
             <select className={input} value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value as HelpAudience })}>
               <option value="admin">Admin</option>
               <option value="public">Portail</option>
+              <option value="sejour">Séjours</option>
             </select>
           </div>
         </div>

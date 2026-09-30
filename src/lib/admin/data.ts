@@ -134,7 +134,7 @@ export interface HelpCategoryAdmin {
  * fournie. Sans argument (ou `undefined`), toutes les audiences : c'est le cas
  * "Toutes les plateformes" du contexte de travail (`/admin/aide`, prompt 6).
  */
-export async function getAllHelpArticles(audience?: "admin" | "public"): Promise<HelpArticleAdmin[]> {
+export async function getAllHelpArticles(audience?: "admin" | "public" | "sejour"): Promise<HelpArticleAdmin[]> {
   const admin = createAdminClient();
   if (!admin) return [];
   let query = admin
@@ -146,7 +146,7 @@ export async function getAllHelpArticles(audience?: "admin" | "public"): Promise
   return (data as HelpArticleAdmin[]) ?? [];
 }
 
-export async function getAllHelpCategories(audience?: "admin" | "public"): Promise<HelpCategoryAdmin[]> {
+export async function getAllHelpCategories(audience?: "admin" | "public" | "sejour"): Promise<HelpCategoryAdmin[]> {
   const admin = createAdminClient();
   if (!admin) return [];
   let query = admin

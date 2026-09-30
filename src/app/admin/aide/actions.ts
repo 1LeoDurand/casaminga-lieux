@@ -31,8 +31,8 @@ export async function seedDefaultHelp(): Promise<Result> {
   return { ok: true, summary: `${cats.length} catégories et ${arts.length} articles importés.` };
 }
 
-export type HelpAudience = "admin" | "public";
-const HELP_AUDIENCES: HelpAudience[] = ["admin", "public"];
+export type HelpAudience = "admin" | "public" | "sejour";
+const HELP_AUDIENCES: HelpAudience[] = ["admin", "public", "sejour"];
 
 export interface ArticleInput {
   slug: string;
