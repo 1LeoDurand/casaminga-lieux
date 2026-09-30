@@ -29,6 +29,13 @@ export interface PortalBillet {
   eventSlug: string | null;
 }
 
+/** Registration on the waiting list: no ticket yet, so no link. */
+export interface PortalAttente {
+  eventTitle: string;
+  eventStartAt: string;
+  seats: number;
+}
+
 export interface PortalRecu {
   id: string;
   number: string | null;
@@ -61,6 +68,15 @@ export interface PortalReservation {
   status: string;            // "demandee" ou "confirmee"
 }
 
+interface TicketLite {
+  registration_id: string | null;
+  holder_name: string;
+  ticket_token: string;
+  event_id: string;
+  payment_status: string | null;
+  created_at: string;
+}
+
 export interface PortalOrgData {
   orgId: string;
   orgSlug: string;
@@ -68,6 +84,7 @@ export interface PortalOrgData {
   displayName: string;        // nom de la fiche persons si disponible, sinon orgName
   adhesion: PortalAdhesion | null;
   billets: PortalBillet[];
+  attente: PortalAttente[];
   recus: PortalRecu[];
   factures: PortalFacture[];
   reservations: PortalReservation[];
@@ -145,7 +162,8 @@ export async function getPortalDataByEmail(
       .order("created_at", { ascending: false }),
     admin
       .from("event_registrations")
-      .select("ticket_token, full_name, event_id, organization_id, checked_in_at, email")
+      .select("id, ticket_token, full_name, event_id, organization_id, email, status, seats")
+      .in("status", ["inscrit", "liste_attente"]) // cancelled ones never show up
       .ilike("email", pattern),
     // Factures émises au nom de cet email. Les brouillons et annulées ne
     // concernent pas le client ; les avoirs sont des pièces comptables internes.
@@ -161,6 +179,50 @@ export async function getPortalDataByEmail(
   const personsRows = (personsRes.data ?? []).filter((r) => sameEmail(r.email, email));
   const adhesionsRows = (adhesionsRes.data ?? []).filter((r) => sameEmail(r.email, email));
   const billetsRows = (billetsRes.data ?? []).filter((r) => sameEmail(r.email, email));
+
+  // Tickets live in event_tickets (one per participant), linked by
+  // registration_id. The legacy event_registrations.ticket_token is only
+  // trusted when it matches an existing ticket of the same event.
+  const confirmedRows = billetsRows.filter((r) => r.status === "inscrit");
+  const regIds = confirmedRows.map((r) => r.id);
+  const legacyTokens = confirmedRows.map((r) => r.ticket_token).filter((t): t is string => !!t);
+  const [ticketsByRegRes, ticketsByTokenRes] = await Promise.all([
+    regIds.length
+      ? admin
+          .from("event_tickets")
+          .select("registration_id, holder_name, ticket_token, event_id, payment_status, created_at")
+          .in("registration_id", regIds)
+      : Promise.resolve({ data: [] as TicketLite[] }),
+    legacyTokens.length
+      ? admin
+          .from("event_tickets")
+          .select("registration_id, holder_name, ticket_token, event_id, payment_status, created_at")
+          .in("ticket_token", legacyTokens)
+      : Promise.resolve({ data: [] as TicketLite[] }),
+  ]);
+  const ticketsByReg = new Map<string, TicketLite[]>();
+  for (const t of (ticketsByRegRes.data ?? []) as TicketLite[]) {
+    if (!t.registration_id) continue;
+    if (!ticketsByReg.has(t.registration_id)) ticketsByReg.set(t.registration_id, []);
+    ticketsByReg.get(t.registration_id)!.push(t);
+  }
+  const ticketsByToken = new Map<string, TicketLite>(
+    ((ticketsByTokenRes.data ?? []) as TicketLite[]).map((t) => [t.ticket_token, t])
+  );
+  /** Tickets to show for a confirmed registration ([] = no link at all). */
+  const ticketsOf = (r: { id: string; ticket_token: string | null; event_id: string }): TicketLite[] => {
+    const linked = ticketsByReg.get(r.id);
+    const list = linked?.length
+      ? linked
+      : (() => {
+          const legacy = r.ticket_token ? ticketsByToken.get(r.ticket_token) : undefined;
+          return legacy && legacy.event_id === r.event_id ? [legacy] : [];
+        })();
+    // Unpaid tickets (online payment pending) have no valid QR yet.
+    return list
+      .filter((t) => t.payment_status !== "pending")
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  };
   const facturesRows = (facturesRes.data ?? []).filter((r) => sameEmail(r.client_email, email));
 
   const allOrgIds = new Set<string>();
@@ -282,20 +344,30 @@ export async function getPortalDataByEmail(
       };
     }
 
-    // Billets à venir pour cette org
+    // Upcoming tickets (one per participant) and waiting-list entries for this org
     const billets: PortalBillet[] = [];
+    const attente: PortalAttente[] = [];
     for (const b of billetsRows) {
       if (b.organization_id !== orgId) continue;
       const ev = eventsMap.get(b.event_id);
       if (!ev) continue; // filtré par gte(now) au-dessus : pas dans la map = passé
-      billets.push({
-        ticketToken: b.ticket_token,
-        holderName: b.full_name ?? "",
-        eventTitle: ev.title,
-        eventStartAt: ev.start_at,
-        eventSlug: ev.slug ?? null,
-      });
+      if (b.status === "liste_attente") {
+        attente.push({ eventTitle: ev.title, eventStartAt: ev.start_at, seats: b.seats ?? 1 });
+        continue;
+      }
+      for (const t of ticketsOf(b)) {
+        billets.push({
+          ticketToken: t.ticket_token,
+          holderName: t.holder_name ?? "",
+          eventTitle: ev.title,
+          eventStartAt: ev.start_at,
+          eventSlug: ev.slug ?? null,
+        });
+      }
     }
+    attente.sort(
+      (a, b) => new Date(a.eventStartAt).getTime() - new Date(b.eventStartAt).getTime()
+    );
     billets.sort(
       (a, b) => new Date(a.eventStartAt).getTime() - new Date(b.eventStartAt).getTime()
     );
@@ -355,6 +427,7 @@ export async function getPortalDataByEmail(
       displayName: displayNameByOrg.get(orgId) ?? org.name,
       adhesion,
       billets,
+      attente,
       recus,
       factures,
       reservations,

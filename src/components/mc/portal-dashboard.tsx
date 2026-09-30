@@ -164,8 +164,8 @@ function AdhesionCard({ adhesion, renewUrl, attestationUrl }: {
   );
 }
 
-function BilletsSection({ billets }: { billets: PortalOrgData["billets"] }) {
-  if (!billets.length) {
+function BilletsSection({ billets, attente }: { billets: PortalOrgData["billets"]; attente: PortalOrgData["attente"] }) {
+  if (!billets.length && !attente.length) {
     return (
       <div style={{ marginBottom: 16 }}>
         <h3 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: "#6B6460", textTransform: "uppercase", letterSpacing: "0.04em" }}>
@@ -206,6 +206,16 @@ function BilletsSection({ billets }: { billets: PortalOrgData["billets"] }) {
               Voir mon billet →
             </div>
           </a>
+        ))}
+        {attente.map((w, i) => (
+          <div
+            key={`w${i}`}
+            style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 12, padding: "14px 16px" }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#2C2C2C", marginBottom: 4 }}>{w.eventTitle}</div>
+            <div style={{ fontSize: 12, color: "#9C9590" }}>📅 {fmtDate(w.eventStartAt)}</div>
+            <div style={{ fontSize: 11, color: "#9C9590", marginTop: 6, fontWeight: 600 }}>En liste d&apos;attente</div>
+          </div>
         ))}
       </div>
     </div>
@@ -357,7 +367,7 @@ function OrgSection({ org, token }: { org: PortalOrgData; token: string }) {
     : null;
 
   const isEmpty =
-    !org.adhesion && org.billets.length === 0 && org.recus.length === 0 && org.factures.length === 0;
+    !org.adhesion && org.billets.length === 0 && org.attente.length === 0 && org.recus.length === 0 && org.factures.length === 0;
 
   return (
     <div
@@ -413,7 +423,7 @@ function OrgSection({ org, token }: { org: PortalOrgData; token: string }) {
             />
           )}
           <FacturesSection factures={org.factures} token={token} />
-          <BilletsSection billets={org.billets} />
+          <BilletsSection billets={org.billets} attente={org.attente} />
           <RecusSection recus={org.recus} token={token} />
         </>
       )}

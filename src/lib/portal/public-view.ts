@@ -36,6 +36,14 @@ export interface PortalViewBillet {
   ticketUrl: string;
 }
 
+export interface PortalViewAttente {
+  eventTitle: string;
+  eventStartAt: string;
+  seats: number;
+  /** Ready-to-display label: no ticket link exists for a waiting-list entry. */
+  label: string;
+}
+
 export interface PortalViewReservation {
   title: string | null;
   spaceName: string | null;
@@ -73,6 +81,8 @@ export interface PortalViewOrg {
   displayName: string;
   adhesion: PortalViewAdhesion | null;
   billets: PortalViewBillet[];
+  /** Waiting-list registrations (new field, no link). */
+  attente: PortalViewAttente[];
   reservations: PortalViewReservation[];
   recus: PortalViewRecu[];
   factures: PortalViewFacture[];
@@ -120,6 +130,12 @@ export function toPortalView(data: PortalData, token: string): PortalView {
           eventTitle: b.eventTitle,
           eventStartAt: b.eventStartAt,
           ticketUrl: `${PORTAL_ADMIN_BASE}/billet/${seg(b.ticketToken)}`,
+        })),
+        attente: org.attente.map((w) => ({
+          eventTitle: w.eventTitle,
+          eventStartAt: w.eventStartAt,
+          seats: w.seats,
+          label: "En liste d'attente",
         })),
         reservations: org.reservations.map((r) => ({
           title: r.title,
