@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { publicEventUrl } from "@/lib/site-public/url";
 import { notFound } from "next/navigation";
 import { getOrganizationBySlug, getEvenementById, isUnclaimedImport } from "@/lib/data";
 import { getPublishedSiteContent } from "@/lib/site-public/data";
@@ -21,6 +22,7 @@ export async function generateMetadata({
   return {
     title: `${event.title} · ${org.name}`,
     description: event.description?.slice(0, 160) ?? undefined,
+    alternates: { canonical: publicEventUrl(event.id) },
   };
 }
 

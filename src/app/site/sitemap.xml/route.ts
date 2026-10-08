@@ -24,7 +24,7 @@ export async function GET() {
   const events = await getUpcomingEventIds(sites.map((s) => s.orgId));
 
   const entries = sites.flatMap((site) =>
-    siteEntries(`${origin}/${site.slug}`, site, events[site.orgId] ?? [])
+    siteEntries(`${origin}/${site.slug}`, site, events[site.orgId] ?? [], origin)
   );
 
   return new NextResponse(renderSitemap(entries), { headers: XML_HEADERS });

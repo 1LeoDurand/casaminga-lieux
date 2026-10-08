@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { vitrineCanonical } from "@/lib/site-public/url";
 import { notFound } from "next/navigation";
 import { loadPublicSite } from "@/lib/site-public/page-data";
 import { getTheme } from "@/lib/site-public/themes";
@@ -11,7 +12,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await loadPublicSite(slug);
-  return { title: data ? `À propos — ${data.displayName}` : "Lieu introuvable" };
+  if (!data) return { title: "Lieu introuvable" };
+  return {
+    title: `À propos — ${data.displayName}`,
+    alternates: { canonical: vitrineCanonical(slug, "/a-propos", "/histoire", !!data.establishment) },
+  };
 }
 
 export default async function AProposPage({

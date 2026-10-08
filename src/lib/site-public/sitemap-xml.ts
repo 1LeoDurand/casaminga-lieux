@@ -23,23 +23,33 @@ export interface SitePages {
  * `base` est la racine du site, sans barre finale : `https://casaminga.com/mon-lieu`
  * sur le domaine partagé, `https://monlieu.fr` sur un domaine personnalisé.
  * C'est à l'appelant de la construire — lui seul sait sur quel host il répond.
+ *
+ * `portalOrigin` : à fournir quand `base` est sur casaminga.com. Ces URL sont
+ * alors servies par le site public (dépôt casa-minga-public), qui n'a pas les
+ * mêmes chemins que l'admin : « à propos » y est `/histoire`, et une fiche
+ * événement `/evenement/<id>` à la racine. Sans lui (domaine personnalisé,
+ * servi par l'admin), on garde les chemins de l'admin.
  */
 export function siteEntries(
   base: string,
   site: SitePages,
-  events: { id: string; updatedAt: string | null }[] = []
+  events: { id: string; updatedAt: string | null }[] = [],
+  portalOrigin?: string
 ): SitemapEntry[] {
+  const aproposPath = portalOrigin ? "/histoire" : "/a-propos";
+  const eventLoc = (id: string) =>
+    portalOrigin ? `${portalOrigin}/evenement/${id}` : `${base}/agenda/${id}`;
   const lastmod = site.updatedAt ?? undefined;
   const entries: SitemapEntry[] = [
     { loc: base, lastmod, changefreq: "weekly", priority: 1.0 },
   ];
-  if (site.pages.apropos) entries.push({ loc: `${base}/a-propos`, lastmod, changefreq: "monthly", priority: 0.7 });
+  if (site.pages.apropos) entries.push({ loc: `${base}${aproposPath}`, lastmod, changefreq: "monthly", priority: 0.7 });
   if (site.pages.agenda) entries.push({ loc: `${base}/agenda`, lastmod, changefreq: "daily", priority: 0.8 });
   if (site.pages.espaces) entries.push({ loc: `${base}/espaces`, lastmod, changefreq: "monthly", priority: 0.7 });
   if (site.pages.soutenir) entries.push({ loc: `${base}/soutenir`, lastmod, changefreq: "monthly", priority: 0.6 });
   for (const e of events) {
     entries.push({
-      loc: `${base}/agenda/${e.id}`,
+      loc: eventLoc(e.id),
       lastmod: e.updatedAt ?? undefined,
       changefreq: "weekly",
       priority: 0.6,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { vitrineCanonical } from "@/lib/site-public/url";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -24,14 +25,15 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const canonical = { alternates: { canonical: `https://admin.casaminga.com/site/${slug}` } };
   const site = await getPublicSiteBySlug(slug);
   if (site) {
+    const canonical = { alternates: { canonical: vitrineCanonical(slug, "", "") } };
     return { title: site.title, description: site.seo_description ?? undefined, ...canonical };
   }
   // Vitrine par établissement
   const est = await getEstablishmentForPublic(slug);
   if (est) {
+    const canonical = { alternates: { canonical: vitrineCanonical(slug, "", "", true) } };
     const orgSite = await getPublicSiteBySlug(est.orgSlug);
     return {
       title: est.establishment.name,

@@ -17,3 +17,34 @@ export function publicSiteUrl(slug: string): string {
 export function publicSiteUrlDisplay(slug: string): string {
   return publicSiteUrl(slug).replace(/^https?:\/\//, "");
 }
+
+/**
+ * Canonical d'une page vitrine servie sous admin.casaminga.com/site/<slug>.
+ *
+ * Le site public (dépôt casa-minga-public) affiche lui-même les vitrines
+ * d'organisation sous casaminga.com/<slug>, avec ses propres chemins :
+ * c'est cette adresse qu'on désigne à Google, pour qu'il range la page sous
+ * casaminga.com et non sous le sous-domaine technique. Les pages admin restent
+ * en ligne, parce que le site public renvoie vers elles pour le formulaire de
+ * contact, le don et l'adhésion.
+ *
+ * `publicPath` : chemin de la page équivalente côté public ("" pour l'accueil,
+ * "/histoire" pour /a-propos…). `null` quand le site public n'en a pas.
+ * Les vitrines d'établissement n'existent que sur l'admin : canonical admin.
+ */
+export function vitrineCanonical(
+  slug: string,
+  adminPath: string,
+  publicPath: string | null,
+  isEstablishment = false
+): string {
+  if (publicPath === null || isEstablishment) {
+    return `https://admin.casaminga.com/site/${slug}${adminPath}`;
+  }
+  return `${publicSiteUrl(slug)}${publicPath}`;
+}
+
+/** Canonical d'une fiche événement : casaminga.com/evenement/<id>. */
+export function publicEventUrl(id: string): string {
+  return `${PUBLIC_SITE_BASE.replace(/\/$/, "")}/evenement/${id}`;
+}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { vitrineCanonical } from "@/lib/site-public/url";
 import { notFound } from "next/navigation";
 import { getSpacesForOrg } from "@/lib/data";
 import { loadPublicSite } from "@/lib/site-public/page-data";
@@ -12,7 +13,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await loadPublicSite(slug);
-  return { title: data ? `Espaces — ${data.displayName}` : "Lieu introuvable" };
+  if (!data) return { title: "Lieu introuvable" };
+  return {
+    title: `Espaces — ${data.displayName}`,
+    alternates: { canonical: vitrineCanonical(slug, "/espaces", "/espaces", !!data.establishment) },
+  };
 }
 
 function price(s: { price_hour: number | null; price_day: number | null }): string | null {

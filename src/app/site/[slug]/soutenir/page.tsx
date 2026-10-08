@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { vitrineCanonical } from "@/lib/site-public/url";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMembershipCampaignsForOrg, getTiersForCampaign } from "@/lib/data";
@@ -15,7 +16,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await loadPublicSite(slug);
-  return { title: data ? `Soutenir — ${data.displayName}` : "Lieu introuvable" };
+  if (!data) return { title: "Lieu introuvable" };
+  return {
+    title: `Soutenir — ${data.displayName}`,
+    alternates: { canonical: vitrineCanonical(slug, "/soutenir", "/soutenir", !!data.establishment) },
+  };
 }
 
 function fmt(n: number) {

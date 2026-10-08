@@ -42,13 +42,13 @@ export async function GET(
   const h = await headers();
   const host = (h.get("host") ?? "").split(":")[0].toLowerCase();
 
-  const base = isCustomDomain(host)
-    ? `https://${host}`
-    : `${PUBLIC_SITE_BASE.replace(/\/$/, "")}/${site.slug}`;
+  const custom = isCustomDomain(host);
+  const portalOrigin = PUBLIC_SITE_BASE.replace(/\/$/, "");
+  const base = custom ? `https://${host}` : `${portalOrigin}/${site.slug}`;
 
   const events = (await getUpcomingEventIds([site.orgId]))[site.orgId] ?? [];
 
-  return new NextResponse(renderSitemap(siteEntries(base, site, events)), {
+  return new NextResponse(renderSitemap(siteEntries(base, site, events, custom ? undefined : portalOrigin)), {
     headers: XML_HEADERS,
   });
 }

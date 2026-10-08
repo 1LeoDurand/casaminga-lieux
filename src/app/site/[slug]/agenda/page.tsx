@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { vitrineCanonical } from "@/lib/site-public/url";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getEvenementsForOrg } from "@/lib/data";
@@ -14,7 +15,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await loadPublicSite(slug);
-  return { title: data ? `Agenda — ${data.displayName}` : "Lieu introuvable" };
+  if (!data) return { title: "Lieu introuvable" };
+  return {
+    title: `Agenda — ${data.displayName}`,
+    alternates: { canonical: vitrineCanonical(slug, "/agenda", "/agenda", !!data.establishment) },
+  };
 }
 
 function monthLabel(iso: string) {
