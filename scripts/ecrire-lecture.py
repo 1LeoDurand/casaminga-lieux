@@ -434,7 +434,11 @@ def main():
     slugs_pris = {o["slug"] for o in org_rows}
     sites_existants = ({s["organization_id"] for s in db.lire_tout("public_sites?select=organization_id")}
                        if db else set())
-    etabs_existants = {e["id"] for e in db.lire_tout("establishments?select=id")} if db else set()
+    etab_rows = db.lire_tout("establishments?select=id,organization_id,slug") if db else []
+    etabs_existants = {e["id"] for e in etab_rows}
+    # Contrainte unique (organization_id, slug) : deux lieux d'une même
+    # association peuvent porter le même nom lu (« Saison culturelle »).
+    slugs_etab_pris = {(e["organization_id"], e["slug"]) for e in etab_rows}
     deja_importes = ({i["event_id"] for i in db.lire_tout("evenements_import?select=event_id")}
                      if db else set())
     dedoublonneur = Dedoublonneur(db) if db else None
@@ -482,10 +486,16 @@ def main():
             cache_geo, f["lieu_adresse"], f["lieu_commune"], f["lieu_nom"])
         if eid not in etabs_existants and not any(e["id"] == eid for e in etabs_a_creer):
             premier = nouvelle and not any(e["organization_id"] == oid for e in etabs_a_creer)
+            base = slugify(f["lieu_nom"] or f["lieu_commune"] or sid)
+            slug_e, n = base, 1
+            while (oid, slug_e) in slugs_etab_pris:
+                n += 1
+                slug_e = f"{base}-{n}"
+            slugs_etab_pris.add((oid, slug_e))
             etabs_a_creer.append({
                 "id": eid, "organization_id": oid,
                 "name": (f["lieu_nom"] or f["lieu_commune"] or sites[sid]["association"])[:120],
-                "slug": slugify(f["lieu_nom"] or f["lieu_commune"] or sid),
+                "slug": slug_e,
                 "city": f["lieu_commune"], "address": f["lieu_adresse"], "postal_code": None,
                 "latitude": lat, "longitude": lng, "is_primary": premier, "active": True,
             })
