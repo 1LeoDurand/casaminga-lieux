@@ -5,7 +5,21 @@
 
 // ── Base layout ────────────────────────────────────────────────────────────
 
-function base(content: string, orgName = "Casa Minga Lieux") {
+/**
+ * HTML-escape a value typed by a third party before it is injected into an
+ * email body. Accepts null/undefined so optional fields can be passed as is.
+ */
+export function esc(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function base(content: string, orgNameRaw = "Casa Minga Lieux") {
+  const orgName = esc(orgNameRaw);
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -90,11 +104,11 @@ export function tplDemandeRecue(opts: {
   return base(
     `
     ${h1("Votre demande a bien été reçue ✓")}
-    ${p(`Bonjour <strong>${opts.personName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.personName)}</strong>,`)}
     ${p(`Nous avons bien reçu votre demande auprès de <strong>${opts.orgName}</strong>. Notre équipe la traitera dans les meilleurs délais.`)}
     ${card([
-      { label: "Type", value: opts.type },
-      { label: "Message", value: opts.message.slice(0, 200) + (opts.message.length > 200 ? "…" : "") },
+      { label: "Type", value: esc(opts.type) },
+      { label: "Message", value: esc(opts.message.slice(0, 200)) + (opts.message.length > 200 ? "…" : "") },
     ])}
     ${p("Vous recevrez un email dès que notre équipe aura traité votre demande.")}
     ${p("Merci de votre confiance !")}
@@ -133,13 +147,13 @@ export function tplDemandeAlerteEquipe(opts: {
     `
     ${badge("Nouvelle demande", "#E8714D")}
     <div style="height:12px;"></div>
-    ${h1(`Demande de ${opts.personName}`)}
+    ${h1(`Demande de ${esc(opts.personName)}`)}
     ${p("Une nouvelle demande vient d'être soumise sur votre site public.")}
     ${card([
-      { label: "Nom", value: opts.personName },
-      { label: "Email", value: opts.personEmail },
-      { label: "Type", value: opts.type },
-      { label: "Message", value: opts.message.slice(0, 300) + (opts.message.length > 300 ? "…" : "") },
+      { label: "Nom", value: esc(opts.personName) },
+      { label: "Email", value: esc(opts.personEmail) },
+      { label: "Type", value: esc(opts.type) },
+      { label: "Message", value: esc(opts.message.slice(0, 300)) + (opts.message.length > 300 ? "…" : "") },
     ])}
     ${btn("Traiter la demande →", opts.dashboardUrl)}
   `,
@@ -168,7 +182,7 @@ export function tplDemandeStatut(opts: {
     ${badge(s.label, s.color)}
     <div style="height:12px;"></div>
     ${h1("Mise à jour de votre demande")}
-    ${p(`Bonjour <strong>${opts.personName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.personName)}</strong>,`)}
     ${p(s.msg)}
     ${p(`N'hésitez pas à nous contacter si vous avez des questions.`)}
   `,
@@ -183,21 +197,43 @@ export function tplAdhesionCandidat(opts: {
   firstName: string;
   lastName: string;
   tierLabel: string;
+  /** Tier price. */
   amount: number;
-  membershipEnd: string;
+  /** Optional donation added on top of the tier. */
+  donation?: number | null;
+  /** Null for an unlimited membership. */
+  membershipEnd: string | null;
+  /** True when the payment was taken online (Stripe); false when it is settled offline. */
+  paidOnline?: boolean;
 }) {
+  const donation = opts.donation && opts.donation > 0 ? opts.donation : 0;
+  const total = opts.amount + donation;
+  const endDate = opts.membershipEnd ? new Date(opts.membershipEnd) : null;
+  const rows = [
+    { label: "Formule", value: esc(opts.tierLabel) },
+    ...(donation > 0
+      ? [
+          { label: "Tarif", value: `${opts.amount.toFixed(2)} €` },
+          { label: "Don", value: `${donation.toFixed(2)} €` },
+        ]
+      : []),
+    { label: donation > 0 ? "Total" : "Montant", value: `${total.toFixed(2)} €` },
+    ...(endDate && !Number.isNaN(endDate.getTime())
+      ? [{ label: "Valable jusqu'au", value: endDate.toLocaleDateString("fr-FR") }]
+      : []),
+  ];
   return base(
     `
-    ${h1("Votre candidature d'adhésion est enregistrée ✓")}
-    ${p(`Bonjour <strong>${opts.firstName} ${opts.lastName}</strong>,`)}
-    ${p(`Nous avons bien reçu votre candidature d'adhésion à <strong>${opts.orgName}</strong>. Elle sera validée par notre équipe.`)}
-    ${card([
-      { label: "Formule",       value: opts.tierLabel },
-      { label: "Montant",       value: `${opts.amount.toFixed(2)} €` },
-      { label: "Valable jusqu'au", value: new Date(opts.membershipEnd).toLocaleDateString("fr-FR") },
-    ])}
+    ${h1("Votre demande d'adhésion est enregistrée")}
+    ${p(`Bonjour <strong>${esc(opts.firstName)} ${esc(opts.lastName)}</strong>,`)}
+    ${p(`Nous avons bien reçu votre demande d'adhésion à <strong>${esc(opts.orgName)}</strong>. Elle sera validée par notre équipe.`)}
+    ${card(rows)}
+    ${
+      opts.paidOnline
+        ? p("Votre paiement en ligne a bien été pris en compte.")
+        : p("Aucun paiement n'a été pris. L'équipe vous écrira pour le règlement, par virement ou sur place. Votre adhésion prend effet à sa validation.")
+    }
     ${p("Vous recevrez un email de confirmation dès la validation de votre adhésion.")}
-    ${p("Bienvenue dans notre communauté !")}
   `,
     opts.orgName
   );
@@ -219,11 +255,11 @@ export function tplAdhesionValidee(opts: {
     ${badge("Adhésion validée ✓", "#22C55E")}
     <div style="height:12px;"></div>
     ${h1("Bienvenue, vous êtes maintenant membre !")}
-    ${p(`Bonjour <strong>${opts.firstName} ${opts.lastName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.firstName)} ${esc(opts.lastName)}</strong>,`)}
     ${p(`Votre adhésion à <strong>${opts.orgName}</strong> a été validée. Voici votre reçu :`)}
     ${card([
-      { label: "Membre",         value: `${opts.firstName} ${opts.lastName}` },
-      { label: "Formule",        value: opts.tierLabel },
+      { label: "Membre",         value: `${esc(opts.firstName)} ${esc(opts.lastName)}` },
+      { label: "Formule",        value: esc(opts.tierLabel) },
       { label: "Montant réglé",  value: `${opts.amount.toFixed(2)} €` },
       { label: "Début",          value: new Date(opts.membershipStart).toLocaleDateString("fr-FR") },
       { label: "Fin de validité",value: new Date(opts.membershipEnd).toLocaleDateString("fr-FR") },
@@ -250,7 +286,7 @@ export function tplAdhesionRappelRenouvellement(opts: {
     ${badge("Adhésion bientôt expirée", "#F59E0B")}
     <div style="height:12px;"></div>
     ${h1("Votre adhésion expire dans 30 jours")}
-    ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.firstName)}</strong>,`)}
     ${p(`Votre adhésion à <strong>${opts.orgName}</strong> expire le <strong>${new Date(opts.membershipEnd).toLocaleDateString("fr-FR")}</strong>.`)}
     ${p("Renouvelez dès maintenant pour continuer à bénéficier de tous les avantages.")}
     ${opts.renewUrl ? btn("Renouveler mon adhésion →", opts.renewUrl) : ""}
@@ -281,11 +317,11 @@ export function tplAdhesionNonRenouvellement(opts: {
     `
     ${badge("NON-RENOUVELLEMENT", "#E8A23D")}
     ${h1("Un adhérent ne renouvellera pas")}
-    ${p(`<strong>${opts.memberName}</strong> vient d'indiquer qu'il ne renouvellera pas son adhésion.`)}
+    ${p(`<strong>${esc(opts.memberName)}</strong> vient d'indiquer qu'il ne renouvellera pas son adhésion.`)}
     ${card([
-      { label: "Email", value: opts.memberEmail },
+      { label: "Email", value: esc(opts.memberEmail) },
       { label: "Fin d'adhésion", value: opts.membershipEnd },
-      ...(opts.note ? [{ label: "Motif indiqué", value: opts.note }] : []),
+      ...(opts.note ? [{ label: "Motif indiqué", value: esc(opts.note) }] : []),
     ])}
     ${p(
       `Les rappels de renouvellement sont arrêtés pour cette personne. ` +
@@ -312,13 +348,13 @@ export function tplReservationConfirmee(opts: {
   return base(
     `
     ${h1("Votre réservation est enregistrée ✓")}
-    ${p(`Bonjour <strong>${opts.contactName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.contactName)}</strong>,`)}
     ${p(`Votre demande de réservation auprès de <strong>${opts.orgName}</strong> a été enregistrée. Elle est en attente de confirmation par notre équipe.`)}
     ${card([
-      { label: "Espace",  value: opts.spaceName },
+      { label: "Espace",  value: esc(opts.spaceName) },
       { label: "Début",   value: fmt(opts.startAt) },
       { label: "Fin",     value: fmt(opts.endAt) },
-      ...(opts.purpose ? [{ label: "Objet", value: opts.purpose }] : []),
+      ...(opts.purpose ? [{ label: "Objet", value: esc(opts.purpose) }] : []),
     ])}
     ${p("Vous recevrez un email de confirmation dès la validation.")}
   `,
@@ -342,10 +378,10 @@ export function tplReservationApprouvee(opts: {
     ${badge("Réservation confirmée ✓", "#22C55E")}
     <div style="height:12px;"></div>
     ${h1("Votre réservation est confirmée !")}
-    ${p(`Bonjour <strong>${opts.contactName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.contactName)}</strong>,`)}
     ${p(`Bonne nouvelle ! Votre réservation chez <strong>${opts.orgName}</strong> est confirmée.`)}
     ${card([
-      { label: "Espace", value: opts.spaceName },
+      { label: "Espace", value: esc(opts.spaceName) },
       { label: "Début",  value: fmt(opts.startAt) },
       { label: "Fin",    value: fmt(opts.endAt) },
     ])}
@@ -373,10 +409,10 @@ export function tplReservationRappel(opts: {
     ${badge("Rappel — demain", "#3B82F6")}
     <div style="height:12px;"></div>
     ${h1("Votre réservation est demain")}
-    ${p(`Bonjour <strong>${opts.contactName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.contactName)}</strong>,`)}
     ${p(`Petit rappel : vous avez une réservation chez <strong>${opts.orgName}</strong> demain.`)}
     ${card([
-      { label: "Espace", value: opts.spaceName },
+      { label: "Espace", value: esc(opts.spaceName) },
       { label: "Début",  value: fmt(opts.startAt) },
       { label: "Fin",    value: fmt(opts.endAt) },
     ])}
@@ -410,11 +446,11 @@ export function tplReservationAnnuleeParClient(opts: {
     `
     ${badge("PLACE LIBÉRÉE", "#E8A23D")}
     ${h1("Une réservation vient d'être annulée")}
-    ${p(`<strong>${opts.contactName}</strong> a annulé sa réservation depuis le rappel de la veille.`)}
+    ${p(`<strong>${esc(opts.contactName)}</strong> a annulé sa réservation depuis le rappel de la veille.`)}
     ${card([
-      { label: "Espace", value: opts.spaceName },
+      { label: "Espace", value: esc(opts.spaceName) },
       { label: "Créneau", value: fmt(opts.startAt) },
-      ...(opts.reason ? [{ label: "Motif indiqué", value: opts.reason }] : []),
+      ...(opts.reason ? [{ label: "Motif indiqué", value: esc(opts.reason) }] : []),
     ])}
     ${p("Le créneau est de nouveau disponible.")}
     ${btn("Voir les réservations", opts.dashboardUrl)}
@@ -438,8 +474,8 @@ export function tplReservationAnnulee(opts: {
     ${badge("Réservation annulée", "#EF4444")}
     <div style="height:12px;"></div>
     ${h1("Votre réservation a été annulée")}
-    ${p(`Bonjour <strong>${opts.contactName}</strong>,`)}
-    ${p(`Votre réservation de <strong>${opts.spaceName}</strong> prévue le <strong>${fmt(opts.startAt)}</strong> a été annulée.`)}
+    ${p(`Bonjour <strong>${esc(opts.contactName)}</strong>,`)}
+    ${p(`Votre réservation de <strong>${esc(opts.spaceName)}</strong> prévue le <strong>${fmt(opts.startAt)}</strong> a été annulée.`)}
     ${p("Si vous pensez qu'il s'agit d'une erreur, contactez-nous directement.")}
   `,
     opts.orgName
@@ -460,12 +496,12 @@ export function tplEvenementInscription(opts: {
   return base(
     `
     ${h1("Inscription confirmée ✓")}
-    ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.firstName)}</strong>,`)}
     ${p(`Votre inscription à l'événement de <strong>${opts.orgName}</strong> est confirmée.`)}
     ${card([
-      { label: "Événement", value: opts.eventTitle },
+      { label: "Événement", value: esc(opts.eventTitle) },
       { label: "Date",      value: fmt(opts.startAt) },
-      ...(opts.location ? [{ label: "Lieu", value: opts.location }] : []),
+      ...(opts.location ? [{ label: "Lieu", value: esc(opts.location) }] : []),
     ])}
     ${p("À bientôt !")}
   `,
@@ -492,16 +528,16 @@ export function tplEvenementRappel(opts: {
     ${badge("Rappel — demain", "#3B82F6")}
     <div style="height:12px;"></div>
     ${h1("C'est demain !")}
-    ${p(`Bonjour <strong>${opts.firstName}</strong>,`)}
-    ${p(`Petit rappel : <strong>${opts.eventTitle}</strong> organisé par <strong>${opts.orgName}</strong> a lieu demain.`)}
+    ${p(`Bonjour <strong>${esc(opts.firstName)}</strong>,`)}
+    ${p(`Petit rappel : <strong>${esc(opts.eventTitle)}</strong> organisé par <strong>${opts.orgName}</strong> a lieu demain.`)}
     ${card([
       { label: "Date", value: fmt(opts.startAt) },
-      ...(opts.location ? [{ label: "Lieu", value: opts.location }] : []),
+      ...(opts.location ? [{ label: "Lieu", value: esc(opts.location) }] : []),
     ])}
     ${tickets.length === 1 ? btn("Voir mon billet", tickets[0].url) : ""}
     ${
       tickets.length > 1
-        ? resourceLinks(tickets.map((t) => ({ label: `🎟️ ${t.holderName}`, href: t.url })))
+        ? resourceLinks(tickets.map((t) => ({ label: `🎟️ ${esc(t.holderName)}`, href: t.url })))
         : ""
     }
     ${p("On vous attend !")}
@@ -534,9 +570,9 @@ export function tplBilletAnnuleParClient(opts: {
     `
     ${badge("PLACE LIBÉRÉE", "#E8A23D")}
     ${h1("Un participant a rendu sa place")}
-    ${p(`<strong>${opts.holderName}</strong> a annulé son billet pour <strong>${opts.eventTitle}</strong>.`)}
+    ${p(`<strong>${esc(opts.holderName)}</strong> a annulé son billet pour <strong>${esc(opts.eventTitle)}</strong>.`)}
     ${card([
-      { label: "Événement", value: opts.eventTitle },
+      { label: "Événement", value: esc(opts.eventTitle) },
       { label: "Date", value: fmt(opts.startAt) },
       ...(opts.seatsLeft !== null ? [{ label: "Places restantes", value: String(opts.seatsLeft) }] : []),
     ])}
@@ -557,8 +593,8 @@ export function tplPersonneBienvenue(opts: {
 }) {
   return base(
     `
-    ${h1(`Bienvenue, ${opts.firstName} !`)}
-    ${p(`Vous avez été ajouté(e) à l'annuaire de <strong>${opts.orgName}</strong>${opts.role ? ` en tant que <strong>${opts.role}</strong>` : ""}.`)}
+    ${h1(`Bienvenue, ${esc(opts.firstName)} !`)}
+    ${p(`Vous avez été ajouté(e) à l'annuaire de <strong>${opts.orgName}</strong>${opts.role ? ` en tant que <strong>${esc(opts.role)}</strong>` : ""}.`)}
     ${p("N'hésitez pas à prendre contact avec l'équipe pour toute question.")}
     ${opts.siteUrl ? btn(`Découvrir ${opts.orgName} →`, opts.siteUrl) : ""}
   `,
@@ -580,11 +616,11 @@ export function tplCaisseRecu(opts: {
   return base(
     `
     ${h1("Reçu de paiement")}
-    ${opts.contactName ? p(`Bonjour <strong>${opts.contactName}</strong>,`) : ""}
+    ${opts.contactName ? p(`Bonjour <strong>${esc(opts.contactName)}</strong>,`) : ""}
     ${p(`Voici votre reçu pour le paiement effectué auprès de <strong>${opts.orgName}</strong>.`)}
     ${card([
       { label: "N° ticket",   value: opts.ticketRef },
-      { label: "Objet",       value: opts.label },
+      { label: "Objet",       value: esc(opts.label) },
       { label: "Montant TTC", value: `${opts.amountTtc.toFixed(2)} €` },
       { label: "Règlement",   value: opts.paymentMethod },
       { label: "Date",        value: new Date(opts.occurredAt).toLocaleDateString("fr-FR") },
@@ -805,10 +841,10 @@ export function tplLienPaiement(opts: {
     ${badge("Paiement sécurisé", "#635BFF")}
     <div style="height:12px;"></div>
     ${h1("Réglez votre réservation en ligne")}
-    ${p(`Bonjour <strong>${opts.contactName}</strong>,`)}
+    ${p(`Bonjour <strong>${esc(opts.contactName)}</strong>,`)}
     ${p(`Voici le lien pour régler votre réservation auprès de <strong>${opts.orgName}</strong>.`)}
     ${card([
-      { label: "Objet", value: opts.label },
+      { label: "Objet", value: esc(opts.label) },
       ...(opts.startAt ? [{ label: "Créneau", value: fmt(opts.startAt) }] : []),
       { label: "Montant", value: `${opts.amount.toFixed(2)} €` },
     ])}
@@ -864,7 +900,7 @@ export function tplPortalLink(opts: {
   const orgName = opts.orgName || "Casa Minga";
   const sender =
     opts.establishmentName && opts.establishmentName !== orgName
-      ? `<strong>${orgName}</strong>, ${opts.establishmentName}`
+      ? `<strong>${esc(orgName)}</strong>, ${esc(opts.establishmentName)}`
       : `<strong>${orgName}</strong>`;
   return base(
     `
@@ -1245,8 +1281,8 @@ export function tplRevendicationInvitation(opts: {
   expiresLabel: string;
 }) {
   const qualite = opts.demandeurFonction
-    ? `${opts.demandeurNom}, ${opts.demandeurFonction},`
-    : `${opts.demandeurNom}`;
+    ? `${esc(opts.demandeurNom)}, ${esc(opts.demandeurFonction)},`
+    : `${esc(opts.demandeurNom)}`;
   const evenements =
     opts.nbEvenements > 1
       ? `${opts.nbEvenements} de vos rendez-vous y figurent déjà`
@@ -1290,22 +1326,22 @@ export function tplRevendicationArbitrage(opts: {
   arbitrageUrl: string;
 }) {
   const rows = [
-    { label: "Lieu", value: opts.orgName },
-    { label: "Demandeur", value: opts.demandeurNom },
-    { label: "Fonction", value: opts.demandeurFonction ?? "non précisée" },
-    { label: "Courriel", value: opts.demandeurEmail },
-    { label: "Téléphone", value: opts.demandeurTel ?? "non précisé" },
-    { label: "Site du lieu", value: opts.siteWeb ?? "aucun connu" },
-    { label: "Depuis l'événement", value: opts.evenementTitre ?? "non précisé" },
+    { label: "Lieu", value: esc(opts.orgName) },
+    { label: "Demandeur", value: esc(opts.demandeurNom) },
+    { label: "Fonction", value: esc(opts.demandeurFonction ?? "non précisée") },
+    { label: "Courriel", value: esc(opts.demandeurEmail) },
+    { label: "Téléphone", value: esc(opts.demandeurTel ?? "non précisé") },
+    { label: "Site du lieu", value: esc(opts.siteWeb ?? "aucun connu") },
+    { label: "Depuis l'événement", value: esc(opts.evenementTitre ?? "non précisé") },
   ];
   return base(
     `
     ${badge("Revendication à arbitrer", "#6366f1")}
     <div style="height:12px;"></div>
     ${h1("Une revendication attend ta décision")}
-    ${p(`<strong>${opts.orgName}</strong> n'a pas d'adresse de contact publiée : impossible de vérifier automatiquement. La demande attend donc que tu tranches.`)}
+    ${p(`<strong>${esc(opts.orgName)}</strong> n'a pas d'adresse de contact publiée : impossible de vérifier automatiquement. La demande attend donc que tu tranches.`)}
     ${card(rows)}
-    ${opts.message ? p(`Message du demandeur :<br/><em>${opts.message}</em>`) : ""}
+    ${opts.message ? p(`Message du demandeur :<br/><em>${esc(opts.message)}</em>`) : ""}
     ${p(`Le repère le plus simple : le domaine du courriel correspond-il au site du lieu ? Sinon, un appel au numéro public du lieu règle la question en deux minutes.`)}
     ${btn("Ouvrir l'arbitrage", opts.arbitrageUrl)}
   `
