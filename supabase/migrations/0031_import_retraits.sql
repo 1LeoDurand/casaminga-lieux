@@ -10,7 +10,7 @@
 -- Contents: texte_normalise (helper), 3 tables, 1 view, 2 functions, and a
 -- tightened RLS policy on evenements (section F, behaviour change, see there).
 --
--- NOT applied yet.
+-- Applied on 2026-10-12 (Leo: go C2), after 0030 and 0032.
 --
 -- Grants follow 0018 and 0020: a new function has no EXECUTE for anon or
 -- authenticated, a new table keeps arwd, so every grant and revoke below is
@@ -27,28 +27,11 @@
 -- and recreate evenements_public_read without the show_on_public_site test.
 
 -- =====================================================================
--- A. Text normalisation helper (also needed by P1, 0030, same signature:
---    create or replace keeps both migrations compatible).
---    Lower case, accents folded, every non alphanumeric run becomes one space.
---    No dependency on the unaccent extension.
+-- A. texte_normalise is defined by 0030_agenda_lecture_serveur (richer
+--    body, same signature). Applied on 2026-10-12 after 0030: this file no
+--    longer redefines it, so the search table and the fingerprints share one
+--    normalisation.
 -- =====================================================================
-create or replace function public.texte_normalise(t text)
-returns text
-language sql
-immutable
-parallel safe
-set search_path = pg_catalog
-as $$
-  select btrim(regexp_replace(
-    translate(
-      replace(replace(lower(coalesce(t, '')), U&'\0153', 'oe'), U&'\00E6', 'ae'),
-      U&'\00E0\00E2\00E4\00E1\00E3\00E5\00E7\00E9\00E8\00EA\00EB\00ED\00EC\00EE\00EF\00F1\00F3\00F2\00F4\00F6\00F5\00FA\00F9\00FB\00FC\00FD\00FF',
-      'aaaaaaceeeeiiiinooooouuuuyy'),
-    '[^a-z0-9]+', ' ', 'g'));
-$$;
-
-revoke all on function public.texte_normalise(text) from public, anon, authenticated;
-grant execute on function public.texte_normalise(text) to service_role;
 
 -- =====================================================================
 -- B. Journal and current state.

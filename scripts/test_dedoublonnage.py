@@ -164,15 +164,44 @@ def test_cas_negatifs():
 
 def test_ecart_exact_proche():
     """Niveau 3 : titre a 0,85 ou plus, ou contenu (15 caracteres au moins)."""
-    d = index_avec(fiche("Marché de Noël des créateurs", "2026-12-12T09:00:00+00:00", "Dijon"))
-    r = d.chercher(fiche("Marché de Pâques des créateurs", "2026-12-12T09:00:00+00:00", "Dijon"))
-    assert r and r.niveau == dd.NIVEAU_PROCHE and r.score >= 0.85
+    # score de 0,95 ou plus : lie meme si chaque titre a un mot propre
+    d = index_avec(fiche("Grand marché de Noël des créateurs de la halle de Dijon 2026", "2026-12-12T09:00:00+00:00", "Dijon"))
+    r = d.chercher(fiche("Grand marché de Noël des créateurs de la halle de Dijon 2025", "2026-12-12T09:00:00+00:00", "Dijon"))
+    assert r and r.niveau == dd.NIVEAU_PROCHE and r.score >= 0.95
     d = index_avec(fiche("Vernissage de l'exposition Méridionalité", "2026-10-15T16:00:00+00:00", "Montpellier"))
     r = d.chercher(fiche("Vernissage de l'exposition Méridionalité et autres voies", "2026-10-15T16:00:00+00:00", "Montpellier"))
     assert r and r.niveau == dd.NIVEAU_PROCHE
     # titre court contenu : sous 15 caracteres, pas de liaison
     d = index_avec(fiche("Atelier jeux", "2026-10-15T16:00:00+00:00", "Montpellier"))
     assert d.chercher(fiche("Atelier jeux de société pour tous", "2026-10-15T16:00:00+00:00", "Montpellier")) is None
+
+
+# Faux positifs mesures (decision C3) : titres a 0,85 ou plus, mais chacun a un mot que l'autre n'a pas.
+FAUX_POSITIFS_C3 = [
+    ("Preparation aux concours, Paris / Nantes",
+     fiche("Préparation aux concours de l'enseignement - Paris", "2026-11-10T17:00:00+00:00", "Paris"),
+     fiche("Préparation aux concours de l'enseignement - Nantes", "2026-11-10T17:00:00+00:00", "Paris")),
+    ("Preparation aux concours, Paris / Montpellier",
+     fiche("Préparation aux concours de l'enseignement - Paris", "2026-11-10T17:00:00+00:00", "Paris"),
+     fiche("Préparation aux concours de l'enseignement - Montpellier", "2026-11-10T17:00:00+00:00", "Paris")),
+    ("Bordeaux, atelier contre stage d'architecture",
+     fiche("Atelier d'architecture pour les enfants à Bordeaux", "2026-11-14T09:00:00+00:00", "Bordeaux"),
+     fiche("Stage d'architecture pour les enfants à Bordeaux", "2026-11-14T09:00:00+00:00", "Bordeaux")),
+]
+
+
+def test_garde_c3_faux_positifs():
+    for nom, a, b in FAUX_POSITIFS_C3:
+        ea, eb = dd.entree_de_fiche(a), dd.entree_de_fiche(b)
+        assert dd.similarite(ea.tn, eb.tn) >= dd.SEUIL_SIMILARITE, f"{nom} : n'est plus un cas limite"
+        for existante, nouvelle in ((a, b), (b, a)):
+            assert index_avec(existante).chercher(nouvelle) is None, f"{nom} : lie a tort"
+    # les 13 vrais doublons restent lies (niveau 2, hors garde)
+    for nom, a, b in DOUBLONS:
+        assert index_avec(a).chercher(b) is not None, f"{nom} : perdu par la garde"
+    # titre contenu dans l'autre : jamais de mot propre au plus court, la garde ne s'applique pas
+    d = index_avec(fiche("Vernissage de l'exposition Méridionalité", "2026-10-15T16:00:00+00:00", "Montpellier"))
+    assert d.chercher(fiche("Vernissage de l'exposition Méridionalité et autres voies", "2026-10-15T16:00:00+00:00", "Montpellier"))
 
 
 def test_horaire_et_lieu():

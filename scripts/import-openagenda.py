@@ -68,6 +68,11 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 
+# Dedoublonnage croise (R7), partage avec import-sites.py, import-datatourisme.py
+# et mesure-import.py : voir scripts/dedoublonnage.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur  # noqa: E402
+
 SOURCE = "openagenda"
 API = ("https://public.opendatasoft.com/api/explore/v2.1/catalog/"
        "datasets/evenements-publics-openagenda/records")
@@ -546,6 +551,23 @@ def rattacher_annuaire(db, mapping, existants, essai):
     return len(a_ecrire), len(candidats)
 
 
+def fiche_dedoublonnage(r, v):
+    """Fiche OpenAgenda au format attendu par Dedoublonneur.chercher(), ou None
+    si la date de debut manque (la fiche entre alors comme avant)."""
+    if not r.get("firstdate_begin"):
+        return None
+    return {
+        "titre": (texte(r.get("title_fr")) or "Événement")[:200],
+        "debut": r["firstdate_begin"], "fin": r.get("firstdate_end"),
+        "commune": v.get("city"), "lat": v.get("lat"), "lng": v.get("lng"),
+        "organization_id": str(uuid.uuid5(NS, "org:" + r["location_uid"])),
+        "source": SOURCE, "source_uid": r["uid"],
+        "photos": [r["image"]] if r.get("image") else [],
+        "description": corps_evenement(r),
+        "registration": as_list(r.get("registration")),
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description="Import OpenAgenda -> Casa Minga")
     ap.add_argument("--departement", help="import par departement (exclusif de --lieux)")
@@ -620,25 +642,33 @@ def main():
     orgs_avec_etab = {e["organization_id"] for e in etab_rows}
     deja = {i["event_id"] for i in db.lire_tout("evenements_import?select=event_id")}
 
-    # Un lieu qui existe sous plusieurs identifiants OpenAgenda publie parfois
-    # deux fois la meme seance, une fois par identifiant. Ramenes au meme lieu
-    # canonique, ces enregistrements deviennent des doublons visibles. On garde
-    # celui dont l'identifiant Casaminga vient en premier, regle stable d'une
-    # execution a l'autre.
-    candidats, vus = [], {}
-    for r in source:
-        if r.get("location_uid") not in lieux:
-            continue
-        cle = (r["location_uid"], (r.get("title_fr") or "").strip().lower(), r["firstdate_begin"])
-        eid = str(uuid.uuid5(NS, "evt:" + r["uid"]))
-        garde = vus.get(cle)
-        if garde is None or eid < garde[0]:
-            vus[cle] = (eid, r)
-    candidats = [r for _, r in vus.values()]
+    # Anti-doublon : l'ancienne regle du lot (lieu canonique, titre brut, heure
+    # exacte) est remplacee par le module partage, qui compare a toute la base,
+    # toutes sources, puis aux fiches deja acceptees dans ce lot (R7, P3).
+    # Une fiche en doublon n'est pas inseree : elle est liee a la fiche gardee
+    # (evenements_doublons) et lui sert a l'enrichir. --max compte les fiches
+    # reellement nouvelles.
+    candidats = [r for r in source if r.get("location_uid") in lieux]
     nouveaux = sorted(
         (r for r in candidats if str(uuid.uuid5(NS, "evt:" + r["uid"])) not in deja),
         key=lambda r: (r["firstdate_begin"], r["uid"]))
-    lot = nouveaux[:args.max]
+    dedoublonneur = Dedoublonneur(db)
+    lot, traites, deja_lies = [], 0, 0
+    for r in nouveaux:
+        if len(lot) >= args.max:
+            break
+        traites += 1
+        fiche = fiche_dedoublonnage(r, lieux[r["location_uid"]])
+        if fiche:
+            if dedoublonneur.deja_lie(SOURCE, r["uid"], r["firstdate_begin"]):
+                deja_lies += 1
+                continue
+            res = dedoublonneur.chercher(fiche)
+            if res:
+                dedoublonneur.lier(res, fiche, SOURCE, r["uid"], r.get("canonicalurl"))
+                continue
+            dedoublonneur.enregistrer(fiche, str(uuid.uuid5(NS, "evt:" + r["uid"])))
+        lot.append(r)
 
     # Lieux du lot : création, vitrine technique, établissement.
     orgs, sites, etabs = [], [], []
@@ -729,6 +759,8 @@ def main():
         db.inserer("establishments", etabs, "id")
         db.inserer("evenements", evenements, "id")
         db.inserer("evenements_import", provenance, "event_id")
+    # Liens de doublons et enrichissements : apres les fiches (cle etrangere).
+    bilan_doublons = dedoublonneur.ecrire(essai=args.essai)
 
     # Rattachement annuaire, après que les organisations existent réellement.
     ecrits_annuaire, candidats_annuaire = rattacher_annuaire(db, mapping_annuaire, existants, args.essai)
@@ -739,7 +771,13 @@ def main():
           f"{ecarte_ft} écartés (agenda France Travail)")
     print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
     print(f"Lot      : {len(lot)} événements, {len(orgs)} lieux créés, {len(sites)} vitrines techniques, {len(etabs)} établissements ({mode})")
-    print(f"Reste    : {len(nouveaux) - len(lot)} événements après ce lot")
+    print(f"Reste    : {len(nouveaux) - traites} événements après ce lot")
+    c = dedoublonneur.compteurs
+    verbe_dd = "à lier (essai)" if args.essai else "liés"
+    print(f"Doublons : {bilan_doublons['liens']} {verbe_dd} (exact {c['exact']}, proche {c['proche']}), "
+          f"{deja_lies} déjà liés, {c['seances']} séances gardées, "
+          f"{bilan_doublons['fiches_enrichies']} fiches enrichies {bilan_doublons['champs'] or ''}"
+          f" [règle {REGLE_DEDOUBLONNAGE}]")
     if mapping_annuaire:
         verbe = "à rattacher (essai)" if args.essai else "rattachés"
         print(f"Annuaire : {ecrits_annuaire} organization_id {verbe} sur {candidats_annuaire} tiers-lieux représentés dans ce lot")

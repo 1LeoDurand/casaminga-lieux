@@ -20,7 +20,7 @@
 -- organization whose technical public site is published (mirror of
 -- orgs_select_public). No parameter relaxes them.
 --
--- Not applied by the author. Dry run: scripts/essai-migration-0030.py
+-- Applied on 2026-10-12 (Leo: go C1). Dry run: scripts/essai-migration-0030.py
 -- (single transaction, always rolled back).
 --
 -- Rollback (nothing existing is modified):

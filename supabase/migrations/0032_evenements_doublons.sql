@@ -8,7 +8,7 @@
 -- Written only by the import scripts and scripts/dedoublonnage.py, with the
 -- service key. Not readable by the public site nor by signed-in accounts.
 --
--- Not applied by this file's author: applying it needs Leo's go.
+-- Applied on 2026-10-12 (Leo: go C3).
 -- Rollback: drop table public.evenements_doublons;
 -- (events hidden by the clean-up of existing data are restored first by the
 -- script, see the table comment.)

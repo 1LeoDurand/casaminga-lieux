@@ -27,7 +27,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from import_commun import Base, load_env, titre_normalise  # noqa: E402
+from import_commun import Base, load_env  # noqa: E402
+from dedoublonnage import (  # noqa: E402
+    NIVEAU_EXACT, NIVEAU_PROCHE, NIVEAU_SEANCE, REGLE, Dedoublonneur, groupes_de_doublons,
+)
 
 DOSSIER_RAPPORTS = Path(r"D:\0 - Sync cloud Kdrive\01 Casaminga\08 Import evenements")
 STATUTS_VISIBLES = "publie,confirme,planifie"
@@ -167,20 +170,42 @@ def mesurer(db, maintenant):
             autre[src] += 1
         fiches.append((e, src, et, d))
 
-    # doublons visibles
-    groupes = defaultdict(list)
-    for e, src, et, d in fiches:
-        jour = vers_paris(d).strftime("%Y-%m-%d") if d else ""
-        cle = (titre_normalise(e.get("title")), jour, titre_normalise(et.get("city")))
-        groupes[cle].append((e, src, et, jour))
-    multi = [g for g in groupes.values() if len(g) > 1]
-    multi.sort(key=lambda g: (-len(g), g[0][0].get("title") or ""))
-    en_doublon = sum(len(g) for g in multi)
+    # doublons visibles : regle partagee (scripts/dedoublonnage.py), niveaux 2 et
+    # 3 ; les paires de meme titre, meme lieu, horaires incompatibles sont des
+    # seances (niveau 4) et ne comptent pas. Meme perimetre que la mesure : fiches
+    # visibles a venir.
+    dd = Dedoublonneur(db, retraits=set(), filtre=(
+        f"show_on_public_site=eq.true&status=in.({STATUTS_VISIBLES})&start_at=gte.{iso}"))
+    paires = dd.paires_existantes()
+    groupes = groupes_de_doublons(paires)
+    groupes.sort(key=lambda g: (-len(g[0]), g[0][0].titre))
+    en_doublon = sum(len(g) for g, _ in groupes)
+    par_niveau = Counter(niv for _, niv in groupes)
+    seances = sum(1 for p in paires if p[2] == NIVEAU_SEANCE)
     exemples = [{
-        "titre": g[0][0].get("title"), "jour": g[0][3],
-        "ville": g[0][2].get("city") or "", "nb": len(g),
-        "sources": sorted({nom_source(x[1]) for x in g}),
-    } for g in multi[:10]]
+        "titre": g[0].titre, "jour": g[0].jour, "ville": g[0].commune or "", "nb": len(g),
+        "niveau": niv, "sources": sorted({nom_source(x.groupe_source) for x in g}),
+    } for g, niv in groupes[:10]]
+
+    # liens enregistres (evenements_doublons, migration 0032)
+    seuil_liens = maintenant - timedelta(days=7)
+    liens = {"table": dd.table_doublons, "actifs": 0, "annules": 0, "masques": 0,
+             "par_niveau": {}, "semaine": 0}
+    if dd.table_doublons:
+        rows = db.lire_tout("evenements_doublons?select=niveau,created_at,annule_le,doublon_event_id&order=id")
+        pn = Counter()
+        for l in rows:
+            if l.get("annule_le"):
+                liens["annules"] += 1
+                continue
+            liens["actifs"] += 1
+            pn[l["niveau"]] += 1
+            if l.get("doublon_event_id"):
+                liens["masques"] += 1
+            d = parse_dt(l.get("created_at"))
+            if d and d >= seuil_liens:
+                liens["semaine"] += 1
+        liens["par_niveau"] = {str(k): v for k, v in sorted(pn.items())}
 
     # organisations
     orgs_src = Counter((o.get("source") or "inconnue") for o in orgs)
@@ -218,8 +243,12 @@ def mesurer(db, maintenant):
             "sondes_par_signal": dict(Counter((s.get("signal") or "aucun") for s in sondes).most_common()),
         },
         "imports_semaine": {"total": sum(semaine.values()), "par_source": dict(semaine.most_common())},
-        "doublons": {"groupes": len(multi), "fiches": en_doublon,
-                     "taux": pct(en_doublon, total), "exemples": exemples},
+        "doublons": {"regle": REGLE, "groupes": len(groupes), "fiches": en_doublon,
+                     "taux": pct(en_doublon, total), "exemples": exemples,
+                     "groupes_exact": par_niveau.get(NIVEAU_EXACT, 0),
+                     "groupes_proche": par_niveau.get(NIVEAU_PROCHE, 0),
+                     "paires_seances": seances},
+        "liens_doublons": liens,
     }
 
 
@@ -242,6 +271,7 @@ def lignes_synthese(m):
         ("Fiches avec photo", part_de(m, "photos"), "p"),
         ("Part en Hérault", m["part_herault"], "p"),
         ("Doublons visibles (taux)", m["doublons"]["taux"], "p"),
+        ("Doublons liés en base (actifs)", m.get("liens_doublons", {}).get("actifs", 0), "n"),
         ("Organisations revendiquées", m["organisations"]["revendiquees"], "n"),
         ("Imports de la semaine", m["imports_semaine"]["total"], "n"),
     ]
@@ -286,10 +316,32 @@ def detail_md(m, titre_niveau="###"):
              [[nom_source(s), n(v)] for s, v in m["imports_semaine"]["par_source"].items()]
              or [["aucun", "0"]]))
     d = m["doublons"]
-    ex = [[(x["titre"] or "").replace("|", "/"), x["jour"], x["ville"], x["nb"], ", ".join(x["sources"])] for x in d["exemples"]]
-    P.append(f"{h} Doublons visibles\n\n{n(d['groupes'])} groupes, {n(d['fiches'])} fiches en doublon, "
-             f"taux {fpct(d['taux'])}. Clé : titre normalisé, jour, ville de l'etablissement.\n\n"
-             + (table(["Titre", "Jour", "Ville", "Fiches", "Sources"], ex) if ex else "Aucun doublon."))
+    ex = [[(x["titre"] or "").replace("|", "/"), x["jour"], x["ville"], x["nb"],
+           "exact" if x.get("niveau") == NIVEAU_EXACT else "proche", ", ".join(x["sources"])]
+          for x in d["exemples"]]
+    lk = m.get("liens_doublons")
+    texte_dd = (
+        f"Règle {d.get('regle', 'ancienne')} (module `dedoublonnage.py`) : {n(d['groupes'])} groupes "
+        f"({n(d.get('groupes_exact', 0))} de niveau 2 exact, {n(d.get('groupes_proche', 0))} avec un lien de "
+        f"niveau 3 proche), {n(d['fiches'])} fiches en doublon, taux {fpct(d['taux'])}. Clé : titre normalisé, "
+        f"jour heure de Paris, lieu compatible (même commune ou 1 km), horaire compatible (60 minutes). "
+        f"{n(d.get('paires_seances', 0))} paires de séances (même titre, même lieu, horaires incompatibles) "
+        f"ne sont pas comptées : l'ancienne clé (titre, jour, ville) les prenait pour des doublons.")
+    P.append(f"{h} Doublons visibles\n\n{texte_dd}\n\n"
+             + (table(["Titre", "Jour", "Ville", "Fiches", "Niveau", "Sources"], ex) if ex else "Aucun doublon."))
+    if lk:
+        if not lk.get("table"):
+            P.append(f"{h} Liens de doublons enregistrés\n\nTable `evenements_doublons` absente (migration 0032 non appliquée).")
+        else:
+            pn = lk.get("par_niveau", {})
+            P.append(f"{h} Liens de doublons enregistrés\n\n" + table(["Indicateur", "Valeur"], [
+                ["Liens actifs", n(lk["actifs"])],
+                ["dont niveau 2 (exact)", n(pn.get("2", 0))],
+                ["dont niveau 3 (proche)", n(pn.get("3", 0))],
+                ["dont fiche doublon masquée (reprise de l'existant)", n(lk["masques"])],
+                ["dont doublon écarté à l'import (jamais inséré)", n(lk["actifs"] - lk["masques"])],
+                ["Créés ces 7 derniers jours", n(lk["semaine"])],
+                ["Annulés (faux positifs défaits)", n(lk["annules"])]]))
     return "\n\n".join(P)
 
 

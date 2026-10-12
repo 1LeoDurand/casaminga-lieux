@@ -72,6 +72,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from import_commun import (  # noqa: E402
     Base, NS, adresse, couper, load_env, slugify, texte, titre_normalise,
 )
+# Dedoublonnage croise (R7), partage avec import-openagenda.py, import-sites.py
+# et mesure-import.py : voir scripts/dedoublonnage.py.
+from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur, jour_paris  # noqa: E402
 
 SOURCE = "datatourisme"
 DATASET = "5b598be088ee387c0c353714"
@@ -791,39 +794,17 @@ def main():
         "annuaire_lieux?select=id,nom,adresse,commune,code_postal,latitude,longitude,site_web,organization_id"
         "&masque=eq.false&latitude=not.is.null&order=id"))
 
-    existants = {}  # jour -> [(titre_norm, commune, source)]
-    for r in db.lire_tout("evenements?select=id,organization_id,establishment_id,title,start_at"):
-        try:
-            jour = utc_vers_jour_paris(r["start_at"])
-        except (TypeError, ValueError, KeyError):
-            continue
-        src = source_de.get(r["id"], "casaminga")
-        src = "site" if src.startswith("site:") else src
-        existants.setdefault(jour, []).append((
-            titre_normalise(r["title"]),
-            commune_de(ville_etab.get(r["establishment_id"]), adresse_org.get(r["organization_id"])),
-            src))
-
-    def doublon_de(jour, titre_n, communes_slug):
-        """('exact'|'proche', source) si une fiche existante a le même jour, un
-        titre identique ou proche (0,85) et une commune compatible."""
-        meilleur = None
-        for t, c, src in existants.get(jour, []):
-            compatible = (not c) or (not communes_slug) or c in communes_slug
-            if t == titre_n and compatible:
-                return "exact", src
-            if compatible and meilleur is None and t and titre_n and \
-                    difflib.SequenceMatcher(None, t, titre_n).ratio() >= SIMILARITE_TITRE:
-                meilleur = ("proche", src)
-        return meilleur
-
     # ── D. Dédoublonnage, par date ──
+    # Module partage (R7, P3) : compare a toute la base, toutes sources, jour
+    # heure de Paris, puis aux dates deja acceptees dans ce passage. Une date en
+    # doublon n'est pas importee : elle est liee a la fiche gardee et lui sert
+    # a l'enrichir (heure, photo, description, inscription, prix).
+    dedoublonneur = Dedoublonneur(db)
     fiches.sort(key=lambda f: (f["periodes"][0][0], f["uri"]))
     occurrences = []  # une par date retenue
     doublons, memes_titres_autre_commune = Counter(), 0
-    deja_en_base = 0
+    deja_en_base, deja_liees = 0, 0
     for f in fiches:
-        slugs = {slugify(c, 80) for c in f["communes"]}
         titre_n = titre_normalise(f["titre"])
         garde = 0
         for debut, fin in f["periodes"]:
@@ -831,13 +812,27 @@ def main():
             if eid in deja:
                 deja_en_base += 1
                 continue
-            res = doublon_de(debut, titre_n, slugs)
-            if res:
-                doublons[f"{res[0]} / {res[1]}"] += 1
+            debut_utc = paris_vers_utc(datetime.combine(max(debut, aujourdhui), datetime.min.time()))
+            fin_utc = paris_vers_utc(datetime.combine(fin, datetime.min.time()) + timedelta(hours=23, minutes=59))
+            fiche_dd = {
+                "titre": f["titre"], "debut": debut_utc.isoformat(), "fin": fin_utc.isoformat(),
+                "commune": f["commune"], "lat": f["lat"], "lng": f["lon"],
+                "organization_id": None, "source": SOURCE, "source_uid": f["uri"],
+                "photos": [], "description": f["desc"], "price": None,
+                "registration": [{"type": "link", "value": u} for u in f["billets"]],
+            }
+            if dedoublonneur.deja_lie(SOURCE, f["uri"], fiche_dd["debut"]):
+                deja_liees += 1
                 continue
-            if any(t == titre_n for t, _, _ in existants.get(debut, [])):
+            res = dedoublonneur.chercher(fiche_dd)
+            if res:
+                source_url = (f["infos"] or f["billets"] or [None])[0]
+                dedoublonneur.lier(res, fiche_dd, SOURCE, f["uri"], source_url)
+                doublons[f"{res.raison} / {res.gardee.groupe_source}"] += 1
+                continue
+            if any(e.tn == titre_normalise(f["titre"]) for e in dedoublonneur.index.get(jour_paris(debut_utc), [])):
                 memes_titres_autre_commune += 1
-            existants.setdefault(debut, []).append((titre_n, slugify(f["commune"], 80), SOURCE))
+            dedoublonneur.enregistrer(fiche_dd, eid)
             occurrences.append((f, debut, fin, eid))
             garde += 1
         stats["fiches_retenues"] += 1 if garde else 0
@@ -981,6 +976,9 @@ def main():
         for aid, oid in rattachements.items():
             db._call("PATCH", f"annuaire_lieux?id=eq.{aid}&organization_id=is.null",
                      {"organization_id": oid}, headers={"Prefer": "return=minimal"})
+    # Liens de doublons et enrichissements : apres les fiches (cle etrangere).
+    bilan_doublons = dedoublonneur.ecrire(essai=args.essai, ids_ecrits={e["id"] for e in evenements})
+    c = dedoublonneur.compteurs
 
     # ── Rapport ──
     mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
@@ -999,6 +997,11 @@ def main():
           f"{memes_titres_autre_commune} dates au même titre et même jour dans une autre commune (gardées)")
     for k, n in sorted(doublons.items()):
         print(f"            doublon {k} : {n}")
+    verbe_dd = "à lier (essai)" if args.essai else "liés"
+    print(f"Doublons  : {bilan_doublons['liens']} {verbe_dd} (exact {c['exact']}, proche {c['proche']}), "
+          f"{deja_liees} déjà liés, {c['seances']} séances gardées, {c['liens_reportes']} reportés (hors lot), "
+          f"{bilan_doublons['fiches_enrichies']} fiches enrichies {bilan_doublons['champs'] or ''}"
+          f" [règle {REGLE_DEDOUBLONNAGE}]")
     print(f"À importer: {stats['fiches_retenues']} fiches, {len(occurrences)} dates")
     par_type = Counter(typer(f["titre"], f["cats"], d, e) for f, d, e, _ in occurrences)
     par_type_fiche = {}

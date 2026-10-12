@@ -95,6 +95,9 @@ from import_commun import (  # noqa: E402  (après le reconfigure ci-dessus)
     NS, Base, FREE, adresse, couper, duree_jours, est_exclusion_recrutement,
     guess_type, load_env, slugify, texte, titre_normalise,
 )
+# Dedoublonnage croise (R7), partage avec import-openagenda.py,
+# import-datatourisme.py et mesure-import.py : voir scripts/dedoublonnage.py.
+from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur  # noqa: E402
 
 USER_AGENT = "CasamingaBot/1.0 (+https://casaminga.com/contact)"
 TIMEOUT = 12  # secondes ; sert aussi de "délai de politesse" de la consigne
@@ -1089,27 +1092,15 @@ def main():
             etab_de_org[e["organization_id"]] = e["id"]
     deja_importes = {i["event_id"] for i in db.lire_tout("evenements_import?select=event_id")}
 
-    # Anti-doublon avec OpenAgenda (et avec un import-sites précédent) : par
-    # organisation, jour et titre normalisé, en incluant "l'un contient l'autre".
-    existants_par_org = {}
-    for row in db.lire_tout("evenements?select=id,organization_id,title,start_at"):
-        try:
-            jour = row["start_at"][:10]
-        except (TypeError, KeyError):
-            continue
-        existants_par_org.setdefault(row["organization_id"], []).append(
-            (jour, titre_normalise(row["title"])))
-
-    def est_doublon(oid, jour, titre_norm):
-        for j, t in existants_par_org.get(oid, []):
-            if j == jour and t and titre_norm and (t in titre_norm or titre_norm in t):
-                return True
-        return False
+    # Anti-doublon : l'ancienne regle (meme organisation, jour UTC, titre
+    # normalise contenu) est remplacee par le module partage, qui compare a
+    # toute la base, toutes sources, jour heure de Paris (R7, P3). Il s'applique
+    # dans une seconde passe, apres la collecte des candidats ci-dessous.
+    fiches_dd = {}
 
     orgs_a_creer, sites_a_creer, etabs_a_creer = [], [], []
     evenements, provenance = [], []
     masques_exclusion = []
-    doublons_ecartes = 0
     hors_fenetre = 0
     sans_titre_ou_date = 0
     stats_signal = {}  # signal -> {"sites", "evenements", "thematiques"}
@@ -1146,12 +1137,6 @@ def main():
                 continue
             evids_lot.add(evid)
 
-            jour = r["start_iso"][:10]
-            titre_norm = titre_normalise(titre)
-            if est_doublon(oid, jour, titre_norm):
-                doublons_ecartes += 1
-                continue
-
             exclu = est_exclusion_recrutement(titre)
             if exclu:
                 masques_exclusion.append((titre, lieu["nom"]))
@@ -1178,15 +1163,42 @@ def main():
                 "source_url": r.get("url") or lieu["site_web"], "conditions": None,
                 "registration": None,
             })
-            # Un événement compte une seule fois pour l'anti-doublon suivant.
-            existants_par_org.setdefault(oid, []).append((jour, titre_norm))
+            fiches_dd[evid] = {
+                "titre": titre[:200], "debut": r["start_iso"], "fin": end_iso,
+                "commune": lieu.get("commune"), "lat": lieu.get("latitude"),
+                "lng": lieu.get("longitude"), "organization_id": oid,
+                "source": f"site:{domaine}", "source_uid": source_uid,
+                "photos": photos, "description": description, "registration": None,
+                "price": 0 if r.get("gratuit") else None,
+            }
             st["evenements"] += 1
             if evenements[-1]["type"] in THEMATIQUES:
                 st["thematiques"] += 1
         if len(evenements) > avant:
             st["sites"] += 1
 
-    lot_evenements = evenements[:args.max]
+    # Seconde passe : dedoublonnage croise. Une fiche en doublon n'est pas
+    # inseree, elle est liee a la fiche gardee (evenements_doublons) et lui sert
+    # a l'enrichir. --max compte les fiches reellement nouvelles ; la passe
+    # s'arrete une fois le lot plein (les suivantes seront vues au passage
+    # suivant, avec le meme resultat).
+    dedoublonneur = Dedoublonneur(db)
+    prov_de = {p["event_id"]: p for p in provenance}
+    lot_evenements, traites, deja_lies = [], 0, 0
+    for e in evenements:
+        if len(lot_evenements) >= args.max:
+            break
+        traites += 1
+        fiche, p = fiches_dd[e["id"]], prov_de[e["id"]]
+        if dedoublonneur.deja_lie(p["source"], p["source_uid"], e["start_at"]):
+            deja_lies += 1
+            continue
+        res = dedoublonneur.chercher(fiche)
+        if res:
+            dedoublonneur.lier(res, fiche, p["source"], p["source_uid"], p["source_url"])
+            continue
+        dedoublonneur.enregistrer(fiche, e["id"])
+        lot_evenements.append(e)
     ids_lot = {e["id"] for e in lot_evenements}
     lot_provenance = [p for p in provenance if p["event_id"] in ids_lot]
     orgs_du_lot = {e["organization_id"] for e in lot_evenements}
@@ -1220,14 +1232,22 @@ def main():
             db._call("PATCH", f"annuaire_lieux?id=eq.{aid}", {"organization_id": oid},
                      headers={"Prefer": "return=minimal"})
 
+    # Liens de doublons et enrichissements : apres les fiches (cle etrangere).
+    bilan_doublons = dedoublonneur.ecrire(essai=args.essai)
+    c = dedoublonneur.compteurs
+
     mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
     print(f"\nSignal   : " + ", ".join(f"{k}={v}" for k, v in sorted(par_signal.items())))
     print("Par signal (sites avec au moins un événement retenu, événements retenus, dont ateliers/stages/formations/retraites/séjours) :")
     for k, v in sorted(stats_signal.items(), key=lambda x: -x[1]["evenements"]):
         print(f"  {k:12s} {v['sites']:4d} sites  {v['evenements']:5d} événements  {v['thematiques']:4d} thématiques")
     print(f"Candidats: {len(evenements)} événements retenus (à venir, {FENETRE_MOIS} mois, titre et date valides)")
-    print(f"Écartés  : {sans_titre_ou_date} sans titre/date valide, {hors_fenetre} hors fenêtre, "
-          f"{doublons_ecartes} doublons (même organisation, même jour, titre proche)")
+    print(f"Écartés  : {sans_titre_ou_date} sans titre/date valide, {hors_fenetre} hors fenêtre")
+    verbe_dd = "à lier (essai)" if args.essai else "liés"
+    print(f"Doublons : {bilan_doublons['liens']} {verbe_dd} (exact {c['exact']}, proche {c['proche']}), "
+          f"{deja_lies} déjà liés, {c['seances']} séances gardées, "
+          f"{bilan_doublons['fiches_enrichies']} fiches enrichies {bilan_doublons['champs'] or ''}"
+          f" [règle {REGLE_DEDOUBLONNAGE}]")
     print(f"Masqués  : {len(masques_exclusion)} par exclusion de contenu (recrutement/commercial), non supprimés")
     for titre, nom in masques_exclusion[:10]:
         print(f"  - « {titre} » ({nom})")
@@ -1237,7 +1257,7 @@ def main():
     print(f"Lot      : {len(lot_evenements)} événements ({mode}), {len(orgs_a_creer_lot)} lieux créés")
     for k, v in sorted(par_type.items(), key=lambda x: -x[1]):
         print(f"  {k} : {v}")
-    print(f"Reste    : {len(evenements) - len(lot_evenements)} événements après ce lot")
+    print(f"Reste    : {len(evenements) - traites} événements après ce lot")
     print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
 
 

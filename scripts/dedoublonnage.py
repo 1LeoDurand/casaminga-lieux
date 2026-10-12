@@ -41,6 +41,7 @@ from import_commun import Base, load_env, titre_normalise  # noqa: E402
 REGLE = "v1-2026-10"
 
 SEUIL_SIMILARITE = 0.85          # niveau 3, comme import-datatourisme.py
+SEUIL_GARDE_MOTS = 0.95          # sous ce score, des mots propres a chaque titre = pas un doublon (C3)
 LONGUEUR_CONTENU = 15            # titre contenu dans l'autre : 15 caracteres au moins
 SEUIL_HORAIRE_MIN = 60           # minutes entre doublon et seance
 DISTANCE_LIEU_KM = 1.0
@@ -174,6 +175,14 @@ def titre_proche(tn1, tn2):
     court, long_ = sorted((tn1, tn2), key=len)
     ratio = similarite(tn1, tn2)
     if ratio >= SEUIL_SIMILARITE:
+        # Garde contre les faux positifs (decision C3, 2026-10-12) : sous 0,95, si
+        # chaque titre a au moins un mot absent de l'autre, ce sont deux
+        # evenements voisins (« Preparation aux concours » a Paris, Nantes,
+        # Montpellier ; « ateliers d'architecture » contre « stage d'architecture »).
+        if ratio < SEUIL_GARDE_MOTS:
+            m1, m2 = set(tn1.split()), set(tn2.split())
+            if (m1 - m2) and (m2 - m1):
+                return False, ratio
         return True, ratio
     if len(court) >= LONGUEUR_CONTENU and court in long_:
         return True, ratio
@@ -553,9 +562,19 @@ class Dedoublonneur:
             self.compteurs["enrichis"] += 1
         return ligne
 
-    def ecrire(self, essai=True):
+    def ecrire(self, essai=True, ids_ecrits=None):
         """Ecrit les liens puis les enrichissements, par lots. essai=True (defaut)
-        n'ecrit rien et ne fait que compter. Renvoie les compteurs."""
+        n'ecrit rien et ne fait que compter. Renvoie les compteurs.
+
+        ids_ecrits : ensemble des identifiants des fiches nouvelles qui seront
+        reellement inserees (le lot). Un lien vers une fiche du lot qui n'en
+        fait pas partie (lot coupe par --max) est ecarte : la fiche gardee
+        n'existe pas en base, la cle etrangere echouerait. Le doublon sera
+        revu au passage suivant. None : aucun filtre."""
+        if ids_ecrits is not None:
+            gardes = [x for x in self._liens if not x[1].en_lot or x[1].id in ids_ecrits]
+            self.compteurs["liens_reportes"] += len(self._liens) - len(gardes)
+            self._liens = gardes
         champs = Counter()
         patchs = {}
         for _, cible, enrichi in self._liens:
