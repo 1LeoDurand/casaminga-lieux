@@ -177,6 +177,88 @@ def guess_type(title, keywords, start_at=None, end_at=None):
     return "autre"
 
 
+# ── Typage v2 (T7, 2026-10-12) ──────────────────────────────────────────────
+# Liste unique corrigée, sur titre ET description. Additive : TYPE_RULES et
+# guess_type ci-dessus restent inchangés (import-openagenda.py, import-sites.py
+# les utilisent encore) ; les scripts qui veulent la v2 appellent typer_v2.
+# Corrections : « information » n'est pas « formation », « marche » (randonnée)
+# n'est pas un marché, week-end / immersion / résidence ne forcent un séjour
+# qu'à partir de deux jours, « contemporain » n'est pas un conte.
+# Codes en base : sans accent (marche, sejour, fete). Pas de CHECK sur
+# evenements.type (vérifié 2026-10-12), « fete » s'écrit sans migration.
+# Priorité (le premier qui matche gagne) : retraite, séjour, formation, stage,
+# atelier, fête, exposition, concert, spectacle, rencontre, marché.
+def _sa(t):
+    return unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().lower()
+
+
+# (code, motif sur texte sans accent) : motifs complets, pour le TITRE.
+REGLES_V2_TITRE = [
+    ("retraite", re.compile(r"\bretraites?\b(?! aux flambeaux)|ressourcement")),
+    ("sejour", re.compile(r"\bsejours?\b")),
+    ("sejour_faible", re.compile(r"immersion|residence|week-?end")),  # deux jours ou plus
+    ("formation", re.compile(r"\bformations?\b|cursus|certifiant|diplomant|mooc")),
+    ("stage", re.compile(r"\bstages?\b")),
+    ("atelier", re.compile(r"\bateliers?\b|\binitiation|\bfabriqu(?:e|ez|er|ons)\b")),
+    ("fete", re.compile(r"\bfetes?\b|kermesse|carnaval|\bferia|fest-?noz|\bbal\b|\bbals\b")),
+    ("exposition", re.compile(r"exposition|\bexpos?\b|vernissage")),
+    ("concert", re.compile(r"concert|musique|\blive\b|dj set|festival")),
+    ("spectacle", re.compile(
+        r"spectacle|theatre|danse|cinema|projection|\bfilms?\b|\bcontes?\b|conteu"
+        r"|cirque|marionnette|humour|clown|comedy|stand-?up|one[- ]?(?:wo)?man")),
+    ("rencontre", re.compile(
+        r"rencontre|conference|debat|table ronde|\bcafes?\b|lecture|visite|dedicace|causerie")),
+]
+V2_MARCHE_ACCENT = re.compile(r"\bmarchés?\b")
+V2_MARCHE_SANS_ACCENT = re.compile(
+    r"\bmarches? (?:de noel|paysan|nocturne|artisanal|de producteurs|de createurs"
+    r"|de potiers|gourmand|bio|fermier|de plein vent)|\bbraderies?\b|vente solidaire|\bbrocante|vide-?grenier")
+V2_FESTIVAL_NON_MUSICAL = re.compile(r"theatre|cinema|danse|cirque|spectacle")
+# DESCRIPTION : seulement les termes forts et les premiers caractères (le
+# texte long cite beaucoup de mots hors sujet). Pas de musique, live, cafe,
+# lecture, visite, film, conte, danse, festival, initiation, sejour, week-end.
+V2_DESC_LEN = 350
+REGLES_V2_DESC = [
+    ("retraite", re.compile(r"\bretraites? (?:de |en |spirituelle|yoga|silence|meditation|bien-etre)|ressourcement")),
+    ("formation", re.compile(r"\bformations?\b(?! de|s? des)|certifiant|diplomant")),
+    ("stage", re.compile(r"\bstages?\b")),
+    ("atelier", re.compile(r"\bateliers?\b")),
+    ("fete", re.compile(r"\bfetes? (?:du|de|des|d')|kermesse|carnaval|fest-?noz|\bbal (?:folk|trad|populaire)")),
+    ("exposition", re.compile(r"exposition|vernissage")),
+    ("concert", re.compile(r"\bconcerts?\b|dj set")),
+    ("spectacle", re.compile(r"\bspectacles?\b|piece de theatre|projection")),
+    ("rencontre", re.compile(r"conference|table ronde|\bdebats?\b|rencontre-debat|dedicace")),
+]
+
+
+def typer_v2(titre, description=None, start_at=None, end_at=None):
+    """Renvoie (code, regle) ou (None, None) quand rien ne matche.
+    Sources : « titre:<type> » puis « desc:<type> »."""
+    t_l = (titre or "").lower()
+    t_n = _sa(titre)
+    duree = duree_jours(start_at, end_at)
+    for code, motif in REGLES_V2_TITRE:
+        if code == "sejour_faible":
+            if motif.search(t_n) and duree >= 2:
+                return "sejour", "titre:sejour"
+            continue
+        if not motif.search(t_n):
+            continue
+        if code == "concert" and not re.search(r"concert|musique|\blive\b|dj set", t_n):
+            if V2_FESTIVAL_NON_MUSICAL.search(t_n):
+                continue
+        return code, f"titre:{code}"
+    if V2_MARCHE_ACCENT.search(t_l) or V2_MARCHE_SANS_ACCENT.search(t_n):
+        return "marche", "titre:marche"
+    d_n = _sa((description or "")[:V2_DESC_LEN])
+    for code, motif in REGLES_V2_DESC:
+        if motif.search(d_n):
+            return code, f"desc:{code}"
+    if re.search(r"\bmarchés? (?:de|du|des|d'|artisanal|paysan|nocturne)", (description or "")[:V2_DESC_LEN].lower()):
+        return "marche", "desc:marche"
+    return None, None
+
+
 def titre_normalise(titre):
     """Forme comparable d'un titre, pour l'anti-doublon avec OpenAgenda :
     sans accent, sans ponctuation, espaces réduits, en minuscule."""
