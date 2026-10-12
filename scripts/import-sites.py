@@ -2,15 +2,37 @@
 """
 Moissonneur de sites de tiers-lieux (prompt 2.4, ANALYSE-SOURCES-EVENEMENTS.md
 § 4.B) : pour chaque tiers-lieu de l'annuaire ayant un site, essaie dans
-l'ordre l'API The Events Calendar, un flux ICS, puis du JSON-LD schema.org, et
-écrit les événements trouvés dans la base Casa Minga.
+l'ordre l'API The Events Calendar, les flux ICS (lien annoncé, Events Manager,
+Event Organiser, My Calendar, All-in-One Event Calendar, Google Agenda
+embarqué), Squarespace, Wix Events, du JSON-LD schema.org, puis les pages de
+billetterie Billetweb liées, et écrit les événements trouvés dans la
+base Casa Minga.
 
 Pourquoi un script, et pas un modèle
 ------------------------------------
-Les trois sources visées sont structurées (API JSON, ICS, JSON-LD) : un
+Toutes les sources visées sont structurées (API JSON, ICS, JSON-LD) : un
 mapping, pas une interprétation. « Importer avec le script, jamais par un
 modèle » (CLAUDE.md, casaminga.com, § Données importées) s'applique ici comme
 à import-openagenda.py.
+
+Élargissement du 2026-10-08 (sondage de 300 sites muets, voir le rapport)
+------------------------------------------------------------------------
+- Les API et flux se cherchent à la RACINE du site (schéma + hôte), pas sous
+  le chemin enregistré dans l'annuaire : 298 sites muets et 193 en erreur ont
+  une URL profonde (« …/tiki-index.php », « …/accueil/la-fabrique »), sous
+  laquelle `/wp-json/…` ou `/events.ics` n'existent pas.
+- Chaque extension n'est interrogée que si sa signature (chemin du plugin
+  dans le HTML) est présente : jamais d'URL essayée à l'aveugle sur tout le
+  parc.
+- Le signal enregistré dans annuaire_sites_sondes dit quelle source a parlé :
+  tribe, ics, em, eo, mycalendar, ai1ec, gcal, squarespace, wix, jsonld,
+  billetterie (migration 0024 pour la contrainte CHECK).
+- Google Agenda : l'ICS public est une source structurée, mais
+  calendar.google.com/robots.txt interdit tout (« Disallow: / »). Le script
+  respecte robots.txt : l'ICS Google n'est lu qu'avec l'option explicite
+  --google-ics-hors-robots, à ne passer que sur décision de Léo.
+- Les ICS ne sont pas développés (pas de RRULE) : un cours hebdomadaire
+  n'apparaît que par son occurrence déclarée.
 
 Ce qu'il garantit
 -----------------
@@ -24,6 +46,7 @@ Ce qu'il garantit
 
 Usage
 -----
+  python scripts/import-sites.py --essai --echantillon 300 --resonder-tout
   python scripts/import-sites.py --essai --limite-sites 100
   python scripts/import-sites.py --limite-sites 100 --max 500
   python scripts/import-sites.py --departement "Hérault" --max 500
@@ -33,7 +56,10 @@ La clé de service est lue dans .env.local et n'est jamais affichée.
 """
 
 import argparse
+import base64
+import html as html_lib
 import json
+import random
 import re
 import socket
 import ssl
@@ -74,9 +100,16 @@ USER_AGENT = "CasamingaBot/1.0 (+https://casaminga.com/contact)"
 TIMEOUT = 12  # secondes ; sert aussi de "délai de politesse" de la consigne
 MAX_BYTES = 1_000_000
 PAGES_AGENDA = ["", "/agenda", "/evenements", "/events", "/programme"]
-MAX_PARALLELE_DOMAINES = 8
+MAX_PARALLELE_DOMAINES = 16  # la limite d'une requête/s vaut par domaine : un fil par site
 RESONDE_APRES_JOURS = 90
 FENETRE_MOIS = 12
+MAX_LIENS_DECOUVERTS = 4   # pages d'agenda trouvées par lien depuis l'accueil
+MAX_LIENS_ICS = 5
+MAX_LIENS_BILLETTERIE = 12
+THEMATIQUES = {"atelier", "stage", "formation", "retraite", "sejour"}
+
+# Réglages de la ligne de commande lus par le sondage (fils d'exécution).
+OPTIONS = {"google_hors_robots": False}
 
 DTSTAMP = re.compile(r"^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})Z?)?$")
 
@@ -184,12 +217,17 @@ def _meta_charset(raw):
     return m.group(1).decode("ascii", "ignore") if m else None
 
 
-def get(url, accept=None):
+def get(url, accept=None, ignorer_robots=False):
     """GET poli : robots.txt, une requête/seconde/domaine, 1 Mo max, User-Agent
-    explicite. Retourne (texte_ou_none, code_ou_exception)."""
+    explicite. Retourne (texte_ou_none, code_ou_exception).
+    `ignorer_robots` n'est passé que pour l'ICS public de Google Agenda, et
+    seulement sur l'option explicite --google-ics-hors-robots."""
     domaine = domaine_de(url)
-    schema = urllib.parse.urlsplit(url).scheme or "https"
-    if not POLITESSE.autorise(url, domaine, schema):
+    try:
+        schema = urllib.parse.urlsplit(url).scheme or "https"
+    except ValueError:
+        return None, "URL illisible"
+    if not ignorer_robots and not POLITESSE.autorise(url, domaine, schema):
         return None, "robots.txt"
     POLITESSE.attendre(domaine)
     headers = {"User-Agent": USER_AGENT}
@@ -219,6 +257,24 @@ def normaliser_url(site):
     if not re.match(r"^https?://", s, re.I):
         s = "https://" + s
     return s.rstrip("/")
+
+
+def origine_de(url):
+    """« https://exemple.fr/accueil/la-fabrique » -> « https://exemple.fr ».
+    Les API et flux des extensions vivent à la racine du site, jamais sous le
+    chemin enregistré dans l'annuaire."""
+    try:
+        p = urllib.parse.urlsplit(url)
+    except ValueError:
+        return url
+    if not p.scheme or not p.netloc:
+        return url
+    return f"{p.scheme}://{p.netloc}"
+
+
+def meme_site(a, b):
+    """Même hôte, à « www. » près."""
+    return domaine_de(a).removeprefix("www.") == domaine_de(b).removeprefix("www.")
 
 
 # ── Fenêtre temporelle ───────────────────────────────────────────
@@ -310,20 +366,6 @@ def _heure_ete(annee):
 LIEN_ICS = re.compile(
     r'href=["\']([^"\']+?(?:\.ics(?:[?#][^"\']*)?|[?&]ical=1[^"\']*))["\']', re.I)
 LIEN_WEBCAL = re.compile(r'["\'](webcal://[^"\']+)["\']', re.I)
-
-
-def trouver_flux_ics(pages_html, base_url):
-    for html_txt, url_page in pages_html:
-        if not html_txt:
-            continue
-        for motif in (LIEN_ICS, LIEN_WEBCAL):
-            m = motif.search(html_txt)
-            if m:
-                lien = m.group(1)
-                if lien.startswith("webcal://"):
-                    lien = "https://" + lien[len("webcal://"):]
-                return urllib.parse.urljoin(url_page, lien)
-    return None
 
 
 def parse_ics(texte_ics):
@@ -457,7 +499,7 @@ def trouver_events_jsonld(html_txt, url_page):
 
 DATE_LD = re.compile(
     r"^(\d{4})-(\d{1,2})-(\d{1,2})"
-    r"(?:[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?"
+    r"(?:[T ](\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.\d+)?)?)?"  # fractions de seconde (Billetweb : « .000Z »)
     r"(Z|([+-])(\d{1,2}):?(\d{2})?)?$")
 
 
@@ -489,56 +531,357 @@ def _iso_ou_none(v):
         return None
 
 
+# ── Extensions d'agenda : signatures et lecteurs ─────────────────
+
+# Signature = chemin du plugin dans le HTML (« /wp-content/plugins/<slug>/ »).
+# Pas de simple mot-clé : le thème Divi embarque du CSS de compatibilité
+# nommé « ai1ec-… » et « evcal_… » (16 faux positifs sur 283 sites sondés le
+# 2026-10-08), alors qu'aucun de ces deux plugins n'y était installé.
+SIGNATURES = {
+    "em": re.compile(r"/wp-content/plugins/events-manager/", re.I),
+    "tribe": re.compile(r"/wp-content/plugins/the-events-calendar/", re.I),
+    "eo": re.compile(r"/wp-content/plugins/event-organiser/", re.I),
+    "mycalendar": re.compile(r"/wp-content/plugins/my-calendar/", re.I),
+    "ai1ec": re.compile(r"/wp-content/plugins/all-in-one-event-calendar/", re.I),
+    "squarespace": re.compile(r"static1\.squarespace\.com|images\.squarespace-cdn\.com", re.I),
+}
+
+# Chemins ICS par extension, à la racine du site, dans l'ordre d'essai. Tous
+# vérifiés le 2026-10-08 sur des sites réels (alternateur-valleeherault.fr,
+# maisondebourgogne.fr, mpt-abbeville.fr pour Events Manager ; lelieudit.fr
+# pour My Calendar ; csc-rolandcharrier.centres-sociaux.fr pour Event
+# Organiser ; letrois8.fr pour All-in-One Event Calendar ; eirlab.net pour
+# The Events Calendar). `/events.ics` d'Events Manager liste les événements à
+# venir ; `/events/?ical=1` y ramène aussi l'historique.
+CHEMINS_ICS = [
+    ("em", "em", ["/events.ics", "/?ical=1"]),
+    ("tribe", "tribe", ["/events/?ical=1"]),
+    ("eo", "eo", ["/?feed=eo-events", "/events/feed/eo-events"]),
+    ("mycalendar", "mycalendar", ["/?feed=my-calendar-ics"]),
+    ("ai1ec", "ai1ec", ["/?plugin=all-in-one-event-calendar&controller=ai1ec_exporter_controller&action=export_events"]),
+]
+
+LIEN_AGENDA = re.compile(
+    r"agenda|v[eé]nement|programm|calendrier|planning|atelier|stage|formation|retraite", re.I)
+PRIORITE_LIEN = re.compile(r"agenda|v[eé]nement|programm|calendrier|planning", re.I)
+HREF = re.compile(r'<a\s[^>]*href=["\']([^"\'#]+)["\']', re.I)
+FICHIER_STATIQUE = re.compile(r"\.(?:jpe?g|png|gif|webp|svg|pdf|docx?|xlsx?|zip|mp[34])(?:\?|$)", re.I)
+
+
+def liens_agenda(pages_html, origine, deja):
+    """Pages d'agenda annoncées par un lien de l'accueil (« Agenda »,
+    « Programme », « Ateliers »…), du même site, que les cinq chemins fixes
+    n'attrapent pas (« /nos-ateliers », « /agenda-2026 »). Les plus
+    explicites (agenda, événements, programme, calendrier) passent d'abord."""
+    trouves = []
+    for html_txt, url_page in pages_html[:2]:
+        for href in HREF.findall(html_txt or ""):
+            u = urllib.parse.urljoin(url_page + "/", href.strip())
+            if not u.startswith(("http://", "https://")) or not meme_site(u, origine):
+                continue
+            chemin = urllib.parse.urlsplit(u).path
+            if not LIEN_AGENDA.search(chemin) or FICHIER_STATIQUE.search(u):
+                continue
+            u = u.split("?")[0].rstrip("/")
+            if u != origine and u not in deja and u not in trouves:
+                trouves.append(u)
+    trouves.sort(key=lambda u: 0 if PRIORITE_LIEN.search(urllib.parse.urlsplit(u).path) else 1)
+    return trouves[:MAX_LIENS_DECOUVERTS]
+
+
+def extensions_detectees(pages_html):
+    texte_pages = "\n".join(h for h, _ in pages_html if h)
+    return {cle for cle, rx in SIGNATURES.items() if rx.search(texte_pages)}
+
+
+def evenements_ics(contenu):
+    return [{
+        "uid": b.get("UID") or b.get("SUMMARY"), "title": b.get("SUMMARY"),
+        "description": b.get("DESCRIPTION"), "start_iso": b.get("DTSTART"),
+        "end_iso": b.get("DTEND"), "url": b.get("URL"), "image": None,
+        "gratuit": None, "adresse": b.get("LOCATION"),
+    } for b in parse_ics(contenu)]
+
+
+def lire_ics(url, ignorer_robots=False):
+    """None si l'URL ne rend pas un calendrier (beaucoup de sites répondent
+    200 avec une page HTML à une adresse de flux inconnue) ; une liste, vide ou
+    non, si c'est un VCALENDAR."""
+    contenu, _code = get(url, accept="text/calendar", ignorer_robots=ignorer_robots)
+    if not contenu or "BEGIN:VCALENDAR" not in contenu:
+        return None
+    return evenements_ics(contenu)
+
+
+def tous_liens_ics(pages_html):
+    liens = []
+    for html_txt, url_page in pages_html:
+        if not html_txt:
+            continue
+        for motif in (LIEN_ICS, LIEN_WEBCAL):
+            for m in motif.finditer(html_txt):
+                lien = html_lib.unescape(m.group(1))
+                if lien.startswith("webcal://"):
+                    lien = "https://" + lien[len("webcal://"):]
+                lien = urllib.parse.urljoin(url_page, lien)
+                if lien not in liens:
+                    liens.append(lien)
+    return liens[:MAX_LIENS_ICS]
+
+
+def ids_google_agenda(pages_html):
+    """Identifiants des agendas Google publics embarqués : `src=<id>` (adresse
+    ou identifiant de groupe) ou `cid=<base64 de l'identifiant>`. Les agendas
+    de jours fériés et de numéros de semaine (« …#holiday@… », « …#weeknum@… »)
+    sont des calendriers Google, pas ceux du lieu : écartés."""
+    ids = []
+    for html_txt, _url in pages_html:
+        for m in re.finditer(r"calendar\.google\.com/calendar/[^\"'\s<>]*", html_txt or ""):
+            u = html_lib.unescape(m.group(0))
+            try:
+                q = urllib.parse.parse_qs(urllib.parse.urlsplit("https://x/" + u.split("calendar/", 1)[1]).query)
+            except ValueError:
+                continue
+            candidats = list(q.get("src", []))
+            for c in q.get("cid", []):
+                try:
+                    candidats.append(base64.urlsafe_b64decode(c + "=" * (-len(c) % 4)).decode())
+                except (ValueError, UnicodeDecodeError):
+                    pass
+            for i in candidats:
+                if "#" in i or "@" not in i or i in ids:
+                    continue
+                ids.append(i)
+    return ids[:3]
+
+
+def url_ics_google(identifiant):
+    return ("https://calendar.google.com/calendar/ical/"
+            + urllib.parse.quote(identifiant, safe="@") + "/public/basic.ics")
+
+
+def essayer_ics(urls, agreger, ignorer_robots=False):
+    """Retourne (evenements_ou_None, premiere_url_valide). `agreger` : tous les
+    flux annoncés sont lus (plusieurs agendas d'un même site) ; sinon le
+    premier flux non vide gagne (une même source servie par plusieurs
+    adresses)."""
+    evs, premiere = None, None
+    for u in urls:
+        r = lire_ics(u, ignorer_robots)
+        if r is None:
+            continue
+        premiere = premiere or u
+        evs = (evs or []) + r
+        if r and not agreger:
+            break
+    return evs, premiere
+
+
+# Modern Events Calendar (testé, NON retenu, 2026-10-08) : sur 9 sites sondés,
+# `mec/v1/events` rend une liste vide ou 401, l'export `?mec-ical-feed=1` rend
+# du HTML, et la lecture des 40 dernières fiches (`wp/v2/mec-events` puis
+# JSON-LD de chaque page, 40 requêtes par site) n'a donné AUCUN événement à
+# venir : les fiches sont triées par date de publication, pas d'événement, et
+# la date d'événement n'est dans aucun champ ouvert de l'API. Coût sans
+# rendement : pas de détecteur.
+
+
+# Squarespace : toute page de collection répond en JSON avec `?format=json`.
+# Une collection « événements » porte la liste à venir sous `upcoming`.
+def essai_squarespace(urls_pages, origine):
+    evs, vus = [], set()
+    for u in urls_pages:
+        if "?" in u:
+            continue
+        body, _c = get(u + "?format=json", accept="application/json")
+        if not body or not body.lstrip().startswith("{"):
+            continue
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            continue
+        for it in data.get("upcoming") or []:
+            if not isinstance(it, dict) or it.get("id") in vus:
+                continue
+            vus.add(it.get("id"))
+            debut, fin = _ms_vers_iso(it.get("startDate")), _ms_vers_iso(it.get("endDate"))
+            evs.append({
+                "uid": it.get("id") or it.get("fullUrl"), "title": it.get("title"),
+                "description": it.get("body") or it.get("excerpt"),
+                "start_iso": debut, "end_iso": fin,
+                "url": urllib.parse.urljoin(origine + "/", it["fullUrl"]) if it.get("fullUrl") else None,
+                "image": it.get("assetUrl"), "gratuit": None, "adresse": None,
+            })
+    return evs
+
+
+def _ms_vers_iso(ms):
+    try:
+        return datetime.fromtimestamp(int(ms) / 1000, timezone.utc).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+# Wix Events : la liste est rendue en JavaScript, mais l'accueil et la page
+# d'agenda portent en général des liens « /event-details/<slug> » dans le HTML
+# servi, et chaque page d'événement porte un JSON-LD Event complet (vérifié le
+# 2026-10-08 sur barmacievaubecourt.wixsite.com). Sans lien dans le HTML, rien
+# n'est lisible : le site reste muet.
+MAX_PAGES_WIX = 20
+
+
+def essai_wix(pages_html, origine):
+    liens = []
+    for html_txt, url_page in pages_html:
+        for href in HREF.findall(html_txt or ""):
+            if "/event-details/" not in href:
+                continue
+            u = urllib.parse.urljoin(url_page + "/", html_lib.unescape(href.strip())).split("?")[0]
+            if meme_site(u, origine) and u not in liens:
+                liens.append(u)
+    evs = []
+    for u in liens[:MAX_PAGES_WIX]:
+        page, _c = get(u)
+        for e in trouver_events_jsonld(page, u):
+            e["uid"] = u
+            e["url"] = u
+            evs.append(e)
+    return evs
+
+
+# Billetweb : chaque page de billetterie porte un JSON-LD Event complet (nom,
+# dates, lieu). Les pages d'adhésion, de don et de bon cadeau y ont aussi une
+# date mais ne sont pas des événements : écartées par le titre.
+LIEN_BILLETWEB = re.compile(r"https?://(?:www\.)?billetweb\.fr/([a-z0-9][a-z0-9_-]{2,})(?=[\"'\s<>?#/\\]|$)", re.I)
+RESERVES_BILLETWEB = {"shop", "api", "login", "help", "contact", "cgu", "cgv", "static"}
+NON_EVENEMENT = re.compile(r"adh[eé]sion|cotisation|bon[\s-]*cadeau|\bdon\b|\bdons\b|donateur", re.I)
+
+
+def essai_billetterie(pages_html):
+    liens = []
+    for html_txt, _url in pages_html:
+        for m in LIEN_BILLETWEB.finditer(html_txt or ""):
+            if m.group(1).lower() in RESERVES_BILLETWEB or m.group(1).lower().endswith(".php"):
+                continue
+            u = f"https://www.billetweb.fr/{m.group(1)}"
+            if u not in liens:
+                liens.append(u)
+    evs = []
+    for u in liens[:MAX_LIENS_BILLETTERIE]:
+        page, _c = get(u)
+        for e in trouver_events_jsonld(page, u):
+            if e.get("title") and NON_EVENEMENT.search(e["title"]):
+                continue
+            e["uid"] = u
+            e["url"] = u
+            evs.append(e)
+    return evs
+
+
 # ── Sondage d'un site ────────────────────────────────────────────
 
 def sonder_site(lieu):
-    """Essaie tribe, puis ICS, puis JSON-LD sur un site. Retourne
-    (signal, url_flux, evenements_normalises, erreur)."""
+    """Essaie, dans l'ordre : API The Events Calendar, flux ICS (annoncés par
+    la page, puis propres à chaque extension reconnue, puis Google Agenda),
+    Squarespace, Wix Events, JSON-LD, billetterie Billetweb.
+    Retourne (signal, url_flux, evenements_normalises, erreur)."""
     base = lieu["site_web"]
+    origine = origine_de(base)
+    vide = None  # (signal, url) d'une source lisible mais sans événement
 
-    # (a) The Events Calendar
-    rows, err = essai_tribe(base)
-    if rows is not None:
+    # (a) The Events Calendar, à la racine du site
+    rows, err = essai_tribe(origine)
+    if rows:
         evs = [{
             "uid": r["uid"], "title": r["title"], "description": r["description"],
             "start_iso": r["start_iso"], "end_iso": r["end_iso"], "url": r["url"],
             "image": r["image"], "gratuit": _cost_gratuit(r["cost"]), "adresse": None,
         } for r in rows]
-        return "tribe", f"{base}/wp-json/tribe/events/v1/events", evs, None
+        return "tribe", f"{origine}/wp-json/tribe/events/v1/events", evs, None
+    if rows is not None:
+        vide = ("tribe", f"{origine}/wp-json/tribe/events/v1/events")
 
-    # Pages où chercher un flux ICS ou du JSON-LD.
+    # Pages où chercher un flux ICS, une extension ou du JSON-LD : la page
+    # enregistrée dans l'annuaire, la racine, les chemins usuels, puis les
+    # pages d'agenda annoncées par l'accueil.
+    # Une URL profonde peut être le vrai site (hébergeurs par chemin :
+    # « monsite.wixsite.com/monsite », « sites.google.com/view/… ») : les
+    # chemins usuels se tentent donc sous l'URL enregistrée aussi.
+    chemins = [origine + c for c in PAGES_AGENDA]
+    if base != origine:
+        chemins = [base] + chemins + [base + c for c in PAGES_AGENDA if c]
     pages_html = []
     derniere_erreur = err
-    for chemin in PAGES_AGENDA:
-        html_txt, code = get(base + chemin)
-        pages_html.append((html_txt, base + chemin))
+    for url_page in chemins:
+        html_txt, code = get(url_page)
+        pages_html.append((html_txt, url_page))
         if html_txt:
             derniere_erreur = None
         elif code and derniere_erreur is None:
             derniere_erreur = code
+    for url_page in liens_agenda(pages_html, origine, {u for _, u in pages_html}):
+        html_txt, _code = get(url_page)
+        pages_html.append((html_txt, url_page))
 
-    # (b) ICS
-    flux = trouver_flux_ics(pages_html, base)
-    if flux:
-        contenu, code = get(flux, accept="text/calendar")
-        if contenu and "BEGIN:VCALENDAR" in contenu:
-            bruts = parse_ics(contenu)
-            evs = [{
-                "uid": b.get("UID") or b.get("SUMMARY"), "title": b.get("SUMMARY"),
-                "description": b.get("DESCRIPTION"), "start_iso": b.get("DTSTART"),
-                "end_iso": b.get("DTEND"), "url": b.get("URL"), "image": None,
-                "gratuit": None, "adresse": b.get("LOCATION"),
-            } for b in bruts]
-            return "ics", flux, evs, None
+    exts = extensions_detectees(pages_html)
 
-    # (c) JSON-LD
-    for html_txt, url_page in pages_html:
-        if not html_txt:
+    # (b) ICS : flux annoncés par la page (agrégés), puis ceux de chaque extension
+    evs, premiere = essayer_ics(tous_liens_ics(pages_html), agreger=True)
+    if evs:
+        return "ics", premiere, evs, None
+    if evs is not None:
+        vide = vide or ("ics", premiere)
+    for cle, signal, chemins_ics in CHEMINS_ICS:
+        if cle not in exts:
             continue
-        evs = trouver_events_jsonld(html_txt, url_page)
+        evs, premiere = essayer_ics([origine + c for c in chemins_ics], agreger=False)
         if evs:
-            return "jsonld", url_page, evs, None
+            return signal, premiere, evs, None
+        if evs is not None:
+            vide = vide or (signal, premiere)
 
+    # (c) Google Agenda embarqué : ICS public. calendar.google.com/robots.txt
+    # interdit tout ; sans l'option explicite, get() renvoie « robots.txt » et
+    # rien n'est lu.
+    ids_g = ids_google_agenda(pages_html)
+    if ids_g:
+        evs, premiere = essayer_ics([url_ics_google(i) for i in ids_g], agreger=True,
+                                    ignorer_robots=OPTIONS["google_hors_robots"])
+        if evs:
+            return "gcal", premiere, evs, None
+
+    # (d) Squarespace
+    if "squarespace" in exts:
+        evs = essai_squarespace([u for h, u in pages_html if h], origine)
+        if evs:
+            return "squarespace", origine, evs, None
+
+    # (e) Wix Events : pages /event-details/ liées depuis le HTML
+    evs = essai_wix(pages_html, origine)
+    if evs:
+        return "wix", origine, evs, None
+
+    # (f) JSON-LD, sur toutes les pages lues (une page par événement, chez
+    # certains sites : on agrège, sans doublon)
+    evs_ld, vus, premiere = [], set(), None
+    for html_txt, url_page in pages_html:
+        for e in trouver_events_jsonld(html_txt, url_page):
+            cle_ev = (e.get("uid"), e.get("start_iso"))
+            if cle_ev in vus:
+                continue
+            vus.add(cle_ev)
+            premiere = premiere or url_page
+            evs_ld.append(e)
+    if evs_ld:
+        return "jsonld", premiere, evs_ld, None
+
+    # (g) Billetterie Billetweb liée depuis les pages
+    evs = essai_billetterie(pages_html)
+    if evs:
+        return "billetterie", "https://www.billetweb.fr", evs, None
+
+    if vide:
+        return vide[0], vide[1], [], None
     if all(h is None for h, _ in pages_html) and rows is None:
         return "erreur", None, [], derniere_erreur or "aucune page jointe"
     return "aucun", None, [], None
@@ -675,14 +1018,28 @@ def main():
     ap.add_argument("--depart", type=int, default=0,
                     help="index de départ dans l'annuaire (ordre stable par id), pour traiter par lots")
     ap.add_argument("--departement", help="ne sonder que ce département de l'annuaire")
+    ap.add_argument("--echantillon", type=int, default=0,
+                    help="tire au hasard (graine fixe 42, reproductible) N sites parmi ceux à sonder")
+    ap.add_argument("--resonder-tout", action="store_true", dest="resonder_tout",
+                    help="ignore la mémoire de sondage (resonde aussi les sites muets récents)")
+    ap.add_argument("--google-ics-hors-robots", action="store_true", dest="google_hors_robots",
+                    help="lit l'ICS public des agendas Google embarqués malgré le robots.txt de "
+                         "calendar.google.com (« Disallow: / »). Décision de Léo requise : "
+                         "désactivé par défaut")
     args = ap.parse_args()
+    OPTIONS["google_hors_robots"] = args.google_hors_robots
 
     t0 = time.time()
     url, key = load_env()
     db = Base(url, key)
 
     candidats = charger_candidats(db, args.departement, 0, args.depart)
-    a_sonder, ignores_recents = filtrer_deja_sondes(db, candidats)
+    if args.resonder_tout:
+        a_sonder, ignores_recents = list(candidats), 0
+    else:
+        a_sonder, ignores_recents = filtrer_deja_sondes(db, candidats)
+    if args.echantillon and args.echantillon < len(a_sonder):
+        a_sonder = random.Random(42).sample(a_sonder, args.echantillon)
     if args.limite_sites:
         a_sonder = a_sonder[:args.limite_sites]
 
@@ -755,6 +1112,8 @@ def main():
     doublons_ecartes = 0
     hors_fenetre = 0
     sans_titre_ou_date = 0
+    stats_signal = {}  # signal -> {"sites", "evenements", "thematiques"}
+    evids_lot, uids_vus = set(), set()
 
     for lieu in a_sonder:
         signal, url_flux, evs, erreur = resultats[lieu["id"]]
@@ -764,6 +1123,8 @@ def main():
         oid, eid = preparer_organisation(
             lieu, domaine, orgs_existantes, sites_existants, slugs_pris,
             etab_de_org, orgs_a_creer, sites_a_creer, etabs_a_creer)
+        st = stats_signal.setdefault(signal, {"sites": 0, "evenements": 0, "thematiques": 0})
+        avant = len(evenements)
 
         for r in evs:
             titre = texte(r.get("title"))
@@ -775,9 +1136,15 @@ def main():
                 continue
 
             source_uid = str(r.get("uid") or r.get("url") or titre)
+            if (domaine, source_uid) in uids_vus:
+                # Même UID, autre date : occurrence modifiée d'une série ICS.
+                # Sans suffixe, la seconde écraserait la première (même uuid5).
+                source_uid = f"{source_uid}@{r['start_iso']}"
+            uids_vus.add((domaine, source_uid))
             evid = evt_id_pour(domaine, source_uid)
-            if evid in deja_importes:
+            if evid in deja_importes or evid in evids_lot:
                 continue
+            evids_lot.add(evid)
 
             jour = r["start_iso"][:10]
             titre_norm = titre_normalise(titre)
@@ -813,6 +1180,11 @@ def main():
             })
             # Un événement compte une seule fois pour l'anti-doublon suivant.
             existants_par_org.setdefault(oid, []).append((jour, titre_norm))
+            st["evenements"] += 1
+            if evenements[-1]["type"] in THEMATIQUES:
+                st["thematiques"] += 1
+        if len(evenements) > avant:
+            st["sites"] += 1
 
     lot_evenements = evenements[:args.max]
     ids_lot = {e["id"] for e in lot_evenements}
@@ -850,6 +1222,9 @@ def main():
 
     mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
     print(f"\nSignal   : " + ", ".join(f"{k}={v}" for k, v in sorted(par_signal.items())))
+    print("Par signal (sites avec au moins un événement retenu, événements retenus, dont ateliers/stages/formations/retraites/séjours) :")
+    for k, v in sorted(stats_signal.items(), key=lambda x: -x[1]["evenements"]):
+        print(f"  {k:12s} {v['sites']:4d} sites  {v['evenements']:5d} événements  {v['thematiques']:4d} thématiques")
     print(f"Candidats: {len(evenements)} événements retenus (à venir, {FENETRE_MOIS} mois, titre et date valides)")
     print(f"Écartés  : {sans_titre_ou_date} sans titre/date valide, {hors_fenetre} hors fenêtre, "
           f"{doublons_ecartes} doublons (même organisation, même jour, titre proche)")
