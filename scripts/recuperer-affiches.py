@@ -73,7 +73,7 @@ SEUIL_GENERIQUE = 5          # same image on MORE than 5 pages of one domain
 BUCKET = "affiches-importees"
 PREFIXE = "importees"
 MEMOIRE = Path(__file__).resolve().parent / "data" / "affiches-importees.json"
-NOMS_GENERIQUES = re.compile(r"logo|favicon|icon|default|placeholder", re.I)
+NOMS_GENERIQUES = re.compile(r"logo|fav|icon|default|placeholder|horaires|tarifs", re.I)
 # Statuses memorised for JOURS_REFUS days (not retried before).
 STATUTS_MEMORISES = {"refus", "page_absente", "sans_image", "generique",
                      "image_refusee", "robots", "image_invalide"}

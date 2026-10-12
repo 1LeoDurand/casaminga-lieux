@@ -252,8 +252,9 @@ jobs:
         continue-on-error: true
         timeout-minutes: 15
         run: |
-          # La memoire des refus (scripts/data/affiches-importees.json) n'existe que
-          # dans la copie du runner : les refus ne sont pas retenus d'une semaine a l'autre.
+          # La memoire des refus (scripts/data/affiches-importees.json) est versionnee :
+          # le runner part de l'etat du dernier commit, ses propres refus ne sont pas
+          # retenus d'une semaine a l'autre (a committer apres un passage local).
           E=""; [ "$ESSAI" = "true" ] && E="--essai"
           python -u scripts/recuperer-affiches.py --source toutes --max 300 $E 2>&1 | tee logs/affiches.txt
       - name: Mesure de l'import (rapports en artefact)
