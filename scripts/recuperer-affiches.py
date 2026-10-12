@@ -284,11 +284,11 @@ def lire_page(url):
 def preparer_image(url):
     """-> dict(statut, jpeg, largeur, hauteur, detail). statut in ok / petite /
     image_refusee / image_invalide / robots / indisponible."""
-    ra = robots_autorise(url)
-    if ra == "interdit":
-        return {"statut": "robots", "detail": "robots.txt (hote de l'image)"}
-    if ra == "indisponible":
-        return {"statut": "indisponible", "detail": "robots.txt illisible (image)"}
+    # No robots.txt check on the image host: robots.txt governs the crawling
+    # of pages, and this image is the one the page itself declares as its
+    # preview (og:image) for reuse by other sites. Checking the CDN's robots
+    # (static.wixstatic.com, cloudinary...) refused 58 legitimate posters on
+    # 2026-10-12. The page host's robots.txt is still honoured (phase 1).
     r = http(url, "GET", IMAGE_MAX, "image/avif,image/webp,image/*,*/*;q=0.8")
     if r.erreur:
         return {"statut": "indisponible", "detail": r.erreur}
@@ -417,7 +417,7 @@ def lire_candidats(db, args, memoire, maintenant):
         if args.id and ev["id"] not in args.id:
             continue
         mem = memoire["ecartees"].get(ev["id"])
-        if mem and mem.get("source_url") == imp["source_url"] and encore_en_pause(mem, maintenant):
+        if mem and mem.get("source_url") == imp["source_url"] and encore_en_pause(mem, maintenant)                 and mem.get("statut") not in (args.rejouer or []):
             comptes["en_pause_90j"] += 1
             continue
         sortie.append({"id": ev["id"], "title": ev["title"], "source_url": imp["source_url"], "source": imp["source"]})
@@ -432,6 +432,8 @@ def main():
     ap.add_argument("--source", default="datatourisme", help="prefixe de evenements_import.source, ou 'toutes' (defaut : datatourisme)")
     ap.add_argument("--id", action="append", help="traiter cette fiche en priorite (repetable)")
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--rejouer", action="append", metavar="STATUT",
+                    help="retente les fiches ecartees avec ce statut malgre la pause de 90 jours (repetable), ex. --rejouer robots")
     args = ap.parse_args()
     ids_forces = list(args.id or [])
 
