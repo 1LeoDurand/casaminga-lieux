@@ -47,7 +47,7 @@
 -- 10. Dedoublonnage links (evenements_doublons) are not touched; a hidden fiche
 --     keeps its links so a doublon cannot re-create it.
 
-begin;
+
 
 alter table public.evenements_import
   add column if not exists vu_le timestamptz,
@@ -63,4 +63,4 @@ create index if not exists evenements_import_vu_le_idx
   on public.evenements_import (source, vu_le)
   where disparu_le is null;
 
-commit;
+
