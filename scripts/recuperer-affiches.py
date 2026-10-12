@@ -37,7 +37,7 @@ import threading
 import time
 import urllib.error
 import urllib.parse
-import http.client
+from http.client import HTTPException
 import urllib.request
 import urllib.robotparser
 from collections import Counter, defaultdict
@@ -155,7 +155,7 @@ def http(url, methode="GET", max_octets=PAGE_MAX, accept="text/html,application/
         if _erreur_certificat(e):
             return _curl(url, methode, max_octets, accept)
         return Rep(erreur=f"{type(e).__name__}: {getattr(e, 'reason', e)}"[:120])
-    except (TimeoutError, ConnectionError, OSError, ValueError, http.client.HTTPException) as e:
+    except (TimeoutError, ConnectionError, OSError, ValueError, HTTPException) as e:
         # Une og:image mal formee (espaces, retours a la ligne) leve InvalidURL : on la note, on continue.
         return Rep(erreur=f"{type(e).__name__}: {e}"[:120])
 
