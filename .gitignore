@@ -52,3 +52,6 @@ _contexte/Audits
 
 # Cache local du CSV DATAtourisme (60 Mo, reconstruit chaque nuit).
 /scripts/data/cache/
+
+# Extraits RNA filtres (open data data.gouv.fr, regenerables)
+/scripts/data/rna-*.csv
