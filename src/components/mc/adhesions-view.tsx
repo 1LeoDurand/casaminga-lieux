@@ -194,8 +194,8 @@ function CampaignWizard({ campaign, existingTiers, orgId, orgSlug, onClose, onSa
                 <div className="flex flex-col gap-2">
                   {s2.tiers.map((t, i) => (
                     <div key={i} className="flex items-center gap-2 rounded-xl bg-gray-light p-3">
-                      <input className="mc-input flex-1" value={t.name} onChange={(e) => setTier(i, "name", e.target.value)} placeholder="Nom de la formule" />
-                      <input className="mc-input w-24" inputMode="decimal" value={t.amount} onChange={(e) => setTier(i, "amount", e.target.value)} placeholder="€" />
+                      <input className="mc-input min-w-0 flex-1" value={t.name} onChange={(e) => setTier(i, "name", e.target.value)} placeholder="Nom de la formule" />
+                      <input className="mc-input w-24 shrink-0" inputMode="decimal" value={t.amount} onChange={(e) => setTier(i, "amount", e.target.value)} placeholder="€" />
                       <button type="button" onClick={() => removeTier(i)} className="rounded-lg p-1.5 text-warmgray hover:bg-peach-pale"><X className="size-4" /></button>
                     </div>
                   ))}

@@ -472,8 +472,14 @@
 .mc-stat-chg.warn { color: var(--coral-dark); }
 
 /* ─── Toolbar : recherche + chips de filtre ─── */
+/* The default width lives in the components layer so that Tailwind width
+   utilities (w-24, flex-1 siblings...) win. Unlayered, it beat every utility:
+   the tier row of the membership form showed a collapsed name field next to
+   a full-width amount field (reported by Léo 2026-09-30). */
+@layer components {
+  .mc-input { width: 100%; }
+}
 .mc-input {
-  width: 100%;
   border: 1.5px solid var(--border);
   border-radius: 13px;
   padding: 10px 13px;
