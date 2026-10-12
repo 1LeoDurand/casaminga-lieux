@@ -425,17 +425,34 @@ class Dedoublonneur:
 
     @staticmethod
     def _lire_retraits_medias(db):
-        """Organisations sous retrait de medias actif (table import_retraits,
-        migration 0031). Vide si la table n'existe pas encore."""
+        """Organisations dont l'enrichissement croise ne doit ni ecrire de
+        description ni de photos (T4.5, 2026-10-13) : celles qui ont un retrait
+        actif de portee « medias », « fiches », ou « import » sans source
+        (vue import_retraits_actifs, migrations 0031). Un retrait pose sur un
+        lieu d'annuaire sans organisation est resolu par annuaire_lieux.
+        Les empreintes (nom, domaine) ne sont pas appliquees ici : une Entree ne
+        porte que organization_id. Vide si la vue n'existe pas encore."""
         try:
             lignes = db.lire_tout(
-                "import_retraits?select=organization_id&portee=eq.medias&leve_le=is.null"
-                "&organization_id=not.is.null&order=id")
+                "import_retraits_actifs?select=organization_id,annuaire_lieu_id,portee,source&order=id")
         except SystemExit as exc:
             if "PGRST205" in str(exc) or "HTTP 404" in str(exc):
                 return set()
             raise
-        return {l["organization_id"] for l in lignes}
+        lignes = [l for l in lignes
+                  if l.get("portee") in ("medias", "fiches")
+                  or (l.get("portee") == "import" and not l.get("source"))]
+        orgs = {l["organization_id"] for l in lignes if l.get("organization_id")}
+        annuaires = sorted({l["annuaire_lieu_id"] for l in lignes
+                            if not l.get("organization_id") and l.get("annuaire_lieu_id")})
+        if annuaires:
+            for i in range(0, len(annuaires), 100):
+                lot = ",".join(annuaires[i:i + 100])
+                for a in db.lire_tout(
+                        f"annuaire_lieux?select=id,organization_id&id=in.({lot})&order=id"):
+                    if a.get("organization_id"):
+                        orgs.add(a["organization_id"])
+        return orgs
 
     def _charger(self, filtre):
         db = self.db

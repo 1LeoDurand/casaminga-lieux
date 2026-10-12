@@ -259,6 +259,18 @@ def typer_v2(titre, description=None, start_at=None, end_at=None):
     return None, None
 
 
+def typer_import(titre, description=None, start_at=None, end_at=None, keywords=None):
+    """Type d'une fiche NOUVELLE dans les scripts d'import (T7.1, 2026-10-13).
+    Meme priorite que typer-evenements.py : typer_v2 (titre d'abord, description
+    seulement si le titre ne donne rien), puis guess_type en repli (titre et
+    mots-cles). Renvoie (code, regle) ; regle vaut « repli:guess_type » quand
+    c'est l'ancienne liste qui tranche."""
+    code, regle = typer_v2(titre, description, start_at, end_at)
+    if code:
+        return code, regle
+    return guess_type(titre, keywords, start_at, end_at), "repli:guess_type"
+
+
 def titre_normalise(titre):
     """Forme comparable d'un titre, pour l'anti-doublon avec OpenAgenda :
     sans accent, sans ponctuation, espaces réduits, en minuscule."""

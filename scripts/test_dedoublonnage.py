@@ -313,6 +313,57 @@ def test_election_de_la_gardee():
     assert dd.elire_gardee(riche, admin)[0] is admin               # saisie admin : toujours gardee
 
 
+class _FauxBase:
+    """Base minimale : renvoie des lignes figees selon le chemin demande."""
+    def __init__(self, tables):
+        self.tables, self.chemins = tables, []
+
+    def lire_tout(self, chemin):
+        self.chemins.append(chemin)
+        return list(self.tables[chemin.split("?")[0]])
+
+
+def test_retrait_medias_bloque_description_et_photos_via_lier():
+    # T4.5 : une fiche d'organisation sous retrait medias n'est enrichie ni en
+    # description ni en photos par un doublon ; l'heure et le prix passent.
+    d = dd.Dedoublonneur(None, retraits={"org-retiree"})
+    garde = dd.entree_de_fiche(fiche("Concert au jardin", "2026-11-14T23:00:00+00:00", "Tours",
+                                     source="datatourisme", org="org-retiree", uid="g"),
+                               en_lot=False, id_="garde")
+    d.indexer(garde)
+    nouvelle = fiche("Concert au jardin", "2026-11-15T17:00:00+00:00", "Tours", org="org-b",
+                     photos=["https://x/p.jpg"], description="x" * 80, price=9.0)
+    ligne = d.lier(d.chercher(nouvelle), nouvelle, "openagenda", "u1", "https://oa/u1")
+    assert "photos" not in ligne["enrichi"] and "description" not in ligne["enrichi"], ligne["enrichi"]
+    assert "start_at" in ligne["enrichi"] and "price" in ligne["enrichi"]
+    assert d.par_id["garde"].photos == [] and not d.par_id["garde"].description
+    # sens inverse : le doublon vient d'une organisation sous retrait
+    d2 = dd.Dedoublonneur(None, retraits={"org-retiree"})
+    d2.indexer(dd.entree_de_fiche(fiche("Concert au jardin", "2026-11-14T23:00:00+00:00", "Tours",
+                                        source="datatourisme", org="org-b", uid="g2"),
+                                  en_lot=False, id_="garde2"))
+    n2 = fiche("Concert au jardin", "2026-11-15T17:00:00+00:00", "Tours", org="org-retiree",
+               photos=["https://x/p.jpg"], description="x" * 80)
+    l2 = d2.lier(d2.chercher(n2), n2, "openagenda", "u2", None)
+    assert "photos" not in l2["enrichi"] and "description" not in l2["enrichi"]
+
+
+def test_lecture_des_retraits_depuis_la_vue():
+    # Lit import_retraits_actifs (et non la table) ; resout un lieu d'annuaire
+    # sans organisation ; ignore un retrait « import » limite a une source.
+    base = _FauxBase({
+        "import_retraits_actifs": [
+            {"organization_id": "org-m", "annuaire_lieu_id": None, "portee": "medias", "source": None},
+            {"organization_id": None, "annuaire_lieu_id": "ann-1", "portee": "medias", "source": None},
+            {"organization_id": "org-s", "annuaire_lieu_id": None, "portee": "import", "source": "openagenda"},
+            {"organization_id": "org-i", "annuaire_lieu_id": None, "portee": "import", "source": None},
+        ],
+        "annuaire_lieux": [{"id": "ann-1", "organization_id": "org-ann"}],
+    })
+    assert dd.Dedoublonneur._lire_retraits_medias(base) == {"org-m", "org-ann", "org-i"}
+    assert base.chemins[0].startswith("import_retraits_actifs?")
+
+
 def main():
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and callable(f)]
     echecs = 0

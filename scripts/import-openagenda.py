@@ -74,7 +74,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur  # noqa: E402
 # Retraits sur demande (P2) : voir import_commun.py.
 from import_commun import (  # noqa: E402
-    compter_retrait, lire_retraits, retrait_a_relire, retrait_concerne,
+    compter_retrait, lire_retraits, retrait_a_relire, retrait_concerne, typer_import,
 )
 
 SOURCE = "openagenda"
@@ -572,6 +572,19 @@ def fiche_dedoublonnage(r, v):
     }
 
 
+def _avant_apres_types(rows, libelle):
+    """Répartition des types : guess_type (avant) contre typer_import (après)."""
+    from collections import Counter
+    if not rows:
+        return
+    av = Counter(guess_type(r.get("title_fr"), r.get("keywords_fr"), r.get("firstdate_begin"),
+                            r.get("firstdate_end")) for r in rows)
+    ap_ = Counter(typer_import(r.get("title_fr"), corps_evenement(r), r.get("firstdate_begin"),
+                               r.get("firstdate_end"), r.get("keywords_fr"))[0] for r in rows)
+    fmt = lambda c: ", ".join(f"{k} {v}" for k, v in c.most_common())
+    print(f"Types {libelle} ({len(rows)}) :\n  avant : {fmt(av)}\n  après : {fmt(ap_)}")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Import OpenAgenda -> Casa Minga")
     ap.add_argument("--departement", help="import par departement (exclusif de --lieux)")
@@ -768,8 +781,9 @@ def main():
             "organization_id": str(uuid.uuid5(NS, "org:" + r["location_uid"])),
             "establishment_id": etab_de.get(r["location_uid"]),
             "title": (texte(r.get("title_fr")) or "Événement")[:200],
-            "type": guess_type(r.get("title_fr"), r.get("keywords_fr"),
-                              r.get("firstdate_begin"), r.get("firstdate_end")),
+            # T7.1 : typer_v2 (titre puis description), guess_type en repli.
+            "type": typer_import(r.get("title_fr"), corps_evenement(r), r.get("firstdate_begin"),
+                                 r.get("firstdate_end"), r.get("keywords_fr"))[0],
             "status": "publie",
             "start_at": r["firstdate_begin"], "end_at": r["firstdate_end"],
             "description": corps_evenement(r),
@@ -807,6 +821,9 @@ def main():
     print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
     print(f"Lot      : {len(lot)} événements, {len(orgs)} lieux créés, {len(sites)} vitrines techniques, {len(etabs)} établissements ({mode})")
     print(f"Reste    : {len(nouveaux) - traites} événements après ce lot")
+    _avant_apres_types(lot, "du lot")
+    if args.essai:
+        _avant_apres_types(candidats, "du périmètre (nouveaux et déjà importés, mesure)")
     c = dedoublonneur.compteurs
     verbe_dd = "à lier (essai)" if args.essai else "liés"
     print(f"Doublons : {bilan_doublons['liens']} {verbe_dd} (exact {c['exact']}, proche {c['proche']}), "

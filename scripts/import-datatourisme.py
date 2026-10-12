@@ -71,7 +71,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from import_commun import (  # noqa: E402
     Base, NS, adresse, compter_retrait, couper, lire_retraits, load_env, retrait_a_relire,
-    retrait_concerne, slugify, texte, titre_normalise,
+    retrait_concerne, slugify, texte, titre_normalise, typer_v2,
 )
 # Dedoublonnage croise (R7), partage avec import-openagenda.py, import-sites.py
 # et mesure-import.py : voir scripts/dedoublonnage.py.
@@ -588,8 +588,18 @@ def motif_exclusion(titre_n, cats, nb_dates, duree_max):
     return None
 
 
-def typer(titre, cats, debut, fin):
-    """Type Casaminga d'une date. Règles de titre d'abord, catégorie ensuite."""
+def typer(titre, cats, debut, fin, description=None):
+    """Type Casaminga d'une date. Règles de titre d'abord, catégorie ensuite,
+    puis (T7.1) typer_v2 sur titre et description quand rien n'a tranché."""
+    code = _typer_titre_categorie(titre, cats, debut, fin)
+    if code == "autre":
+        v2, _regle = typer_v2(titre, description, debut.isoformat(), fin.isoformat())
+        if v2:
+            return v2
+    return code
+
+
+def _typer_titre_categorie(titre, cats, debut, fin):
     t_n = sans_accent(titre)
     t_l = titre.lower()
     duree = (fin - debut).days
@@ -797,6 +807,65 @@ def main():
         "annuaire_lieux?select=id,nom,adresse,commune,code_postal,latitude,longitude,site_web,organization_id"
         "&masque=eq.false&latitude=not.is.null&order=id"))
 
+    # ── Lieu et verdict de retrait, calculés AVANT le dédoublonnage (T4.5) ──
+    # Une date d'un lieu « refuser » n'entre jamais dans l'index du
+    # dédoublonnage : sinon elle ferait passer pour doublon une vraie date
+    # d'un autre lieu, qui ne serait alors jamais importée.
+    # Retraits : verdict par fiche (uri), selon son lieu. « refuser » : aucune
+    # organisation, vitrine, établissement ni rattachement annuaire, et les
+    # dates sortent de `occurrences` avant --max.
+    verdict_fiche, a_relire = {}, set()
+
+    def verdict_lieu(oid, nom, commune, site, annuaire_id):
+        if retrait_a_relire(retraits, nom, commune):
+            a_relire.add(nom)
+        return retrait_concerne(
+            retraits, organization_id=oid if oid in orgs_existantes else None,
+            source=SOURCE, nom=nom, commune=commune, domaine=site, annuaire_id=annuaire_id)
+
+    lieu_res = {}   # uri -> description du lieu et verdict (mémoïsé)
+
+    def resoudre_lieu(f):
+        r = lieu_res.get(f["uri"])
+        if r is not None:
+            return r
+        hit = annuaire.proche(f["lat"], f["lon"], f"{f['adr']} {f['titre']}")
+        r = {"hit": hit, "mode": None, "existant": False, "annuaire_id": None}
+        if hit:
+            l, dist, mode = hit
+            r["mode"], r["annuaire_id"] = mode, l["id"]
+            if l["organization_id"] and l["organization_id"] in orgs_existantes:
+                oid = l["organization_id"]
+                r.update(existant=True, oid=oid, eid=etab_de_org.get(oid), verdict=verdict_lieu(
+                    oid, l["nom"], l.get("commune"), l.get("site_web"), l["id"]))
+                lieu_res[f["uri"]] = r
+                return r
+            cle, nom, adr_l = f"annuaire:{l['id']}", l["nom"], l.get("adresse")
+            cp_l, com_l, lat_l, lon_l = l.get("code_postal"), l.get("commune"), l["latitude"], l["longitude"]
+            site, annuaire_id = l.get("site_web"), l["id"]
+        else:
+            annuaire_id, site = None, None
+            commune_n = slugify(f["commune"], 80)
+            cle = f"adresse:{slugify(sans_postal(f['adr'], f['cp'], f['commune']), 120)}:{f['cp']}:{commune_n}"
+            nom_adr = nom_du_lieu(f["adr"])
+            if nom_adr:
+                nom = nom_adr if nom_adr != nom_adr.upper() else casse_phrase(nom_adr, f["communes"], "", "")
+                nom = f"{nom}, {f['commune']}" if slugify(f["commune"]) not in slugify(nom) else nom
+            elif f["adr"]:
+                rue = sans_postal(f["adr"], f["cp"], f["commune"])
+                rue = rue if rue != rue.upper() else casse_phrase(rue, f["communes"], "", "")
+                nom = f"{rue}, {f['commune']}"
+            else:
+                nom = f"{f['commune']} (lieu non précisé)"
+            adr_l, cp_l, com_l, lat_l, lon_l = f["adr"] or None, f["cp"], f["commune"], f["lat"], f["lon"]
+        oid = str(uuid.uuid5(NS, f"org:{SOURCE}:{cle}"))
+        eid = str(uuid.uuid5(NS, f"est:{SOURCE}:{cle}"))
+        r.update(oid=oid, eid=eid, nom=nom, adr=adr_l, cp=cp_l, commune=com_l, lat=lat_l, lon=lon_l,
+                 site=site, annuaire_id=annuaire_id,
+                 verdict=verdict_lieu(oid, nom, com_l, site, annuaire_id))
+        lieu_res[f["uri"]] = r
+        return r
+
     # ── D. Dédoublonnage, par date ──
     # Module partage (R7, P3) : compare a toute la base, toutes sources, jour
     # heure de Paris, puis aux dates deja acceptees dans ce passage. Une date en
@@ -833,6 +902,11 @@ def main():
                 dedoublonneur.lier(res, fiche_dd, SOURCE, f["uri"], source_url)
                 doublons[f"{res.raison} / {res.gardee.groupe_source}"] += 1
                 continue
+            if resoudre_lieu(f)["verdict"] == "refuser":
+                # Retrait « import » : la date n'est pas importée, elle ne doit pas
+                # non plus entrer dans l'index (T4.5). Comptée ici, avant --max.
+                compter_retrait(bilan_retrait, "refuser")
+                continue
             if any(e.tn == titre_normalise(f["titre"]) for e in dedoublonneur.index.get(jour_paris(debut_utc), [])):
                 memes_titres_autre_commune += 1
             dedoublonneur.enregistrer(fiche_dd, eid)
@@ -841,76 +915,34 @@ def main():
         stats["fiches_retenues"] += 1 if garde else 0
     occurrences.sort(key=lambda o: (o[1], o[0]["uri"]))
 
-    # ── Lieux : annuaire, sinon adresse ──
+    # ── Lieux : annuaire, sinon adresse (résolus plus haut, mémoïsés) ──
     nouveaux_orgs = {}      # oid -> dict de création (organisation, établissement, vitrine)
     lieu_de_fiche = {}      # uri -> (oid, eid)
     rattachements = {}      # annuaire_id -> oid
     modes = Counter()
     tiers_lieux_touches = set()
-    # Retraits : verdict par fiche (uri), selon son lieu. « refuser » : aucune
-    # organisation, vitrine, établissement ni rattachement annuaire, et les
-    # dates sortent de `occurrences` avant --max.
-    verdict_fiche, a_relire = {}, set()
-
-    def verdict_lieu(oid, nom, commune, site, annuaire_id):
-        if retrait_a_relire(retraits, nom, commune):
-            a_relire.add(nom)
-        return retrait_concerne(
-            retraits, organization_id=oid if oid in orgs_existantes else None,
-            source=SOURCE, nom=nom, commune=commune, domaine=site, annuaire_id=annuaire_id)
 
     for f, *_ in occurrences:
         if f["uri"] in lieu_de_fiche:
             continue
-        nom_adr = nom_du_lieu(f["adr"])
-        hit = annuaire.proche(f["lat"], f["lon"], f"{f['adr']} {f['titre']}")
-        if hit:
-            l, dist, mode = hit
-            modes[mode] += 1
-            tiers_lieux_touches.add(l["id"])
-            if l["organization_id"] and l["organization_id"] in orgs_existantes:
-                oid = l["organization_id"]
-                verdict_fiche[f["uri"]] = verdict_lieu(
-                    oid, l["nom"], l.get("commune"), l.get("site_web"), l["id"])
-                lieu_de_fiche[f["uri"]] = (oid, etab_de_org.get(oid))
-                continue
-            cle, nom, adr_l = f"annuaire:{l['id']}", l["nom"], l.get("adresse")
-            cp_l, com_l, lat_l, lon_l = l.get("code_postal"), l.get("commune"), l["latitude"], l["longitude"]
-            site, annuaire_id = l.get("site_web"), l["id"]
-        else:
-            annuaire_id, site = None, None
-            commune_n = slugify(f["commune"], 80)
-            cle = f"adresse:{slugify(sans_postal(f['adr'], f['cp'], f['commune']), 120)}:{f['cp']}:{commune_n}"
-            if nom_adr:
-                nom = nom_adr if nom_adr != nom_adr.upper() else casse_phrase(nom_adr, f["communes"], "", "")
-                nom = f"{nom}, {f['commune']}" if slugify(f["commune"]) not in slugify(nom) else nom
-            elif f["adr"]:
-                rue = sans_postal(f["adr"], f["cp"], f["commune"])
-                rue = rue if rue != rue.upper() else casse_phrase(rue, f["communes"], "", "")
-                nom = f"{rue}, {f['commune']}"
-            else:
-                nom = f"{f['commune']} (lieu non précisé)"
-            adr_l, cp_l, com_l, lat_l, lon_l = f["adr"] or None, f["cp"], f["commune"], f["lat"], f["lon"]
-        oid = str(uuid.uuid5(NS, f"org:{SOURCE}:{cle}"))
-        eid = str(uuid.uuid5(NS, f"est:{SOURCE}:{cle}"))
-        lieu_de_fiche[f["uri"]] = (oid, eid)
-        verdict_fiche[f["uri"]] = verdict_lieu(oid, nom, com_l, site, annuaire_id)
-        if verdict_fiche[f["uri"]] == "refuser":
+        r = resoudre_lieu(f)
+        if r["hit"]:
+            modes[r["mode"]] += 1
+            tiers_lieux_touches.add(r["annuaire_id"])
+        lieu_de_fiche[f["uri"]] = (r["oid"], r["eid"])
+        verdict_fiche[f["uri"]] = r["verdict"]
+        if r["existant"]:
+            continue
+        if r["verdict"] == "refuser":
             continue  # rien à créer pour ce lieu
-        if oid not in nouveaux_orgs:
-            nouveaux_orgs[oid] = {
-                "oid": oid, "eid": eid, "nom": (texte(nom) or nom or "Lieu")[:120], "adr": adr_l,
-                "cp": cp_l, "commune": com_l, "lat": lat_l, "lon": lon_l, "site": site,
-                "annuaire_id": annuaire_id, "existe": oid in orgs_existantes,
+        if r["oid"] not in nouveaux_orgs:
+            nouveaux_orgs[r["oid"]] = {
+                "oid": r["oid"], "eid": r["eid"], "nom": (texte(r["nom"]) or r["nom"] or "Lieu")[:120],
+                "adr": r["adr"], "cp": r["cp"], "commune": r["commune"], "lat": r["lat"], "lon": r["lon"],
+                "site": r["site"], "annuaire_id": r["annuaire_id"], "existe": r["oid"] in orgs_existantes,
             }
-        if annuaire_id:
+        if r["annuaire_id"]:
             modes["rattachées (fiches, tous modes)"] += 1
-
-    # Dates des lieux refusés : écartées ici, avant --max, et comptées.
-    for o in occurrences:
-        if verdict_fiche.get(o[0]["uri"]) == "refuser":
-            compter_retrait(bilan_retrait, "refuser")
-    occurrences = [o for o in occurrences if verdict_fiche.get(o[0]["uri"]) != "refuser"]
 
     nb_attachees = sum(1 for f, *_ in occurrences if lieu_de_fiche[f["uri"]][0] in nouveaux_orgs
                        and nouveaux_orgs[lieu_de_fiche[f["uri"]][0]]["annuaire_id"]) \
@@ -969,7 +1001,7 @@ def main():
         fin_utc = paris_vers_utc(datetime.combine(fin, datetime.min.time()) + timedelta(hours=23, minutes=59))
         evenements.append({
             "id": eid, "organization_id": oid, "establishment_id": etid,
-            "title": f["titre"], "type": typer(f["titre"], f["cats"], debut, fin),
+            "title": f["titre"], "type": typer(f["titre"], f["cats"], debut, fin, f["desc"]),
             "status": "publie", "start_at": debut_utc.isoformat(), "end_at": fin_utc.isoformat(),
             "description": None if verdict == "medias" else f["desc"],
             "price": None, "photos": [],
@@ -1031,11 +1063,14 @@ def main():
           f"{bilan_doublons['fiches_enrichies']} fiches enrichies {bilan_doublons['champs'] or ''}"
           f" [règle {REGLE_DEDOUBLONNAGE}]")
     print(f"À importer: {stats['fiches_retenues']} fiches, {len(occurrences)} dates")
-    par_type = Counter(typer(f["titre"], f["cats"], d, e) for f, d, e, _ in occurrences)
+    par_type = Counter(typer(f["titre"], f["cats"], d, e, f["desc"]) for f, d, e, _ in occurrences)
     par_type_fiche = {}
     for f, d, e, _ in occurrences:
-        par_type_fiche.setdefault(f["uri"], typer(f["titre"], f["cats"], d, e))
+        par_type_fiche.setdefault(f["uri"], typer(f["titre"], f["cats"], d, e, f["desc"]))
     print("Types (dates)  : " + ", ".join(f"{k} {v}" for k, v in par_type.most_common()))
+    avant_t = Counter(_typer_titre_categorie(f["titre"], f["cats"], d, e) for f, d, e, _ in occurrences)
+    print("Types (dates) avant T7.1 (titre + catégorie seuls) : "
+          + ", ".join(f"{k} {v}" for k, v in avant_t.most_common()))
     print("Types (fiches) : " + ", ".join(f"{k} {v}" for k, v in Counter(par_type_fiche.values()).most_common()))
     uris_annuaire = {f["uri"] for f, *_ in occurrences
                      if (lieu_de_fiche[f["uri"]][0] in nouveaux_orgs and nouveaux_orgs[lieu_de_fiche[f["uri"]][0]]["annuaire_id"])
@@ -1061,7 +1096,7 @@ def main():
         print(f"\n{args.exemples} exemples (titre, commune, type) :")
         pas = max(1, len(occurrences) // args.exemples)
         for f, d, e, _ in occurrences[::pas][:args.exemples]:
-            print(f"  {f['titre']} | {f['commune']} | {typer(f['titre'], f['cats'], d, e)} | {d}")
+            print(f"  {f['titre']} | {f['commune']} | {typer(f['titre'], f['cats'], d, e, f['desc'])} | {d}")
     if args.montrer:
         print("\nLignes construites (première de chaque table) :")
         for nom, rows in (("organizations", orgs), ("public_sites", sites), ("establishments", etabs),

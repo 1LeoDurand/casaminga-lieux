@@ -100,7 +100,7 @@ from import_commun import (  # noqa: E402  (après le reconfigure ci-dessus)
 from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur  # noqa: E402
 # Retraits sur demande (P2) : voir import_commun.py.
 from import_commun import (  # noqa: E402
-    compter_retrait, lire_retraits, retrait_a_relire, retrait_concerne,
+    compter_retrait, lire_retraits, retrait_a_relire, retrait_concerne, typer_import,
 )
 
 USER_AGENT = "CasamingaBot/1.0 (+https://casaminga.com/contact)"
@@ -1177,6 +1177,7 @@ def main():
             image = r.get("image")
             photos = [image] if image and re.match(r"^https?://", image) else []
             description = couper(texte(r.get("description")))
+            desc_typage = description  # le typage lit la description avant un retrait « medias »
             if verdict == "medias":
                 photos, description = [], None
             compter_retrait(bilan_retrait, verdict)
@@ -1185,7 +1186,8 @@ def main():
             evenements.append({
                 "id": evid, "organization_id": oid, "establishment_id": eid,
                 "title": titre[:200],
-                "type": guess_type(titre, None, r["start_iso"], end_iso),
+                # T7.1 : typer_v2 (titre puis description), guess_type en repli.
+                "type": typer_import(titre, desc_typage, r["start_iso"], end_iso)[0],
                 "status": "publie",
                 "start_at": r["start_iso"], "end_at": end_iso,
                 "description": description,
@@ -1295,6 +1297,13 @@ def main():
     for k, v in sorted(par_type.items(), key=lambda x: -x[1]):
         print(f"  {k} : {v}")
     print(f"Reste    : {len(evenements) - traites} événements après ce lot")
+    if args.essai and evenements:
+        # Mesure T7.1 : guess_type (avant) contre le type posé (après), tous candidats.
+        from collections import Counter
+        av = Counter(guess_type(e["title"], None, e["start_at"], e["end_at"]) for e in evenements)
+        ap_ = Counter(e["type"] for e in evenements)
+        fmt = lambda c: ", ".join(f"{k} {v}" for k, v in c.most_common())
+        print(f"Types des candidats ({len(evenements)}) :\n  avant : {fmt(av)}\n  après : {fmt(ap_)}")
     print(f"Retraits : {len(retraits)} actifs, ecartees_retrait {bilan_retrait.get('ecartees_retrait', 0)}, "
           f"masquees_retrait {bilan_retrait.get('masquees_retrait', 0)}, "
           f"sans_medias_retrait {bilan_retrait.get('sans_medias_retrait', 0)}")
