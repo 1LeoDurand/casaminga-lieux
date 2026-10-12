@@ -343,3 +343,148 @@ class Base:
                 "POST", f"{table}?on_conflict={conflit}", rows[i:i + 200],
                 headers={"Prefer": "resolution=merge-duplicates,return=minimal"})
         return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# Retraits sur demande (P2, migration 0031). Ajout seulement.
+#
+# Un retrait est une ligne de import_retraits. Les scripts d'import lisent la
+# vue import_retraits_actifs une fois au démarrage (lire_retraits), puis
+# demandent pour chaque organisation ou fiche candidate s'ils doivent
+# s'abstenir (retrait_concerne). Rien n'est écrit ici : ce module ne fait que
+# décider, l'écriture reste dans les scripts.
+#
+# Réponses de retrait_concerne, de la plus forte à la plus faible :
+#   "refuser" : portée import. Ne créer ni organisation, ni fiche, ni
+#               rattachement ; compter « écartées, retrait ».
+#   "masquer" : portée fiches. La fiche entre avec show_on_public_site=false.
+#   "medias"  : portée medias. La fiche entre sans description ni photos.
+#   None      : aucun retrait ne s'applique.
+# ---------------------------------------------------------------------------
+
+# Domaines partagés par plusieurs structures : un même domaine n'y prouve rien.
+# Comparaison sur le domaine exact ou sur un sous-domaine de la liste.
+DOMAINES_PARTAGES = (
+    "wixsite.com", "wix.com", "openagenda.com", "facebook.com", "instagram.com",
+    "linktr.ee", "helloasso.com", "weebly.com", "jimdofree.com", "jimdosite.com",
+    "blogspot.com", "wordpress.com", "over-blog.com", "google.com", "youtube.com",
+    "eventbrite.fr", "eventbrite.com", "meetup.com", "weezevent.com",
+    "yurplan.com", "billetweb.fr", "framasoft.org", "carrd.co", "notion.site",
+)
+
+
+def texte_normalise_py(t):
+    """Équivalent Python de texte_normalise (0030) : minuscule, sans accent,
+    tout ce qui n'est pas a-z0-9 devient un espace, espaces réduits. Les
+    ligatures (œ, æ) ne sont pas dépliées, comme côté SQL."""
+    s = unicodedata.normalize("NFKD", t or "")
+    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
+    return re.sub(r"[^a-z0-9]+", " ", s).strip()
+
+
+def domaine_web_de(site):
+    """Domaine d'une adresse web, sans schéma ni « www. », même règle que
+    retrait_poser. Renvoie None si rien d'exploitable."""
+    s = (site or "").strip().lower()
+    if not s:
+        return None
+    m = re.match(r"^(?:[a-z][a-z0-9+.-]*://)?(?:www\.)?([^/:?#\s]+)", s)
+    return m.group(1) if m else None
+
+
+def domaine_partage(domaine):
+    if not domaine:
+        return False
+    if domaine.startswith("mairie-") or ".mairie-" in domaine:
+        return True
+    return any(domaine == d or domaine.endswith("." + d) for d in DOMAINES_PARTAGES)
+
+
+def lire_retraits(db):
+    """Retraits actifs (vue import_retraits_actifs), à lire une fois par passage.
+    db est une Base (client service). Si la vue manque, l'échec est net
+    (SystemExit de Base._call) : mieux vaut ne rien importer que d'importer
+    sans respecter les retraits."""
+    return db.lire_tout(
+        "import_retraits_actifs?select=id,organization_id,annuaire_lieu_id,portee,"
+        "source,nom_normalise,commune_normalisee,domaine_web")
+
+
+_FORCE = {"refuser": 3, "masquer": 2, "medias": 1}
+
+
+def retrait_concerne(retraits, organization_id=None, source=None, nom=None,
+                     commune=None, domaine=None, annuaire_id=None):
+    """Dit si un import doit s'abstenir, masquer ou vider les médias.
+
+    organization_id : organisation déjà en base, ou None si elle n'existe pas encore.
+    source          : orthographe de evenements_import.source de ce script
+                      ('openagenda', 'datatourisme', 'site:<domaine>').
+    nom, commune    : de la structure candidate (bruts, normalisés ici).
+    domaine         : domaine de son site web (ou une adresse web : normalisée ici).
+    annuaire_id     : lieu de l'annuaire rattaché, s'il y en a un.
+
+    Les empreintes (nom + commune, ou domaine hors domaines partagés) ne valent
+    que pour un retrait « import » sans source : c'est le seul qui promet de
+    ne plus jamais importer la structure, quelle que soit la source. Un nom
+    seul, sans commune, ne bloque pas : voir retrait_a_relire."""
+    nom_n = texte_normalise_py(nom) if nom else ""
+    com_n = texte_normalise_py(commune) if commune else ""
+    dom = domaine_web_de(domaine) if domaine else None
+    if dom and domaine_partage(dom):
+        dom = None
+    meilleur = None
+    for r in retraits or []:
+        portee = r.get("portee")
+        verdict = None
+        meme_cible = bool(
+            (organization_id and r.get("organization_id") == organization_id)
+            or (annuaire_id and r.get("annuaire_lieu_id") == annuaire_id))
+        if portee == "import":
+            if r.get("source"):
+                # Retrait par source : seule cette source est refusée, et
+                # seulement pour la cible nommée (pas d'empreinte).
+                if meme_cible and source == r["source"]:
+                    verdict = "refuser"
+            elif meme_cible:
+                verdict = "refuser"
+            else:
+                empreinte_nom = bool(nom_n and com_n
+                                     and r.get("nom_normalise") == nom_n
+                                     and r.get("commune_normalisee") == com_n)
+                empreinte_dom = bool(dom and r.get("domaine_web") == dom
+                                     and not domaine_partage(r.get("domaine_web")))
+                if empreinte_nom or empreinte_dom:
+                    verdict = "refuser"
+        elif portee == "fiches" and meme_cible:
+            verdict = "masquer"
+        elif portee == "medias" and meme_cible:
+            verdict = "medias"
+        if verdict and _FORCE[verdict] > _FORCE.get(meilleur, 0):
+            meilleur = verdict
+    return meilleur
+
+
+def retrait_a_relire(retraits, nom, commune=None):
+    """Vrai si seul le nom (sans commune concordante) ressemble à une
+    empreinte d'un retrait « import » sans source. Ne bloque rien : à
+    signaler dans le bilan du passage, pour relecture humaine."""
+    nom_n = texte_normalise_py(nom) if nom else ""
+    com_n = texte_normalise_py(commune) if commune else ""
+    if not nom_n:
+        return False
+    for r in retraits or []:
+        if r.get("portee") == "import" and not r.get("source") and r.get("nom_normalise") == nom_n:
+            if not (com_n and r.get("commune_normalisee") == com_n):
+                return True
+    return False
+
+
+def compter_retrait(compteur, verdict):
+    """Incrémente le dictionnaire de bilan d'un passage (« écartées, retrait »,
+    « masquées, retrait », « sans médias, retrait »). Renvoie le verdict."""
+    if verdict:
+        cle = {"refuser": "ecartees_retrait", "masquer": "masquees_retrait",
+               "medias": "sans_medias_retrait"}[verdict]
+        compteur[cle] = compteur.get(cle, 0) + 1
+    return verdict

@@ -392,6 +392,9 @@ export interface ModerationEvent {
   start_at: string;
   org_name: string;
   org_slug: string;
+  org_id: string | null;
+  /** True when the organization is imported and not claimed (a withdrawal can apply). */
+  org_importee: boolean;
   portal_status: ModStatus;
 }
 
@@ -425,7 +428,7 @@ export async function getPortalPendingEvents(): Promise<ModerationEvent[]> {
   if (!admin) return [];
   const { data } = await admin
     .from("evenements")
-    .select("id, title, start_at, portal_status, organizations(name, slug)")
+    .select("id, title, start_at, portal_status, organization_id, organizations(name, slug, source, claimed_at)")
     .eq("portal_status", "pending")
     .eq("status", "publie")
     .eq("show_on_public_site", true)
@@ -433,7 +436,7 @@ export async function getPortalPendingEvents(): Promise<ModerationEvent[]> {
     .order("start_at", { ascending: true })
     .limit(100);
   return (data ?? []).map((e) => {
-    const org = e.organizations as unknown as { name: string; slug: string } | null;
+    const org = e.organizations as unknown as { name: string; slug: string; source: string | null; claimed_at: string | null } | null;
     return {
       id: e.id as string,
       title: e.title as string,
@@ -441,6 +444,8 @@ export async function getPortalPendingEvents(): Promise<ModerationEvent[]> {
       portal_status: (e.portal_status as ModStatus) ?? "pending",
       org_name: org?.name ?? "—",
       org_slug: org?.slug ?? "",
+      org_id: (e.organization_id as string | null) ?? null,
+      org_importee: !!org?.source && org.source !== "casaminga" && !org.claimed_at,
     };
   });
 }

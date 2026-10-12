@@ -158,7 +158,15 @@ export function ModerationView({ lieux, events }: { lieux: ModerationLieu[]; eve
                     <Clock className="size-3" /> {fmtDate(e.start_at)} · {e.org_name}
                   </div>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {e.org_importee && e.org_id && (
+                    <a
+                      href={`/admin/portail/retraits?org=${e.org_id}`}
+                      className="text-[12px] font-semibold text-warmgray underline-offset-2 hover:text-ink hover:underline"
+                    >
+                      Retirer sur demande
+                    </a>
+                  )}
                   <button
                     type="button"
                     disabled={busyId === e.id && pending}

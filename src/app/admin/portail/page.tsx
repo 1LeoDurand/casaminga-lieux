@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ExternalLink, ListChecks, FileStack, Globe2, MessageSquareWarning } from "lucide-react";
+import { ExternalLink, ListChecks, FileStack, Globe2, MessageSquareWarning, EyeOff } from "lucide-react";
 import { getCatalogueStats } from "@/lib/admin/portail";
+import { countRetraitsActifs } from "@/lib/admin/retraits";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +26,12 @@ const RACCOURCIS = [
   { href: "/admin/portail/liste-blanche", label: "Liste blanche", desc: "Les lieux que l'import a le droit de moissonner", icon: ListChecks },
   { href: "/admin/portail/imports", label: "Imports", desc: "Ce qui est entré, quand, et depuis quels lieux", icon: FileStack },
   { href: "/admin/portail/pages", label: "Pages du portail", desc: "Rôle, indexation, présence au sitemap", icon: Globe2 },
+  { href: "/admin/portail/retraits", label: "Retraits", desc: "Retirer médias, fiches ou import sur demande", icon: EyeOff },
   { href: "/admin/feedback", label: "Feedback et bugs", desc: "Les tickets remontés, tous lieux confondus", icon: MessageSquareWarning },
 ];
 
 export default async function PortailPage() {
-  const stats = await getCatalogueStats();
+  const [stats, retraitsActifs] = await Promise.all([getCatalogueStats(), countRetraitsActifs()]);
 
   if (!stats) {
     return (
@@ -106,7 +108,10 @@ export default async function PortailPage() {
               <Link key={r.href} href={r.href} className="flex items-start gap-3 rounded-2xl border border-border bg-white p-4 transition-colors hover:border-coral">
                 <Icon className="mt-0.5 size-[18px] shrink-0 text-coral" strokeWidth={1.8} />
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-ink">{r.label}</span>
+                  <span className="block text-sm font-semibold text-ink">
+                    {r.label}
+                    {r.href.endsWith("/retraits") && ` (${retraitsActifs} actif${retraitsActifs > 1 ? "s" : ""})`}
+                  </span>
                   <span className="block text-[12px] text-warmgray">{r.desc}</span>
                 </span>
               </Link>
