@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/admin/guard";
 import { humanError } from "@/lib/errors";
 import { demoOrgBySlug, demoPublicSiteBySlug } from "@/lib/demo/data";
 import {
@@ -1357,10 +1358,20 @@ export interface MembershipApplicationInput {
   payment_method?: string | null | undefined; payment_ref?: string | null | undefined;
 }
 
-/** Souscription publique (anon). Retourne l'id créé, ou null en cas d'échec. */
-export async function createMembershipApplication(input: MembershipApplicationInput): Promise<string | null> {
+/**
+ * Insert a membership application from a server route. Since migration 0026
+ * anon has no write on membership_applications: a caller that has checked
+ * its own authorization (assertOrgAdmin on the HelloAsso sync) passes the
+ * service role client; an unauthenticated caller (the HelloAsso webhook,
+ * which verifies nothing yet) keeps the cookie client and is refused by RLS,
+ * which is the safe failure. Returns the created id, or null on failure.
+ */
+export async function createMembershipApplication(
+  input: MembershipApplicationInput,
+  client?: Awaited<ReturnType<typeof createClient>> | NonNullable<ReturnType<typeof createAdminClient>>,
+): Promise<string | null> {
   if (!isSupabaseConfigured()) { addDemoApplication(input); return "demo"; }
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase.from("membership_applications").insert(input).select("id").single();
   if (error) console.error("createMembershipApplication:", error);
   return data?.id ?? null;

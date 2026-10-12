@@ -104,7 +104,7 @@ export async function POST(
       notes: `helloasso:${payment.id}`,
       payment_method: "helloasso",
       payment_ref: payment.order.id,
-    });
+    }, admin);
 
     if (ok) imported++; else skipped++;
   }
