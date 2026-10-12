@@ -46,3 +46,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Audits graphiques (captures, rapports) : locaux, jamais versionnes.
+_contexte/Audits
+
+# Cache local du CSV DATAtourisme (60 Mo, reconstruit chaque nuit).
+/scripts/data/cache/
