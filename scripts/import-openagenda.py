@@ -72,6 +72,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 # et mesure-import.py : voir scripts/dedoublonnage.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur  # noqa: E402
+# Retraits sur demande (P2) : voir import_commun.py.
+from import_commun import (  # noqa: E402
+    compter_retrait, lire_retraits, retrait_a_relire, retrait_concerne,
+)
 
 SOURCE = "openagenda"
 API = ("https://public.opendatasoft.com/api/explore/v2.1/catalog/"
@@ -589,6 +593,8 @@ def main():
     t0 = time.time()
     url, key = load_env()
     db = Base(url, key)
+    retraits = lire_retraits(db)
+    bilan_retrait = {}
 
     source = (lire_lieux(args.lieux, args.depuis, args.jusqua) if args.lieux
               else lire_source(args.departement, args.exclure, args.depuis, args.jusqua))
@@ -653,10 +659,27 @@ def main():
         (r for r in candidats if str(uuid.uuid5(NS, "evt:" + r["uid"])) not in deja),
         key=lambda r: (r["firstdate_begin"], r["uid"]))
     dedoublonneur = Dedoublonneur(db)
+    mapping_annuaire = lire_mapping_annuaire(args.lieux) if args.lieux else {}
+    # Retraits : un verdict par lieu, calculé une fois. Un lieu refusé est sauté
+    # avec ses fiches, sans rien créer ; --max ne compte pas ces fiches.
+    verdict_lieu, a_relire = {}, set()
     lot, traites, deja_lies = [], 0, 0
     for r in nouveaux:
         if len(lot) >= args.max:
             break
+        luid = r["location_uid"]
+        if luid not in verdict_lieu:
+            v = lieux[luid]
+            oid_l = str(uuid.uuid5(NS, "org:" + luid))
+            verdict_lieu[luid] = retrait_concerne(
+                retraits, organization_id=oid_l if oid_l in org_slug else None,
+                source=SOURCE, nom=v["name"], commune=v["city"], domaine=v["website"],
+                annuaire_id=mapping_annuaire.get(luid))
+            if retrait_a_relire(retraits, v["name"], v["city"]):
+                a_relire.add(v["name"])
+        if verdict_lieu[luid] == "refuser":
+            compter_retrait(bilan_retrait, "refuser")
+            continue
         traites += 1
         fiche = fiche_dedoublonnage(r, lieux[r["location_uid"]])
         if fiche:
@@ -724,13 +747,22 @@ def main():
     # le 2026-09-28, prompt 2.3 : une organisation créée dans ce même lot
     # n'existe pas encore en base tant que db.inserer("organizations", ...)
     # n'a pas tourné).
-    mapping_annuaire = lire_mapping_annuaire(args.lieux) if args.lieux else {}
+    # Aucun rattachement annuaire pour un lieu sous retrait « import ».
+    def _refuse(luid):
+        v = lieux.get(luid) or {}
+        oid_l = str(uuid.uuid5(NS, "org:" + luid))
+        return retrait_concerne(
+            retraits, organization_id=oid_l if oid_l in org_slug else None, source=SOURCE,
+            nom=v.get("name"), commune=v.get("city"), domaine=v.get("website"),
+            annuaire_id=mapping_annuaire.get(luid)) == "refuser"
+    mapping_annuaire = {k: a for k, a in mapping_annuaire.items() if not _refuse(k)}
     existants = set(org_slug) | {o["id"] for o in orgs}
 
     evenements, provenance = [], []
     for r in lot:
         eid = str(uuid.uuid5(NS, "evt:" + r["uid"]))
         conditions = texte(r.get("conditions_fr"))
+        verdict = compter_retrait(bilan_retrait, verdict_lieu.get(r["location_uid"]))
         evenements.append({
             "id": eid,
             "organization_id": str(uuid.uuid5(NS, "org:" + r["location_uid"])),
@@ -743,10 +775,13 @@ def main():
             "description": corps_evenement(r),
             "price": 0 if conditions and FREE.match(conditions) else None,
             "photos": [r["image"]] if r.get("image") else [],
-            "show_on_public_site": True,
+            "show_on_public_site": verdict != "masquer",
             # Aucun humain n'a validé ces fiches : le portail doit pouvoir le savoir.
             "portal_status": "pending",
         })
+        if verdict == "medias":
+            evenements[-1]["description"] = None
+            evenements[-1]["photos"] = []
         provenance.append({
             "event_id": eid, "source": SOURCE, "source_uid": r["uid"],
             "source_url": r.get("canonicalurl"), "conditions": conditions,
@@ -778,6 +813,11 @@ def main():
           f"{deja_lies} déjà liés, {c['seances']} séances gardées, "
           f"{bilan_doublons['fiches_enrichies']} fiches enrichies {bilan_doublons['champs'] or ''}"
           f" [règle {REGLE_DEDOUBLONNAGE}]")
+    print(f"Retraits  : {len(retraits)} actifs, ecartees_retrait {bilan_retrait.get('ecartees_retrait', 0)}, "
+          f"masquees_retrait {bilan_retrait.get('masquees_retrait', 0)}, "
+          f"sans_medias_retrait {bilan_retrait.get('sans_medias_retrait', 0)}")
+    for nom_r in sorted(a_relire):
+        print(f"  À relire (nom d'un retrait, commune différente) : {nom_r}")
     if mapping_annuaire:
         verbe = "à rattacher (essai)" if args.essai else "rattachés"
         print(f"Annuaire : {ecrits_annuaire} organization_id {verbe} sur {candidats_annuaire} tiers-lieux représentés dans ce lot")

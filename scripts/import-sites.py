@@ -98,6 +98,10 @@ from import_commun import (  # noqa: E402  (après le reconfigure ci-dessus)
 # Dedoublonnage croise (R7), partage avec import-openagenda.py,
 # import-datatourisme.py et mesure-import.py : voir scripts/dedoublonnage.py.
 from dedoublonnage import REGLE as REGLE_DEDOUBLONNAGE, Dedoublonneur  # noqa: E402
+# Retraits sur demande (P2) : voir import_commun.py.
+from import_commun import (  # noqa: E402
+    compter_retrait, lire_retraits, retrait_a_relire, retrait_concerne,
+)
 
 USER_AGENT = "CasamingaBot/1.0 (+https://casaminga.com/contact)"
 TIMEOUT = 12  # secondes ; sert aussi de "délai de politesse" de la consigne
@@ -1035,6 +1039,8 @@ def main():
     t0 = time.time()
     url, key = load_env()
     db = Base(url, key)
+    retraits = lire_retraits(db)
+    bilan_retrait = {}
 
     candidats = charger_candidats(db, args.departement, 0, args.depart)
     if args.resonder_tout:
@@ -1106,9 +1112,36 @@ def main():
     stats_signal = {}  # signal -> {"sites", "evenements", "thematiques"}
     evids_lot, uids_vus = set(), set()
 
+    # Retraits : un verdict par lieu, calculé une fois (cache). Sans organisation
+    # en base, organization_id=None : seules les empreintes (nom + commune,
+    # domaine, annuaire) peuvent alors le retenir.
+    verdicts_lieu, a_relire = {}, set()
+
+    def verdict_pour(lieu):
+        if lieu["id"] not in verdicts_lieu:
+            dom = domaine_de(lieu["site_web"])
+            oid_l = lieu.get("organization_id")
+            if oid_l not in orgs_existantes:
+                oid_l = org_id_pour(dom)
+                if oid_l not in orgs_existantes:
+                    oid_l = None
+            verdicts_lieu[lieu["id"]] = retrait_concerne(
+                retraits, organization_id=oid_l, source=f"site:{dom}", nom=lieu["nom"],
+                commune=lieu.get("commune"), domaine=lieu["site_web"], annuaire_id=lieu["id"])
+            if retrait_a_relire(retraits, lieu["nom"], lieu.get("commune")):
+                a_relire.add(lieu["nom"])
+        return verdicts_lieu[lieu["id"]]
+
     for lieu in a_sonder:
         signal, url_flux, evs, erreur = resultats[lieu["id"]]
         if signal in ("aucun", "erreur") or not evs:
+            continue
+        verdict = verdict_pour(lieu)
+        if verdict == "refuser":
+            # Ni organisation, ni vitrine, ni établissement, ni fiches ; --max
+            # ne les compte pas (elles n'entrent jamais dans `evenements`).
+            for _ in evs:
+                compter_retrait(bilan_retrait, "refuser")
             continue
         domaine = domaine_de(lieu["site_web"])
         oid, eid = preparer_organisation(
@@ -1144,6 +1177,9 @@ def main():
             image = r.get("image")
             photos = [image] if image and re.match(r"^https?://", image) else []
             description = couper(texte(r.get("description")))
+            if verdict == "medias":
+                photos, description = [], None
+            compter_retrait(bilan_retrait, verdict)
             end_iso = normaliser_fin(r["start_iso"], r.get("end_iso"))
 
             evenements.append({
@@ -1155,7 +1191,7 @@ def main():
                 "description": description,
                 "price": 0 if r.get("gratuit") else None,
                 "photos": photos,
-                "show_on_public_site": not exclu,
+                "show_on_public_site": not exclu and verdict != "masquer",
                 "portal_status": "pending",
             })
             provenance.append({
@@ -1227,6 +1263,7 @@ def main():
         rattachements = [(l["id"], org_id_pour(domaine_de(l["site_web"])))
                          for l in a_sonder
                          if not l.get("organization_id")
+                         and verdict_pour(l) != "refuser"
                          and org_id_pour(domaine_de(l["site_web"])) in cibles]
         for aid, oid in rattachements:
             db._call("PATCH", f"annuaire_lieux?id=eq.{aid}", {"organization_id": oid},
@@ -1258,6 +1295,11 @@ def main():
     for k, v in sorted(par_type.items(), key=lambda x: -x[1]):
         print(f"  {k} : {v}")
     print(f"Reste    : {len(evenements) - traites} événements après ce lot")
+    print(f"Retraits : {len(retraits)} actifs, ecartees_retrait {bilan_retrait.get('ecartees_retrait', 0)}, "
+          f"masquees_retrait {bilan_retrait.get('masquees_retrait', 0)}, "
+          f"sans_medias_retrait {bilan_retrait.get('sans_medias_retrait', 0)}")
+    for nom_r in sorted(a_relire):
+        print(f"  À relire (nom d'un retrait, commune différente) : {nom_r}")
     print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
 
 

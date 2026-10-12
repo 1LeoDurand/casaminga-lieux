@@ -70,7 +70,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from import_commun import (  # noqa: E402
-    Base, NS, adresse, couper, load_env, slugify, texte, titre_normalise,
+    Base, NS, adresse, compter_retrait, couper, lire_retraits, load_env, retrait_a_relire,
+    retrait_concerne, slugify, texte, titre_normalise,
 )
 # Dedoublonnage croise (R7), partage avec import-openagenda.py, import-sites.py
 # et mesure-import.py : voir scripts/dedoublonnage.py.
@@ -775,6 +776,8 @@ def main():
     # ── Base (lecture seule) ──
     url, key = load_env()
     db = Base(url, key)
+    retraits = lire_retraits(db)
+    bilan_retrait = {}
     org_rows = db.lire_tout("organizations?select=id,slug,address")
     orgs_existantes = {o["id"] for o in org_rows}
     adresse_org = {o["id"]: o["address"] for o in org_rows}
@@ -844,6 +847,18 @@ def main():
     rattachements = {}      # annuaire_id -> oid
     modes = Counter()
     tiers_lieux_touches = set()
+    # Retraits : verdict par fiche (uri), selon son lieu. « refuser » : aucune
+    # organisation, vitrine, établissement ni rattachement annuaire, et les
+    # dates sortent de `occurrences` avant --max.
+    verdict_fiche, a_relire = {}, set()
+
+    def verdict_lieu(oid, nom, commune, site, annuaire_id):
+        if retrait_a_relire(retraits, nom, commune):
+            a_relire.add(nom)
+        return retrait_concerne(
+            retraits, organization_id=oid if oid in orgs_existantes else None,
+            source=SOURCE, nom=nom, commune=commune, domaine=site, annuaire_id=annuaire_id)
+
     for f, *_ in occurrences:
         if f["uri"] in lieu_de_fiche:
             continue
@@ -855,6 +870,8 @@ def main():
             tiers_lieux_touches.add(l["id"])
             if l["organization_id"] and l["organization_id"] in orgs_existantes:
                 oid = l["organization_id"]
+                verdict_fiche[f["uri"]] = verdict_lieu(
+                    oid, l["nom"], l.get("commune"), l.get("site_web"), l["id"])
                 lieu_de_fiche[f["uri"]] = (oid, etab_de_org.get(oid))
                 continue
             cle, nom, adr_l = f"annuaire:{l['id']}", l["nom"], l.get("adresse")
@@ -877,6 +894,9 @@ def main():
         oid = str(uuid.uuid5(NS, f"org:{SOURCE}:{cle}"))
         eid = str(uuid.uuid5(NS, f"est:{SOURCE}:{cle}"))
         lieu_de_fiche[f["uri"]] = (oid, eid)
+        verdict_fiche[f["uri"]] = verdict_lieu(oid, nom, com_l, site, annuaire_id)
+        if verdict_fiche[f["uri"]] == "refuser":
+            continue  # rien à créer pour ce lieu
         if oid not in nouveaux_orgs:
             nouveaux_orgs[oid] = {
                 "oid": oid, "eid": eid, "nom": (texte(nom) or nom or "Lieu")[:120], "adr": adr_l,
@@ -885,6 +905,12 @@ def main():
             }
         if annuaire_id:
             modes["rattachées (fiches, tous modes)"] += 1
+
+    # Dates des lieux refusés : écartées ici, avant --max, et comptées.
+    for o in occurrences:
+        if verdict_fiche.get(o[0]["uri"]) == "refuser":
+            compter_retrait(bilan_retrait, "refuser")
+    occurrences = [o for o in occurrences if verdict_fiche.get(o[0]["uri"]) != "refuser"]
 
     nb_attachees = sum(1 for f, *_ in occurrences if lieu_de_fiche[f["uri"]][0] in nouveaux_orgs
                        and nouveaux_orgs[lieu_de_fiche[f["uri"]][0]]["annuaire_id"]) \
@@ -937,6 +963,7 @@ def main():
     evenements, provenance = [], []
     for f, debut, fin, eid in lot:
         oid, eid_lieu = lieu_de_fiche[f["uri"]]
+        verdict = compter_retrait(bilan_retrait, verdict_fiche.get(f["uri"]))
         etid = etab_final.get(oid, eid_lieu if eid_lieu in etab_ids else etab_de_org.get(oid))
         debut_utc = paris_vers_utc(datetime.combine(max(debut, aujourdhui), datetime.min.time()))
         fin_utc = paris_vers_utc(datetime.combine(fin, datetime.min.time()) + timedelta(hours=23, minutes=59))
@@ -944,8 +971,9 @@ def main():
             "id": eid, "organization_id": oid, "establishment_id": etid,
             "title": f["titre"], "type": typer(f["titre"], f["cats"], debut, fin),
             "status": "publie", "start_at": debut_utc.isoformat(), "end_at": fin_utc.isoformat(),
-            "description": f["desc"], "price": None, "photos": [],
-            "show_on_public_site": True,
+            "description": None if verdict == "medias" else f["desc"],
+            "price": None, "photos": [],
+            "show_on_public_site": verdict != "masquer",
             # Aucun humain n'a validé ces fiches : le portail doit pouvoir le savoir.
             "portal_status": "pending",
         })
@@ -1023,6 +1051,11 @@ def main():
     print(f"Lot       : {len(lot)} dates, {len(orgs)} organisations, {len(sites)} vitrines techniques, "
           f"{len(etabs)} établissements, {len(rattachements)} rattachements annuaire ({mode})")
     print(f"Reste     : {len(occurrences) - len(lot)} dates après ce lot")
+    print(f"Retraits  : {len(retraits)} actifs, ecartees_retrait {bilan_retrait.get('ecartees_retrait', 0)}, "
+          f"masquees_retrait {bilan_retrait.get('masquees_retrait', 0)}, "
+          f"sans_medias_retrait {bilan_retrait.get('sans_medias_retrait', 0)}")
+    for nom_r in sorted(a_relire):
+        print(f"  À relire (nom d'un retrait, commune différente) : {nom_r}")
 
     if args.exemples:
         print(f"\n{args.exemples} exemples (titre, commune, type) :")
