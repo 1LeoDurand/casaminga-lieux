@@ -110,6 +110,8 @@ export const config = {
     // api/contact/ excluded: the proxy buffers request bodies and cuts them at 10 MB
     // (photo uploads), logging the URL, hence the signed token. Those routes set their
     // own no-referrer / noindex / no-store headers.
-    "/((?!_next/static|_next/image|favicon.ico|api/contact/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // api/agenda/ excluded: public read-only proxy, no session to refresh, and
+    // a Supabase auth round trip on each call would defeat its cache.
+    "/((?!_next/static|_next/image|favicon.ico|api/contact/|api/agenda/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

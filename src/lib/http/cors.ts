@@ -30,8 +30,12 @@ export interface CorsOptions {
 /** Origines de production : le site public, avec et sans www (les deux répondent). */
 const PRODUCTION_ORIGINS = ["https://casaminga.com", "https://www.casaminga.com"];
 
-/** Serveur de prévisualisation de casa-minga-public (.claude/launch.json). */
-const LOCAL_PUBLIC_ORIGIN = "http://localhost:5174";
+/**
+ * Serveur de prévisualisation de casa-minga-public (.claude/launch.json).
+ * 5175 est le port de repli que prend la prévisualisation quand 5174 est
+ * déjà occupé par une autre session.
+ */
+const LOCAL_PUBLIC_ORIGINS = ["http://localhost:5174", "http://localhost:5175"];
 
 /**
  * Origines autorisées. localhost:5174 n'est admis que hors production, ou sur
@@ -43,7 +47,7 @@ const LOCAL_PUBLIC_ORIGIN = "http://localhost:5174";
 export function allowedOrigins(): string[] {
   const allowLocal =
     process.env.NODE_ENV !== "production" || process.env.CORS_ALLOW_LOCALHOST === "1";
-  return allowLocal ? [...PRODUCTION_ORIGINS, LOCAL_PUBLIC_ORIGIN] : PRODUCTION_ORIGINS;
+  return allowLocal ? [...PRODUCTION_ORIGINS, ...LOCAL_PUBLIC_ORIGINS] : PRODUCTION_ORIGINS;
 }
 
 /** L'origine de la requête si elle est autorisée, null sinon (ou absente). */
