@@ -33,12 +33,24 @@ site de l'association »). Un registre par site est ajouté à
 En --essai, rien n'est écrit en base ; le script produit `a-relire-NN.json`
 (fiches qui ont passé les garde-fous) pour la relecture Sonnet.
 
+Deux déductions prudentes (T36.6 et T36.7, demandées par Léo le 2026-11-10),
+toujours marquées dans la fiche et toujours relues :
+- lieu implicite : la page ne nomme aucun lieu, le lieu est le siège de
+  l'association quand il est connu (annuaire des lieux en base, RNA, commune
+  de l'annuaire communal) et n'est pas une boîte postale ou un domicile
+  (« chez », « c/o »). Jamais d'adresse inventée ;
+- année implicite : « samedi 8 novembre » sans année est accepté seulement si
+  jour de la semaine + jour + mois ne conviennent qu'à UNE année dans la
+  fenêtre (aujourd'hui à 12 mois). Sans jour de la semaine, la date reste
+  rejetée. Un titre de section mois + année vaut toujours année écrite.
+
 Usage
 -----
   python scripts/ecrire-lecture.py --essai                       (lit la base, n'écrit rien)
   python scripts/ecrire-lecture.py --essai --sans-base           (aucun accès à la base)
   python scripts/ecrire-lecture.py --essai --relecture "<dossier>/relecture-*.json"
   python scripts/ecrire-lecture.py --relecture "<dossier>/relecture-*.json"   (écrit)
+  python scripts/ecrire-lecture.py --essai --dossier <rejeu> --jour 2026-10-13  (rejeu d'un lot ancien)
 
 La clé de service est lue dans .env.local et n'est jamais affichée.
 """
@@ -84,6 +96,16 @@ CONFIANCES = {"haute", "moyenne"}
 BAN = "https://api-adresse.data.gouv.fr/search/"
 USER_AGENT = "CasamingaBot/1.0 (+https://casaminga.com/contact)"
 
+# T36.6 : un siège connu seulement par sa commune (RNA, annuaire communal) suffit-il
+# comme lieu ? Oui par défaut (le script accepte déjà une commune seule quand la page
+# la donne) ; mettre False pour exiger une adresse de rue.
+SIEGE_COMMUNE_SEULE = True
+JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+JOURS_ABREGES = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"]
+ANNEE_ECRITE = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)|(?<!\d)\d{1,2}\s*[/.]\s*\d{1,2}\s*[/.]\s*\d{2}(?!\d)")
+# Un siège « chez M. X », « c/o », une boîte postale ou un domicile n'est jamais repris.
+DOMICILE = re.compile(r"\bchez\b|\bc/o\b|\bbp\b|bo[iî]te postale|\bcs\s*\d|domicile|^\s*(?:m\.|mme|mr|monsieur|madame)\b", re.I)
+
 TYPES = {"atelier": "atelier", "stage": "stage", "formation": "formation", "retraite": "retraite",
          "séjour": "sejour", "sejour": "sejour", "rencontre": "rencontre", "spectacle": "spectacle",
          "concert": "concert", "exposition": "exposition", "marché": "marche", "marche": "marche",
@@ -106,6 +128,7 @@ MOTIFS = [
 ] + [m for m, _ in EXCLUSIONS] + [
     "retrait", "organisation_revendiquee", "doublon_interne", "deja_importe", "doublon_base",
     "relecture_date_fausse", "relecture_a_ecarter", "relecture_a_corriger_sans_correction", "non_relue",
+    "siege_inutilisable",
 ]
 
 MOIS_NOMS = ["janv", "f[eé]vr", "mars", "avr", "mai", "juin", "juil", "ao[uû]t", "sept", "oct", "nov", "d[eé]c"]
@@ -176,6 +199,129 @@ def date_litterale(d, extrait, extrait_annee):
         return False
     annee = rf"(?<!\d){d.year}(?!\d)|(?<!\d)0?{d.month}\s*[/.]\s*{d.year % 100:02d}(?!\d)"
     return bool(re.search(annee, e) or re.search(rf"(?<!\d){d.year}(?!\d)", ea))
+
+
+def jour_mois_litteraux(d, extrait, extrait_annee):
+    """Jour et mois de `d` écrits dans l'extrait (le mois peut venir du titre de section)."""
+    e = sa(extrait)
+    ea = sa(extrait_annee)
+    if not re.search(rf"(?<!\d)0?{d.day}(?:er)?(?!\d)", e):
+        return False
+    mois_nom = re.compile(sa(MOIS_NOMS[d.month - 1]).replace("[ee]", "e").replace("[uu]", "u"))
+    mois_num = re.compile(rf"(?<!\d)0?{d.day}\s*[/.\-]\s*0?{d.month}(?!\d)")
+    return bool(mois_nom.search(e) or mois_nom.search(ea) or mois_num.search(e))
+
+
+def annee_deduite(d, extrait, extrait_annee, jour_min):
+    """T36.7, forme prudente. L'année qui convient à `d` (jour et mois lus) quand
+    l'extrait écrit un jour de la semaine collé au jour (« samedi 8 »), qu'aucune
+    année n'est écrite ni dans l'extrait ni dans le titre de section, et qu'UNE
+    seule année de la fenêtre (jour_min à jour_min + 365 jours) fait tomber ce
+    quantième ce jour de la semaine. Sinon None (la date reste rejetée)."""
+    if ANNEE_ECRITE.search(extrait or "") or ANNEE_ECRITE.search(extrait_annee or ""):
+        return None
+    if not jour_mois_litteraux(d, extrait, extrait_annee):
+        return None
+    e = sa(extrait)
+    noms = "|".join(JOURS + JOURS_ABREGES)
+    semaine = {JOURS.index(n) if n in JOURS else JOURS_ABREGES.index(n)
+               for n in re.findall(rf"\b({noms})\b\.?\s*(?:le\s+)?0?{d.day}(?:er)?(?!\d)", e)}
+    if not semaine:
+        return None
+    ok = []
+    for an in (jour_min.year, jour_min.year + 1):
+        try:
+            cand = date(an, d.month, d.day)
+        except ValueError:
+            continue
+        if jour_min <= cand <= jour_min + timedelta(days=FENETRE_JOURS) and cand.weekday() in semaine:
+            ok.append(an)
+    return ok[0] if len(ok) == 1 else None
+
+
+def decaler_annee(dt, delta):
+    try:
+        return dt.replace(year=dt.year + delta)
+    except ValueError:
+        return None
+
+
+class Sieges:
+    """Siège d'une association, pour un lieu implicite (T36.6). Sources, de la
+    plus précise à la moins précise : annuaire des lieux en base (adresse de
+    rue, domaine du site), établissement principal d'une organisation connue
+    (hors celles créées par la lecture), RNA Waldec (code postal et commune,
+    nom identique et non ambigu), commune de l'annuaire communal."""
+
+    def __init__(self, db, rna_csv):
+        self.par_domaine = {}
+        if db:
+            for l in db.lire_tout("annuaire_lieux?select=adresse,commune,code_postal,site_web,source"):
+                dom = domaine_web_de(l.get("site_web"))
+                if dom and not domaine_partage(dom) and (l.get("adresse") or l.get("commune")):
+                    self.par_domaine.setdefault(dom, []).append(l)
+            orgs = {o["id"]: o for o in db.lire_tout("organizations?select=id,website,source")
+                    if not str(o.get("source") or "").startswith("lecture:")}
+            for e in db.lire_tout("establishments?select=organization_id,address,city,postal_code,is_primary"
+                                  "&is_primary=eq.true"):
+                o = orgs.get(e["organization_id"])
+                dom = domaine_web_de(o.get("website")) if o else None
+                if dom and not domaine_partage(dom) and (e.get("address") or e.get("city")):
+                    self.par_domaine.setdefault(dom, []).append(
+                        {"adresse": e.get("address"), "commune": e.get("city"),
+                         "code_postal": e.get("postal_code"), "source": "établissement principal"})
+        self.rna = {}
+        if rna_csv and Path(rna_csv).exists():
+            with open(rna_csv, encoding="utf-8-sig", newline="") as fh:
+                for r in csv.DictReader(fh, delimiter=";"):
+                    cle = self.cle_nom(r.get("titre"))
+                    if cle:
+                        self.rna.setdefault(cle, set()).add(((r.get("code_postal") or "").strip(),
+                                                            (r.get("commune") or "").strip()))
+        self.cache = {}
+        self.motifs = {}
+
+    @staticmethod
+    def cle_nom(nom):
+        t = re.sub(r"[^a-z0-9]+", " ", sa(nom)).strip()
+        t = re.sub(r"\b(?:association|asso|l|la|le|les|de|du|des|d)\b", " ", t)
+        return " ".join(t.split())
+
+    def de(self, site):
+        """{adresse, code_postal, commune, source, precision} ou None ; self.motifs[site_id]
+        vaut « siege_inutilisable » si un siège existe mais ne sert pas (domicile, boîte postale)."""
+        sid = site["site_id"]
+        if sid in self.cache:
+            return self.cache[sid]
+        res = None
+        dom = domaine_web_de(site.get("site"))
+        for l in (self.par_domaine.get(dom) or []) if dom else []:
+            adr = (l.get("adresse") or "").strip()
+            if adr and DOMICILE.search(adr):
+                self.motifs[sid] = "siege_inutilisable"
+                res = None
+                break
+            if adr or (l.get("commune") or "").strip():
+                res = {"adresse": adr or None, "code_postal": (l.get("code_postal") or "").strip() or None,
+                       "commune": (l.get("commune") or "").strip() or None,
+                       "source": str(l.get("source") or "annuaire des lieux")[:60],
+                       "precision": "adresse" if adr else "commune"}
+                if adr:
+                    break
+        if res is None and sid not in self.motifs:
+            cp = (site.get("code_postal") or "").strip()
+            commune = (site.get("commune") or "").strip()
+            if not commune or commune.lower().startswith("code postal"):
+                trouves = self.rna.get(self.cle_nom(site.get("association")), set())
+                cp, commune = next(iter(trouves)) if len(trouves) == 1 else ("", "")
+            if commune and not commune.lower().startswith("code postal"):
+                res = {"adresse": None, "code_postal": cp or None, "commune": commune,
+                       "source": "RNA (code postal et commune)" if cp else "annuaire communal (commune)",
+                       "precision": "commune"}
+        if res and res["precision"] == "commune" and not SIEGE_COMMUNE_SEULE:
+            res = None
+        self.cache[sid] = res
+        return res
 
 
 def geocoder(cache, adresse, commune, nom):
@@ -260,7 +406,7 @@ def charger_relectures(motifs):
 
 # ── Garde-fous ───────────────────────────────────────────────────
 
-def examiner(f, site, pages, aujourdhui):
+def examiner(f, site, pages, aujourdhui, sieges=None):
     """Fiche normalisée, ou (None, motif)."""
     if not isinstance(f, dict):
         return None, "json_invalide"
@@ -280,6 +426,17 @@ def examiner(f, site, pages, aujourdhui):
         return None, "date_illisible"
     ref = date.fromisoformat(site["date_reference"])
     jour_min = max(ref, aujourdhui)
+    extrait, extrait_annee = f.get("extrait") or "", f.get("extrait_annee") or ""
+    # T36.7 : année déduite (jour de la semaine + jour + mois, une seule année possible).
+    deduit = False
+    an = annee_deduite(debut, extrait, extrait_annee, jour_min)
+    if an is not None:
+        delta = an - debut.year
+        debut = decaler_annee(debut, delta)
+        fin = decaler_annee(fin, delta) if fin else None
+        if debut is None or (f.get("fin") and fin is None):
+            return None, "date_illisible"
+        deduit = True
     if debut.date() < jour_min:
         return None, "passe"
     if debut.date() > jour_min + timedelta(days=FENETRE_JOURS):
@@ -289,15 +446,20 @@ def examiner(f, site, pages, aujourdhui):
     lieu_nom = propre(f.get("lieu_nom"), 150)
     lieu_adresse = propre(f.get("lieu_adresse"), 200)
     lieu_commune = propre(f.get("lieu_commune"), 100)
+    siege = None
     if not (lieu_nom or lieu_adresse or lieu_commune):
-        return None, "sans_lieu"
+        # T36.6 : lieu implicite, repris du siège connu de l'association.
+        siege = sieges.de(site) if sieges else None
+        if not siege:
+            return None, ("siege_inutilisable" if sieges and sieges.motifs.get(site["site_id"]) else "sans_lieu")
+        lieu_adresse, lieu_commune = propre(siege["adresse"], 200), propre(siege["commune"], 100)
     if (f.get("confiance") or "").lower() not in CONFIANCES:
         return None, "confiance_basse"
-    extrait, extrait_annee = f.get("extrait") or "", f.get("extrait_annee") or ""
     page_n = norm(texte_page)
     if not extrait or norm(extrait) not in page_n or (extrait_annee and norm(extrait_annee) not in page_n):
         return None, "extrait_introuvable"
-    if not date_litterale(debut, extrait, extrait_annee):
+    if not (jour_mois_litteraux(debut, extrait, extrait_annee) if deduit
+            else date_litterale(debut, extrait, extrait_annee)):
         return None, "date_non_litterale"
 
     lien = (f.get("lien") or "").strip()
@@ -314,6 +476,7 @@ def examiner(f, site, pages, aujourdhui):
         "gratuit": f.get("gratuit") if isinstance(f.get("gratuit"), bool) else None,
         "prix": prix, "lien": lien, "type_modele": TYPES.get((f.get("type") or "").strip().lower()),
         "confiance": f.get("confiance"), "extrait": extrait[:300], "extrait_annee": extrait_annee or None,
+        "annee_deduite": deduit, "lieu_deduit": siege is not None, "siege": siege,
     }, None
 
 
@@ -345,16 +508,24 @@ def main():
     ap.add_argument("--sans-base", action="store_true", dest="sans_base",
                     help="(avec --essai) ni lecture ni écriture en base : pas de dédoublonnage ni de retraits")
     ap.add_argument("--sans-geocodage", action="store_true", dest="sans_geocodage")
+    ap.add_argument("--jour", metavar="AAAA-MM-JJ",
+                    help="traiter comme si on était ce jour-là (rejeu d'un lot ancien, avec --essai)")
+    ap.add_argument("--rna", default=str(ICI / "data" / "rna-34-waldec.csv"),
+                    help="RNA Waldec pour le siège des associations (lieu implicite)")
     ap.add_argument("--relecture", nargs="+", metavar="chemin.json",
                     help="verdicts Sonnet (fichiers ou motifs, ex. relecture-*.json)")
     args = ap.parse_args()
     if args.sans_base and not args.essai:
         raise SystemExit("--sans-base n'a de sens qu'avec --essai.")
+    if args.jour and not args.essai:
+        raise SystemExit("--jour n'a de sens qu'avec --essai.")
 
     t0 = time.time()
     dossier = Path(args.dossier)
     maintenant = datetime.now(timezone.utc)
     aujourdhui = (maintenant + timedelta(hours=decalage_paris(maintenant))).date()  # jour de Paris
+    if args.jour:
+        aujourdhui = date.fromisoformat(args.jour)
     paquets, sites, pages = charger_paquets(dossier)
     resultats, illisibles = charger_resultats(dossier)
     verdicts, fichiers_relecture = charger_relectures(args.relecture)
@@ -363,13 +534,21 @@ def main():
     for x in illisibles:
         print(f"  illisible : {x}")
 
-    registre = {sid: {"motifs": {}, "fiches_modele": 0, "rejets_modele": 0, "candidates": 0, "ecrites": 0}
+    registre = {sid: {"motifs": {}, "fiches_modele": 0, "rejets_modele": 0, "candidates": 0, "ecrites": 0,
+                      "annee_deduite": 0, "lieu_deduit": 0}
                 for sid in sites}
 
     def ecarter(sid, motif):
         r = registre.setdefault(sid, {"motifs": {}, "fiches_modele": 0, "rejets_modele": 0,
-                                      "candidates": 0, "ecrites": 0})
+                                      "candidates": 0, "ecrites": 0, "annee_deduite": 0, "lieu_deduit": 0})
         r["motifs"][motif] = r["motifs"].get(motif, 0) + 1
+
+    # Base (lecture seule) chargée avant les garde-fous : le siège d'une association sert au lieu implicite.
+    db = None
+    if not args.sans_base:
+        url, key = load_env()
+        db = Base(url, key)
+    sieges = Sieges(db, args.rna)
 
     # 1. Garde-fous
     candidates, rejets_modele = [], {}
@@ -385,7 +564,7 @@ def main():
                 registre[sid]["rejets_modele"] += 1
             for f in bloc.get("fiches") or []:
                 registre[sid]["fiches_modele"] += 1
-                fiche, motif = examiner(f, sites[sid], pages, aujourdhui)
+                fiche, motif = examiner(f, sites[sid], pages, aujourdhui, sieges)
                 if motif:
                     ecarter(sid, motif)
                     continue
@@ -419,10 +598,6 @@ def main():
         retenues.append(f)
 
     # 3. Base : retraits, organisations, dédoublonnage (lecture seule en essai)
-    db = None
-    if not args.sans_base:
-        url, key = load_env()
-        db = Base(url, key)
     retraits = lire_retraits(db) if db else []
     org_rows = db.lire_tout("organizations?select=id,slug,source,website,claimed_at") if db else []
     orgs_par_id = {o["id"]: o for o in org_rows}
@@ -480,13 +655,16 @@ def main():
         return org_de_site[sid]
 
     def etablissement_pour(oid, sid, f, nouvelle):
+        deduit = f.get("lieu_deduit")
         cle = sa(" ".join(x for x in [f["lieu_nom"], f["lieu_adresse"], f["lieu_commune"]] if x))
+        if deduit:
+            cle = "siege " + cle
         eid = str(uuid.uuid5(NS, f"est:lecture:{sid}:{cle}"))
         lat, lng = (None, None) if args.sans_geocodage else geocoder(
-            cache_geo, f["lieu_adresse"], f["lieu_commune"], f["lieu_nom"])
+            cache_geo, f["lieu_adresse"], f["lieu_commune"], None if deduit else f["lieu_nom"])
         if eid not in etabs_existants and not any(e["id"] == eid for e in etabs_a_creer):
             premier = nouvelle and not any(e["organization_id"] == oid for e in etabs_a_creer)
-            base = slugify(f["lieu_nom"] or f["lieu_commune"] or sid)
+            base = slugify("siege " + (f["lieu_commune"] or sid) if deduit else (f["lieu_nom"] or f["lieu_commune"] or sid))
             slug_e, n = base, 1
             while (oid, slug_e) in slugs_etab_pris:
                 n += 1
@@ -494,7 +672,9 @@ def main():
             slugs_etab_pris.add((oid, slug_e))
             etabs_a_creer.append({
                 "id": eid, "organization_id": oid,
-                "name": (f["lieu_nom"] or f["lieu_commune"] or sites[sid]["association"])[:120],
+                # Lieu déduit du siège (T36.6) : le nom de l'établissement le dit.
+                "name": (("Siège de " + sites[sid]["association"]) if deduit
+                         else (f["lieu_nom"] or f["lieu_commune"] or sites[sid]["association"]))[:120],
                 "slug": slug_e,
                 "city": f["lieu_commune"], "address": f["lieu_adresse"], "postal_code": None,
                 "latitude": lat, "longitude": lng, "is_primary": premier, "active": True,
@@ -532,6 +712,8 @@ def main():
                 continue
             dedoublonneur.enregistrer(fiche_dd, f["id"])
         registre[sid]["candidates"] += 1
+        registre[sid]["annee_deduite"] += 1 if f["annee_deduite"] else 0
+        registre[sid]["lieu_deduit"] += 1 if f["lieu_deduit"] else 0
         lot.append(f)
 
     # 4. Relecture
@@ -645,6 +827,9 @@ def main():
                     "lieu_commune": f["lieu_commune"], "prix_texte": f["prix_texte"], "lien": f["lien"],
                     "type": f["type"], "confiance": f["confiance"], "extrait": f["extrait"],
                     "extrait_annee": f["extrait_annee"],
+                    "annee_deduite": f["annee_deduite"], "lieu_deduit": f["lieu_deduit"],
+                    "siege": ({k: f["siege"][k] for k in ("adresse", "code_postal", "commune", "source", "precision")}
+                              if f["siege"] else None),
                 } for f in fs],
             }
             (dossier / f"a-relire-{num}.json").write_text(json.dumps(contenu, ensure_ascii=False, indent=1),
@@ -660,14 +845,15 @@ def main():
         w = csv.writer(fh, delimiter=";")
         if nouveau:
             w.writerow(["date", "mode", "paquet", "site_id", "association", "pages", "caracteres",
-                        "fiches_modele", "rejets_modele", "candidates", "ecrites"] + MOTIFS)
+                        "fiches_modele", "rejets_modele", "candidates", "ecrites"] + MOTIFS
+                       + ["annee_deduite", "lieu_deduit"])
         for sid, r in sorted(registre.items()):
             s = sites.get(sid, {})
             w.writerow([horodatage, mode, s.get("paquet", ""), sid, s.get("association", ""),
                         len(s.get("pages", [])), sum(p.get("caracteres", 0) for p in s.get("pages", [])),
                         r["fiches_modele"], r["rejets_modele"], r["candidates"],
                         r["ecrites"] if mode == "ecriture" else 0]
-                       + [r["motifs"].get(m, 0) for m in MOTIFS])
+                       + [r["motifs"].get(m, 0) for m in MOTIFS] + [r["annee_deduite"], r["lieu_deduit"]])
 
     total_motifs = {}
     for r in registre.values():
@@ -699,6 +885,16 @@ def main():
         "verdicts": compte_v, "taux_dates_fausses": round(taux_faux, 4),
         "ecrites": len(evenements) if mode == "ecriture" else 0, "a_ecrire": len(evenements),
         "sans_coordonnees": sans_coord, "ecartees_par_motif": total_motifs,
+        "annee_deduite": sum(1 for f in lot if f["annee_deduite"]),
+        "lieu_deduit": sum(1 for f in lot if f["lieu_deduit"]),
+        "lieu_deduit_precision": {pr: sum(1 for f in lot if f["siege"] and f["siege"]["precision"] == pr)
+                                  for pr in ("adresse", "commune")},
+        "deduites": [{"id": f["id"], "site_id": f["site_id"], "titre": f["titre"],
+                      "debut": f["debut_local"].isoformat(timespec="minutes"),
+                      "annee_deduite": f["annee_deduite"], "lieu_deduit": f["lieu_deduit"],
+                      "siege_source": f["siege"]["source"] if f["siege"] else None,
+                      "verdict": (verdicts.get(f["id"]) or {}).get("verdict")}
+                     for f in lot if f["annee_deduite"] or f["lieu_deduit"]],
         "doublons_lies": liees, "dedoublonnage": bilan_dd, "regle_dedoublonnage": REGLE_DEDOUBLONNAGE,
         "retraits": bilan_retrait, "a_relire_retrait": sorted(a_relire_nom),
         "organisations_creees": len(lignes["organizations"]),

@@ -62,6 +62,11 @@ _spec.loader.exec_module(SITES)
 
 from import_commun import domaine_partage, domaine_web_de  # noqa: E402
 
+# Liste RNA (T36.1) : mêmes règles de nettoyage de l'adresse du site que import-rna.py.
+_spec_rna = importlib.util.spec_from_file_location("import_rna", ICI / "import-rna.py")
+RNA = importlib.util.module_from_spec(_spec_rna)
+_spec_rna.loader.exec_module(RNA)
+
 # ── Réglages ─────────────────────────────────────────────────────
 
 CSV_DEFAUT = ICI / "data" / "annuaire-montpellier.csv"
@@ -85,7 +90,14 @@ DOMAINES_NATIONAUX = {
     "cimade.org", "medecinsdumonde.org", "msf.fr", "handicap-international.fr", "wwf.fr",
     "greenpeace.fr", "attac.org", "planning-familial.org", "laligue.org", "ufcquechoisir.org",
     "clcv.org", "habitat-humanisme.org", "france-parkinson.fr", "afm-telethon.fr",
+    # Signalés en section 4 de S9 après le premier lot (2026-10-13) : national, ville, université, projet.
+    "ufcv.fr", "theatrejeanvilar.montpellier.fr", "theatre.univ-montp3.fr", "montpellier2028.eu",
 }
+# Sites institutionnels : ville, métropole, État, université, rectorat (pas une association locale).
+INSTITUTIONNEL = re.compile(
+    r"(^|\.)(montpellier\.fr|montpellier3m\.fr|montpellier-mediterranee-metropole\.fr|herault\.fr"
+    r"|laregion\.fr|gouv\.fr|ac-montpellier\.fr|cnrs\.fr|inrae\.fr|ird\.fr)$"
+    r"|(^|\.)univ-[a-z0-9-]+\.fr$|^mairie-|^ville-")
 
 # Poids des catégories de l'annuaire (texte sans accent, sous-chaîne).
 POIDS_CATEGORIE = [
@@ -424,12 +436,49 @@ def lire_site(site):
 
 # ── Sélection des sites ──────────────────────────────────────────
 
-def lire_csv(chemin, commune):
+def lire_csv(chemin, commune, format_csv="annuaire"):
     with open(chemin, encoding="utf-8-sig", newline="") as f:
         lignes = list(csv.DictReader(f, delimiter=";"))
+    if format_csv == "rna":
+        return lignes_rna(lignes)
     if commune:
         lignes = [l for l in lignes if sans_accent(l.get("commune")) == sans_accent(commune)]
     return lignes
+
+
+def lignes_rna(brutes):
+    """Lignes du RNA Waldec (id;titre;objet;code_postal;commune;site;thematique)
+    ramenées au format de l'annuaire communal. L'objet social ne sert qu'au
+    score (catégorie tronquée) ; aucune adresse de rue n'existe dans ce fichier."""
+    out = []
+    for r in brutes:
+        if (r.get("thematique") or "").strip().lower() != "oui":
+            continue
+        site = RNA.nettoyer_site(r.get("site"))
+        nom = RNA.nom_lisible(r.get("titre"))
+        if not site or not nom:
+            continue
+        out.append({"nom": nom, "categorie": (r.get("objet") or "").strip()[:100],
+                    "commune": (r.get("commune") or "").strip(), "code_postal": (r.get("code_postal") or "").strip(),
+                    "site_web": site, "type_site": "site", "thematique": "1", "source": "rna-waldec"})
+    return out
+
+
+def deja_essayes(racine, sortie):
+    """Clés de site déjà essayées (selection.csv et registre.csv de toutes les
+    tranches sous `racine`), hors le dossier de sortie courant (un rejeu de la
+    même tranche ne doit pas s'exclure lui-même)."""
+    vus = set()
+    sortie = Path(sortie).resolve()
+    for nom in ("selection.csv", "registre.csv"):
+        for chemin in Path(racine).rglob(nom):
+            if chemin.parent.resolve() == sortie:
+                continue
+            with open(chemin, encoding="utf-8-sig", newline="") as f:
+                for r in csv.DictReader(f, delimiter=";"):
+                    if r.get("site_id"):
+                        vus.add(r["site_id"])
+    return vus
 
 
 def score(ligne):
@@ -464,7 +513,7 @@ def memoire_sondage(sans_memoire):
     return mem, f"{len(mem)} sites mémorisés"
 
 
-def selectionner(lignes, memoire, graine):
+def selectionner(lignes, memoire, graine, exclus=frozenset()):
     """Candidats triés du plus au moins prometteur, un par site, sans les
     sites nationaux ni les domaines partagés par plusieurs associations."""
     par_domaine = {}
@@ -477,6 +526,10 @@ def selectionner(lignes, memoire, graine):
     candidats, ecartes = [], {}
     seuil = datetime.now(timezone.utc) - timedelta(days=RESONDE_APRES_JOURS)
     for cle, groupe in par_domaine.items():
+        if cle in exclus:
+            ecartes["déjà essayé dans une tranche précédente"] = ecartes.get(
+                "déjà essayé dans une tranche précédente", 0) + 1
+            continue
         dom = domaine_web_de(groupe[0][1]) or cle
         racine = ".".join(dom.split(".")[-2:])
         if len({g[0]["nom"] for g in groupe}) > 1:
@@ -485,6 +538,10 @@ def selectionner(lignes, memoire, graine):
             continue
         if racine in DOMAINES_NATIONAUX or dom in DOMAINES_NATIONAUX:
             ecartes["site national ou de fédération"] = ecartes.get("site national ou de fédération", 0) + 1
+            continue
+        if INSTITUTIONNEL.search(dom):
+            ecartes["site institutionnel (ville, État, université)"] = ecartes.get(
+                "site institutionnel (ville, État, université)", 0) + 1
             continue
         if domaine_partage(dom) and "/" not in cle:
             ecartes["plateforme partagée"] = ecartes.get("plateforme partagée", 0) + 1
@@ -506,6 +563,7 @@ def selectionner(lignes, memoire, graine):
         l, url = groupe[0]
         candidats.append({
             "site_id": cle, "url": url, "association": l["nom"].strip(), "commune": l.get("commune"),
+            "code_postal": l.get("code_postal") or None,
             "categorie": l.get("categorie"), "source_annuaire": l.get("source"),
             "score": score(l), "memoire": mem[0] if mem else None, "_alea": rng.random(),
         })
@@ -525,6 +583,12 @@ def main():
     ap.add_argument("--sortie", default=str(SORTIE_DEFAUT), help="dossier des paquets")
     ap.add_argument("--taille-paquet", type=int, default=TAILLE_PAQUET, dest="taille_paquet")
     ap.add_argument("--graine", type=int, default=2026, help="départage des sites à score égal")
+    ap.add_argument("--format", default="annuaire", choices=["annuaire", "rna"], dest="format_csv",
+                    help="annuaire = annuaire communal ; rna = scripts/data/rna-34-waldec.csv")
+    ap.add_argument("--racine-tranches", default=str(SORTIE_DEFAUT), dest="racine_tranches",
+                    help="dossier où chercher les selection.csv des tranches déjà faites (sites exclus)")
+    ap.add_argument("--sans-exclusion", action="store_true", dest="sans_exclusion",
+                    help="ne pas exclure les sites déjà essayés")
     ap.add_argument("--sans-memoire", action="store_true", dest="sans_memoire",
                     help="ne lit pas annuaire_sites_sondes")
     args = ap.parse_args()
@@ -532,9 +596,10 @@ def main():
     t0 = time.time()
     sortie = Path(args.sortie)
     sortie.mkdir(parents=True, exist_ok=True)
-    lignes = lire_csv(args.csv, args.commune)
+    lignes = lire_csv(args.csv, args.commune, args.format_csv)
     memoire, etat_memoire = memoire_sondage(args.sans_memoire)
-    candidats, ecartes = selectionner(lignes, memoire, args.graine)
+    exclus = set() if args.sans_exclusion else deja_essayes(args.racine_tranches, sortie)
+    candidats, ecartes = selectionner(lignes, memoire, args.graine, exclus)
     print(f"Annuaire : {len(lignes)} lignes ({args.commune or 'toutes communes'}), "
           f"{len(candidats)} sites candidats ; mémoire du sondage : {etat_memoire}")
     for motif, n in sorted(ecartes.items(), key=lambda x: -x[1]):
@@ -571,7 +636,7 @@ def main():
             "consigne": "08 Import evenements/Mesures/lecture/CONSIGNE-HAIKU.md",
             "sites": [{
                 "site_id": s["site_id"], "site": s["url"], "association": s["association"],
-                "commune": s["commune"], "categorie": s["categorie"],
+                "commune": s["commune"], "code_postal": s.get("code_postal"), "categorie": s["categorie"],
                 "structure_detectee": s.get("structure_detectee") or [],
                 "pages": [{"page": p["url"], "genre": p["genre"], "lu_le": p["lu_le"],
                            "caracteres": p["caracteres"], "texte": p["texte"]} for p in s["pages"]],
