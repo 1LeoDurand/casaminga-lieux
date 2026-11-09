@@ -214,6 +214,11 @@ V2_MARCHE_SANS_ACCENT = re.compile(
     r"\bmarches? (?:de noel|paysan|nocturne|artisanal|de producteurs|de createurs"
     r"|de potiers|gourmand|bio|fermier|de plein vent)|\bbraderies?\b|vente solidaire|\bbrocante|vide-?grenier")
 V2_FESTIVAL_NON_MUSICAL = re.compile(r"theatre|cinema|danse|cirque|spectacle")
+V2_FESTIVAL_FILM = re.compile(r"\bfilms?\b|cinema|court[s-]? ?metrage|documentaire|\bcine")
+# Un « festival » ne devient « concert » que si le titre porte un indice musical.
+V2_FESTIVAL_MUSICAL = re.compile(
+    r"jazz|rock|blues|reggae|electro|\brap\b|hip-?hop|chanson|guitare|piano|violon|orgue|choeur|chorale"
+    r"|orchestre|symphon|opera|baroque|classique|sonore|\bsons?\b|zik|metal|folk|trad|swing|salsa|latino|gospel|\bdj\b")
 # DESCRIPTION : seulement les termes forts et les premiers caractères (le
 # texte long cite beaucoup de mots hors sujet). Pas de musique, live, cafe,
 # lecture, visite, film, conte, danse, festival, initiation, sejour, week-end.
@@ -245,7 +250,11 @@ def typer_v2(titre, description=None, start_at=None, end_at=None):
         if not motif.search(t_n):
             continue
         if code == "concert" and not re.search(r"concert|musique|\blive\b|dj set", t_n):
-            if V2_FESTIVAL_NON_MUSICAL.search(t_n):
+            # « festival » seul ne dit pas « concert » (T7.2, 2026-11-10) :
+            # cinéma, court métrage, alimentation, course... restent hors concert.
+            if V2_FESTIVAL_FILM.search(t_n):
+                return "spectacle", "titre:spectacle"
+            if V2_FESTIVAL_NON_MUSICAL.search(t_n) or not V2_FESTIVAL_MUSICAL.search(t_n):
                 continue
         return code, f"titre:{code}"
     if V2_MARCHE_ACCENT.search(t_l) or V2_MARCHE_SANS_ACCENT.search(t_n):

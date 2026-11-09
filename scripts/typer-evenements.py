@@ -54,7 +54,7 @@ def charger(db):
     return fiches
 
 
-def calculer(fiches, sans_description=False, sous_agents=None):
+def calculer(fiches, sans_description=False, sous_agents=None, seulement_autre=False):
     """sous_agents : {id: type} classe hors script (sous-agents du forfait,
     decision D3) ; applique seulement aux fiches restees « autre » apres les
     regles, jamais a une fiche verrouillee (R8)."""
@@ -63,6 +63,9 @@ def calculer(fiches, sans_description=False, sous_agents=None):
         actuel = f.get("type") or "autre"
         if f["checked"]:
             f["nouveau"], f["regle"] = actuel, "verrou:checked_at"
+            continue
+        if seulement_autre and actuel != "autre":
+            f["nouveau"], f["regle"] = actuel, None  # T7.2 : une fiche deja typee ne bouge pas
             continue
         code, regle = typer_v2(f["title"], f.get("description"), f.get("start_at"), f.get("end_at"))
         if actuel == "conference" and not code:
@@ -139,6 +142,8 @@ def main():
     ap.add_argument("--export-reliquat", metavar="CHEMIN")
     ap.add_argument("--sans-description", action="store_true",
                     help="n'applique pas les regles desc:* (les moins sures)")
+    ap.add_argument("--seulement-autre", action="store_true",
+                    help="ne touche que les fiches typees « autre » (T7.2)")
     ap.add_argument("--appliquer-fichier", metavar="F.json",
                     help="types classes par les sous-agents : liste de {id, type}")
     a = ap.parse_args()
@@ -151,7 +156,7 @@ def main():
     if a.appliquer_fichier:
         sa = {e["id"]: e["type"] for e in json.loads(Path(a.appliquer_fichier).read_text(encoding="utf-8"))}
         print(f"Sous-agents : {len(sa)} fiches classees dans {a.appliquer_fichier}")
-    calculer(fiches, sans_description=a.sans_description, sous_agents=sa)
+    calculer(fiches, sans_description=a.sans_description, sous_agents=sa, seulement_autre=a.seulement_autre)
     if a.essai:
         essai(fiches)
     if a.export_reliquat:
