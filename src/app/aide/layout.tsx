@@ -37,7 +37,7 @@ export default function AideLayout({ children }: { children: React.ReactNode }) 
       <footer className="border-t border-[#F0E8E0] bg-peach-pale">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-warmgray sm:flex-row">
           <span>© {new Date().getFullYear()} Casa Minga Lieux</span>
-          <nav className="flex items-center gap-5">
+          <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <Link href="/aide" className="hover:text-coral-dark">
               Centre d'aide
             </Link>
