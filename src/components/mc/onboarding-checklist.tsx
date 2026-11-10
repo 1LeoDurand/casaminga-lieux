@@ -49,7 +49,7 @@ export function OnboardingChecklist({ orgSlug, steps }: OnboardingChecklistProps
       {/* Fermer */}
       <button
         onClick={dismiss}
-        className="absolute right-4 top-4 rounded-md p-1 text-warmgray/50 hover:text-warmgray transition-colors"
+        className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-md text-warmgray/50 hover:text-warmgray transition-colors"
         title="Ne plus afficher"
       >
         <X className="size-4" />

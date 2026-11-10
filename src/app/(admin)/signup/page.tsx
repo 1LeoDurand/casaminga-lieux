@@ -203,14 +203,14 @@ export default function SignupPage() {
             </button>
 
             <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <button type="button" onClick={() => setStep("lieu")} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}>
+              <button type="button" onClick={() => setStep("lieu")} style={{ background: "transparent", border: "none", padding: "6px 0", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}>
                 ← Retour
               </button>
               <button
                 type="button"
                 onClick={() => submit("autre")}
                 disabled={loading}
-                style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}
+                style={{ background: "transparent", border: "none", padding: "6px 0", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}
               >
                 Passer cette étape
               </button>
@@ -298,7 +298,7 @@ export default function SignupPage() {
             </button>
 
             {step === "lieu" && (
-              <button type="button" onClick={() => setStep("account")} style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}>
+              <button type="button" onClick={() => setStep("account")} style={{ background: "transparent", border: "none", padding: "6px 0", cursor: "pointer", fontSize: 13, color: "#6B6460", textDecoration: "underline" }}>
                 ← Revenir à l'étape précédente
               </button>
             )}
