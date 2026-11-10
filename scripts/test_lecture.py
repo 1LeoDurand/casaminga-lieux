@@ -90,6 +90,10 @@ def test_siege_rna_par_nom():
     assert s["commune"] == "Castelnau-le-Lez" and s["code_postal"] == "34170"
 
 
+def test_siege_commune_sans_cedex():
+    assert EL.Sieges(None, None).de(site(commune="Montpellier Cedex 5"))["commune"] == "Montpellier"
+
+
 def test_siege_rna_ambigu_ou_absent():
     rna = faux_rna(["W1;COMPAGNIE DU TEST;x;34170;Castelnau-le-Lez;;oui",
                     "W2;COMPAGNIE DU TEST;x;34000;Montpellier;;oui"])

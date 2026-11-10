@@ -318,6 +318,9 @@ class Sieges:
                 res = {"adresse": None, "code_postal": cp or None, "commune": commune,
                        "source": "RNA (code postal et commune)" if cp else "annuaire communal (commune)",
                        "precision": "commune"}
+        if res and res["commune"]:
+            # « Montpellier Cedex 5 » : la commune seule, sinon la BAN ne retrouve pas le lieu.
+            res["commune"] = re.sub(r"\s+cedex(?:\s+\d+)?\s*$", "", res["commune"], flags=re.I) or None
         if res and res["precision"] == "commune" and not SIEGE_COMMUNE_SEULE:
             res = None
         self.cache[sid] = res
