@@ -334,7 +334,7 @@ function Stepper({ current }: { current: StepKey }) {
               }}>
                 {done ? "✓" : i + 1}
               </div>
-              <span style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#2C2C2C" : "#9C9590", whiteSpace: "nowrap" }}>
+              <span className={active ? undefined : "max-[420px]:hidden"} style={{ fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#2C2C2C" : "#9C9590", whiteSpace: "nowrap" }}>
                 {s.label}
               </span>
             </div>
