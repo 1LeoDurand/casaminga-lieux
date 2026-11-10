@@ -1106,7 +1106,7 @@ def main():
         avec_billet = next((p for p in provenance if p["registration"]), None)
         if avec_billet:
             print(f"  evenements_import (avec inscription) : {json.dumps(avec_billet, ensure_ascii=False)[:600]}")
-    print(f"Coût      : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+    print(f"Coût      : {db.octets / 1000:.1f} ko envoyés, {db.octets_recus / 1e6:.1f} Mo reçus de Supabase, {time.time() - t0:.1f} s, 0 token")
 
 
 if __name__ == "__main__":

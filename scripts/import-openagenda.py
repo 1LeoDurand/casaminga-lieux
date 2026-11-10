@@ -53,6 +53,7 @@ La clé de service est lue dans .env.local et n'est jamais affichée.
 
 import argparse
 import html
+import gzip
 import json
 import os
 import re
@@ -281,15 +282,22 @@ class Base:
         self.url = url
         self.auth = {"apikey": key, "Authorization": f"Bearer {key}"}
         self.octets = 0
+        # Octets reçus de Supabase : le plan gratuit compte le trafic sortant
+        # (5 Go par mois), relire la base à chaque passage n'est pas gratuit.
+        self.octets_recus = 0
 
     def _call(self, method, path, body=None, headers=None):
         data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
         req = urllib.request.Request(
             f"{self.url}/rest/v1/{path}", data=data, method=method,
-            headers={**self.auth, "Content-Type": "application/json", **(headers or {})})
+            headers={**self.auth, "Content-Type": "application/json",
+                     "Accept-Encoding": "gzip", **(headers or {})})
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 raw = r.read()
+                self.octets_recus += len(raw)
+                if r.headers.get("Content-Encoding") == "gzip":
+                    raw = gzip.decompress(raw)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:500]
             raise SystemExit(f"Échec {method} {path.split('?')[0]} : HTTP {e.code} {detail}")
@@ -587,7 +595,8 @@ def _avant_apres_types(rows, libelle):
 
 def main():
     ap = argparse.ArgumentParser(description="Import OpenAgenda -> Casa Minga")
-    ap.add_argument("--departement", help="import par departement (exclusif de --lieux)")
+    ap.add_argument("--departement", help="import par departement (exclusif de --lieux) ; "
+                    "plusieurs noms separes par | lisent la base une seule fois")
     ap.add_argument("--lieux", help="fichier JSON de liste blanche de lieux (exclusif de --departement)")
     ap.add_argument("--depuis", help="date ISO de debut de fenetre, ex. 2026-10-01")
     ap.add_argument("--jusqu-a", dest="jusqua", help="date ISO de fin exclue, ex. 2027-01-01")
@@ -610,7 +619,8 @@ def main():
     bilan_retrait = {}
 
     source = (lire_lieux(args.lieux, args.depuis, args.jusqua) if args.lieux
-              else lire_source(args.departement, args.exclure, args.depuis, args.jusqua))
+              else [r for d in args.departement.split("|") if d.strip()
+                    for r in lire_source(d.strip(), args.exclure, args.depuis, args.jusqua)])
 
     # Filtre defensif France Travail (voir FRANCE_TRAVAIL ci-dessus), applique
     # dans les deux modes : --exclure ne fonctionne qu'en --departement (clause
@@ -621,12 +631,12 @@ def main():
 
     if args.reparer:
         reparer(db, source, args.essai)
-        print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+        print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {db.octets_recus / 1e6:.1f} Mo reçus de Supabase, {time.time() - t0:.1f} s, 0 token")
         return
 
     if args.retyper:
         retyper(db, source, args.essai)
-        print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+        print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {db.octets_recus / 1e6:.1f} Mo reçus de Supabase, {time.time() - t0:.1f} s, 0 token")
         return
 
     # Lieux : attributs réunis sur TOUTES les fiches de la source, car un lieu
@@ -815,7 +825,9 @@ def main():
     ecrits_annuaire, candidats_annuaire = rattacher_annuaire(db, mapping_annuaire, existants, args.essai)
 
     mode = "ESSAI, rien n'est écrit" if args.essai else "écrit en base"
-    portee = args.departement or Path(args.lieux).name
+    portee = (args.departement if args.departement and "|" not in args.departement
+              else f"{len(args.departement.split('|'))} departements" if args.departement
+              else Path(args.lieux).name)
     print(f"Source   : {len(source)} événements ({portee}), {ecartes} écartés faute de lieu ou de dates, "
           f"{ecarte_ft} écartés (agenda France Travail)")
     print(f"Base     : {len(candidats) - len(nouveaux)} déjà importés, {len(nouveaux)} nouveaux disponibles")
@@ -838,7 +850,7 @@ def main():
     if mapping_annuaire:
         verbe = "à rattacher (essai)" if args.essai else "rattachés"
         print(f"Annuaire : {ecrits_annuaire} organization_id {verbe} sur {candidats_annuaire} tiers-lieux représentés dans ce lot")
-    print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {time.time() - t0:.1f} s, 0 token")
+    print(f"Coût     : {db.octets / 1000:.1f} ko envoyés, {db.octets_recus / 1e6:.1f} Mo reçus de Supabase, {time.time() - t0:.1f} s, 0 token")
 
 
 if __name__ == "__main__":

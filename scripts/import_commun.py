@@ -13,6 +13,7 @@ la clé de service.
 """
 
 import html
+import gzip
 import json
 import os
 import re
@@ -325,15 +326,22 @@ class Base:
         self.url = url
         self.auth = {"apikey": key, "Authorization": f"Bearer {key}"}
         self.octets = 0
+        # Octets reçus de Supabase : le plan gratuit compte le trafic sortant
+        # (5 Go par mois), relire la base à chaque passage n'est pas gratuit.
+        self.octets_recus = 0
 
     def _call(self, method, path, body=None, headers=None):
         data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
         req = urllib.request.Request(
             f"{self.url}/rest/v1/{path}", data=data, method=method,
-            headers={**self.auth, "Content-Type": "application/json", **(headers or {})})
+            headers={**self.auth, "Content-Type": "application/json",
+                     "Accept-Encoding": "gzip", **(headers or {})})
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 raw = r.read()
+                self.octets_recus += len(raw)
+                if r.headers.get("Content-Encoding") == "gzip":
+                    raw = gzip.decompress(raw)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:500]
             raise SystemExit(f"Échec {method} {path.split('?')[0]} : HTTP {e.code} {detail}")
