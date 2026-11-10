@@ -548,7 +548,7 @@ export default async function LandingPage() {
           <div style={{ position: "relative", marginBottom: 32 }} className="lp-sitepub-grid">
             {/* Colonne gauche — Site public */}
             <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 18 }}>
                 <span style={{ background: "#FFF0EB", border: "1.5px solid #FFB4A2", color: "#E8714D", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 100 }}>Site public</span>
                 <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C" }}>casaminga.com/bernard-kohn</span>
               </div>
@@ -575,7 +575,7 @@ export default async function LandingPage() {
 
             {/* Colonne droite — Plateforme */}
             <div style={{ background: "#fff", border: "1.5px solid #E5DDD6", borderRadius: 20, padding: "22px 24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 18 }}>
                 <span style={{ background: "#E8F3E9", border: "1.5px solid #bfe0c5", color: "#2f8a4c", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", padding: "3px 9px", borderRadius: 100 }}>Plateforme</span>
                 <span style={{ fontSize: 13.5, fontWeight: 700, color: "#2C2C2C" }}>Pilotage interne</span>
               </div>
