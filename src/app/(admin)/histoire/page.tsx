@@ -102,7 +102,7 @@ export default function HistoirePage() {
       {/* ══ 2. LE LIEU ══ */}
       <section style={{ background: "#fff", padding: "clamp(64px,9vw,108px) 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: "clamp(32px,5vw,72px)", alignItems: "center" }} className="hist-two-col">
+          <div style={{ display: "grid", gap: "clamp(32px,5vw,72px)", alignItems: "center" }} className="hist-two-col">
             <div>
               <Eyebrow variant="mint">Le lieu</Eyebrow>
               <h2 style={{ fontSize: "clamp(26px,3.2vw,40px)", fontWeight: 800, lineHeight: 1.12, marginBottom: 20 }}>
@@ -145,7 +145,7 @@ export default function HistoirePage() {
           </div>
 
           {/* Grille outils éparpillés */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 48 }} className="hist-tools-grid">
+          <div style={{ display: "grid", gap: 14, marginBottom: 48 }} className="hist-tools-grid">
             {[
               { ic: "📂", t: "Le gros Drive", d: "Chaque personne doit être formée. Et on oublie au fur et à mesure." },
               { ic: "📨", t: "Les mails sans fin", d: "Des échanges incessants pour retrouver qui a l'information." },
@@ -160,7 +160,7 @@ export default function HistoirePage() {
           </div>
 
           {/* Encart photo contexte */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(20px,4vw,48px)", alignItems: "center" }} className="hist-two-col">
+          <div style={{ display: "grid", gap: "clamp(20px,4vw,48px)", alignItems: "center" }} className="hist-two-col hist-two-col-even">
             <div style={{ borderRadius: 22, overflow: "hidden" }}>
               <Image src="/images/leo-tiers-lieu.webp" alt="Léo dans le tiers-lieu" width={900} height={676}
                 style={{ width: "100%", height: "auto", display: "block" }} />
@@ -180,7 +180,7 @@ export default function HistoirePage() {
       {/* ══ 4. LE TOURNANT ══ */}
       <section style={{ padding: "clamp(64px,9vw,108px) 0", background: "linear-gradient(180deg, #FFFBF0, #FFF5EE)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 28px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: "clamp(32px,5vw,72px)", alignItems: "start" }} className="hist-two-col hist-two-col-rev">
+          <div style={{ display: "grid", gap: "clamp(32px,5vw,72px)", alignItems: "start" }} className="hist-two-col hist-two-col-rev">
 
             {/* Portrait */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -249,7 +249,7 @@ export default function HistoirePage() {
             </h2>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, marginBottom: 48 }} className="hist-values-grid">
+          <div style={{ display: "grid", gap: 18, marginBottom: 48 }} className="hist-values-grid">
             {[
               {
                 ic: "🌿", title: "Sobre", color: "#2a7d6e", bg: "#E6F4F1",
@@ -273,7 +273,7 @@ export default function HistoirePage() {
           </div>
 
           {/* Encart photo ambiance */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(20px,4vw,48px)" }} className="hist-two-col">
+          <div style={{ display: "grid", gap: "clamp(20px,4vw,48px)" }} className="hist-two-col hist-two-col-even">
             <PhotoEncart
               src="/images/detail-architectural.webp"
               alt="Détail architectural Bernard Kohn"

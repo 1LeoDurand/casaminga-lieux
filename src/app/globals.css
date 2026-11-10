@@ -955,12 +955,14 @@ select.mc-input { cursor: pointer; }
 .hist-values-grid   { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
 
 @media (max-width: 860px) {
+.hist-two-col-even  { grid-template-columns: 1fr 1fr; }
   .hist-two-col     { grid-template-columns: 1fr; }
   .hist-two-col-rev { grid-template-columns: 1fr; }
   .hist-tools-grid  { grid-template-columns: 1fr; }
   .hist-values-grid { grid-template-columns: 1fr; }
 }
 .lp-pillars-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .hist-two-col-even { grid-template-columns: 1fr; }
 .lp-product-grid { display: grid; grid-template-columns: 0.95fr 1.2fr; gap: clamp(28px,5vw,56px); align-items: center; }
 .lp-pourqui-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .lp-cta-grid     { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(28px,5vw,64px); align-items: flex-start; }

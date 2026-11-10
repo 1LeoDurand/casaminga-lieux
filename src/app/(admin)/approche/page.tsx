@@ -33,7 +33,7 @@ function ConvictionCard({
   num: string; title: string; body: string; proof: string; children?: React.ReactNode;
 }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(36px,5vw,72px)", alignItems: "center", padding: "clamp(56px,8vw,96px) 0", borderBottom: "1px solid #F0E8E2" }} className="hist-two-col">
+    <div style={{ display: "grid", gap: "clamp(36px,5vw,72px)", alignItems: "center", padding: "clamp(56px,8vw,96px) 0", borderBottom: "1px solid #F0E8E2" }} className="hist-two-col hist-two-col-even">
       <div>
         <div style={{ fontSize: 11, fontWeight: 800, color: "#FF8A65", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 16 }}>{num}</div>
         <h2 style={{ fontSize: "clamp(22px,2.8vw,34px)", fontWeight: 800, lineHeight: 1.15, marginBottom: 18 }}>{title}</h2>
