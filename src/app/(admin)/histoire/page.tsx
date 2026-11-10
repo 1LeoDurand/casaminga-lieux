@@ -58,7 +58,7 @@ export default function HistoirePage() {
 
       {/* ══ NAV ══ */}
       <nav style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(255,251,240,0.94)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,180,162,0.28)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 28px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 20px" }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 16, color: "#2C2C2C", textDecoration: "none" }}>
             <img src="/logo-icon.webp" alt="Casa Minga Lieux" style={{ width: 34, height: 34, objectFit: "contain" }} />
             Casa Minga Lieux
