@@ -79,21 +79,21 @@ function ModuleDemo() {
         </div>
       </div>
 
-      <div style={{ fontSize: 9.5, fontWeight: 800, color: "#9C9590", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Pilotage — toujours là</div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#9C9590", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Pilotage — toujours là</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 14 }}>
         {socle.map((m) => (
           <span key={m} style={{ background: "#FFF0EB", color: "#E8714D", border: "1px solid #FFD0BC", fontSize: 11, fontWeight: 600, borderRadius: 100, padding: "3px 10px" }}>{m}</span>
         ))}
       </div>
 
-      <div style={{ fontSize: 9.5, fontWeight: 800, color: "#9C9590", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Activé pour vous</div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#9C9590", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Activé pour vous</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 14 }}>
         {tiers.map((m) => (
           <span key={m} style={{ background: "#E8F3E9", color: "#2f8a4c", border: "1px solid #bfe0c5", fontSize: 11, fontWeight: 600, borderRadius: 100, padding: "3px 10px" }}>{m}</span>
         ))}
       </div>
 
-      <div style={{ fontSize: 9.5, fontWeight: 800, color: "#9C9590", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Disponibles si besoin</div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: "#9C9590", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Disponibles si besoin</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {avance.map((m) => (
           <span key={m} style={{ background: "#F4EFE9", color: "#9C9590", border: "1px solid #E5DDD6", fontSize: 11, fontWeight: 500, borderRadius: 100, padding: "3px 10px" }}>{m}</span>

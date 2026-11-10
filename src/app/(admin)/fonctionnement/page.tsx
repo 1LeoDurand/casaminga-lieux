@@ -369,7 +369,7 @@ export default async function LandingPage() {
                 <p style={{ fontSize: 13.5, color: p.color, lineHeight: 1.65, marginBottom: 16, flexGrow: 1 }}>{p.p}</p>
                 {/* Bloc exemple — badge inline à gauche */}
                 <div style={{ background: p.exBg, border: `1px solid ${p.exBorder}`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span style={{ flexShrink: 0, background: "#fff", border: `1px solid ${p.exBorder}`, color: p.color, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", padding: "3px 8px", borderRadius: 100, marginTop: 1 }}>Exemple</span>
+                  <span style={{ flexShrink: 0, background: "#fff", border: `1px solid ${p.exBorder}`, color: p.color, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", padding: "3px 8px", borderRadius: 100, marginTop: 1 }}>Exemple</span>
                   <p style={{ fontSize: 13, color: p.color, lineHeight: 1.55, margin: 0 }}>{p.ex}</p>
                 </div>
               </div>
@@ -412,7 +412,7 @@ export default async function LandingPage() {
                 <div style={{ background: "#2C2C2C", color: "rgba(255,255,255,0.85)", padding: "12px 8px", fontSize: 11, display: "flex", flexDirection: "column", gap: 3 }}>
                   {[["Pilotage", null], [null, "⬚ Dashboard"], [null, "📥 Demandes"], [null, "✓ Tâches"], ["Lieu", null], [null, "🛋 Espaces"], [null, "🎭 Événements"], [null, "🏡 Résidences"], ["Structure", null], [null, "💶 Finances"], [null, "🏛 Gouvernance"], [null, "📊 Impact"]].map(([label, item], i) =>
                     label
-                      ? <div key={i} style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", padding: "8px 6px 4px" }}>{label}</div>
+                      ? <div key={i} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", padding: "8px 6px 4px" }}>{label}</div>
                       : <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", borderRadius: 6, fontSize: 11, background: item?.startsWith("✓") ? "#FF8A65" : "transparent", color: item?.startsWith("✓") ? "#fff" : "rgba(255,255,255,0.85)" }}>{item}</div>
                   )}
                 </div>
@@ -425,7 +425,7 @@ export default async function LandingPage() {
                     {[["12", "Ouvertes"], ["3", "Urgentes"], ["5", "Alertes auto"]].map(([v, l]) => (
                       <div key={l} style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 9, padding: "9px 11px" }}>
                         <div style={{ fontSize: 18, fontWeight: 700 }}>{v}</div>
-                        <div style={{ fontSize: 9.5, color: "#6B6460", textTransform: "uppercase", letterSpacing: "0.05em" }}>{l}</div>
+                        <div style={{ fontSize: 10, color: "#6B6460", textTransform: "uppercase", letterSpacing: "0.05em" }}>{l}</div>
                       </div>
                     ))}
                   </div>
@@ -435,9 +435,9 @@ export default async function LandingPage() {
                     { tag: "À FAIRE", t: "Commander affiches portes ouvertes", cat: "Communication", tc: "#6B6460", bg: "#f1f5f9" },
                   ].map((r) => (
                     <div key={r.t} style={{ background: "#fff", border: "1px solid #E5DDD6", borderRadius: 9, padding: "9px 11px", display: "flex", alignItems: "center", gap: 10, marginBottom: 5, fontSize: 11.5 }}>
-                      <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: r.bg, color: r.tc, whiteSpace: "nowrap" }}>{r.tag}</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: r.bg, color: r.tc, whiteSpace: "nowrap" }}>{r.tag}</span>
                       <span style={{ flex: 1 }}>{r.t}</span>
-                      <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: "#f1f5f9", color: "#64748b", whiteSpace: "nowrap" }}>{r.cat}</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: "#f1f5f9", color: "#64748b", whiteSpace: "nowrap" }}>{r.cat}</span>
                     </div>
                   ))}
                 </div>

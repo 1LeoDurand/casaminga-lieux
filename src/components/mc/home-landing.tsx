@@ -554,7 +554,7 @@ export default function HomeLanding() {
                       { label: "Factures" },
                     ].map((item) => (
                       <div key={item.label}>
-                        {item.group && <div style={{ padding: "8px 14px 3px", fontSize: "8.5px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.3)" }}>{item.group}</div>}
+                        {item.group && <div style={{ padding: "8px 14px 3px", fontSize: "10px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(255,255,255,.3)" }}>{item.group}</div>}
                         <div style={{ margin: "1px 6px", padding: "5px 10px", borderRadius: "6px", fontSize: "11px", color: item.active ? "#fff" : "rgba(255,255,255,.5)", background: item.active ? ACCENT : "transparent", fontWeight: item.active ? 600 : 400 }}>{item.label}</div>
                       </div>
                     ))}
@@ -563,13 +563,13 @@ export default function HomeLanding() {
                   <div style={{ flex: 1, padding: "16px", background: "#FAFAF7", overflow: "hidden" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                       <div style={{ fontSize: "13px", fontWeight: 700, color: "#2C2D2D" }}>Tâches &amp; alertes</div>
-                      <div style={{ background: ACCENT, color: "#fff", fontSize: "9px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px" }}>+ Nouvelle tâche</div>
+                      <div style={{ background: ACCENT, color: "#fff", fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "100px" }}>+ Nouvelle tâche</div>
                     </div>
                     <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                       {[["12","OUVERTES"],["3","URGENTES"],["5","ALERTES"]].map(([n, l]) => (
                         <div key={l} style={{ flex: 1, background: "#fff", border: "1px solid #EEEBE4", borderRadius: "8px", padding: "8px 10px" }}>
                           <div style={{ fontSize: "18px", fontWeight: 800, color: "#2C2D2D", lineHeight: 1 }}>{n}</div>
-                          <div style={{ fontSize: "8px", color: "rgba(44,45,45,.4)", letterSpacing: ".08em", marginTop: "3px" }}>{l}</div>
+                          <div style={{ fontSize: "10px", color: "rgba(44,45,45,.4)", letterSpacing: ".08em", marginTop: "3px" }}>{l}</div>
                         </div>
                       ))}
                     </div>
@@ -579,9 +579,9 @@ export default function HomeLanding() {
                       { tag: "À FAIRE", tagColor: "#F5F4F0", tagText: "rgba(44,45,45,.5)", text: "Commander affiches portes ouvertes", badge: "Communication", badgeColor: "#E8FFF3", badgeText: "#0E7A4A" },
                     ].map((row) => (
                       <div key={row.text} style={{ display: "flex", alignItems: "center", gap: "8px", background: "#fff", border: "1px solid #EEEBE4", borderRadius: "8px", padding: "7px 10px", marginBottom: "6px" }}>
-                        <span style={{ background: row.tagColor, color: row.tagText, fontSize: "7px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px", flexShrink: 0, letterSpacing: ".05em" }}>{row.tag}</span>
+                        <span style={{ background: row.tagColor, color: row.tagText, fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "4px", flexShrink: 0, letterSpacing: ".05em" }}>{row.tag}</span>
                         <span style={{ flex: 1, fontSize: "10px", color: "#2C2D2D", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.text}</span>
-                        <span style={{ background: row.badgeColor, color: row.badgeText, fontSize: "7px", fontWeight: 600, padding: "2px 7px", borderRadius: "4px", flexShrink: 0 }}>{row.badge}</span>
+                        <span style={{ background: row.badgeColor, color: row.badgeText, fontSize: "10px", fontWeight: 600, padding: "2px 7px", borderRadius: "4px", flexShrink: 0 }}>{row.badge}</span>
                       </div>
                     ))}
                   </div>
